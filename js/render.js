@@ -1,72 +1,53 @@
-
 import {
   state,
   setCurrentPage,
-  openSettings,
-  closeSettings,
-  saveProfileFromInputs,
-  fillProfileInputs
+  fillProfileInputs,
+  saveProfileFromInputs
 } from "./state.js";
 
 export function bindShellEvents() {
-  bindTabEvents();
-  bindSettingsEvents();
-  renderShell();
+  bindTabs();
+  bindSettings();
+  showPage(state.ui?.currentPage || "incidentPage");
 }
 
-function bindTabEvents() {
+function bindTabs() {
   document.querySelectorAll(".tab-btn[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      setCurrentPage(btn.dataset.page);
-      renderShell();
+      showPage(btn.dataset.page);
     });
   });
 }
 
-function bindSettingsEvents() {
+function showPage(pageId) {
+  setCurrentPage(pageId);
+
+  document.querySelectorAll(".page").forEach((page) => {
+    page.classList.toggle("active", page.id === pageId);
+  });
+
+  document.querySelectorAll(".tab-btn[data-page]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.page === pageId);
+  });
+}
+
+function bindSettings() {
   const openBtn = document.getElementById("openSettingsBtn");
   const closeBtn = document.getElementById("closeSettingsBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
+  const modal = document.getElementById("settingsModal");
 
   openBtn?.addEventListener("click", () => {
-    openSettings();
     fillProfileInputs();
-    renderShell();
+    modal?.classList.remove("hidden");
   });
 
   closeBtn?.addEventListener("click", () => {
-    closeSettings();
-    renderShell();
+    modal?.classList.add("hidden");
   });
 
   saveBtn?.addEventListener("click", () => {
     saveProfileFromInputs();
-    closeSettings();
-    renderShell();
+    modal?.classList.add("hidden");
   });
-}
-
-export function renderShell() {
-  renderPages();
-  renderTabs();
-  renderSettingsModal();
-}
-
-function renderPages() {
-  document.querySelectorAll(".page").forEach((page) => {
-    page.classList.toggle("active", page.id === state.ui.currentPage);
-  });
-}
-
-function renderTabs() {
-  document.querySelectorAll(".tab-btn[data-page]").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.page === state.ui.currentPage);
-  });
-}
-
-function renderSettingsModal() {
-  const modal = document.getElementById("settingsModal");
-  if (!modal) return;
-
-  modal.classList.toggle("hidden", !state.ui.settingsOpen);
 }
