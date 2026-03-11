@@ -26,9 +26,24 @@ incident: {
   incidentType: "",
   pagerDetails: "",
   actualLocation: "",
-  controlName: ""
+  controlName: "",
+
+  firstAgency: "",
+
+  brigadesOnScene: [],
+
+  weather1: "",
+  weather2: "",
+
+  distanceToScene: "",
+
+  hoses: {
+    hose64: 0,
+    hose38: 0,
+    hose25: 0,
+    other: ""
+  }
 }
-};
 
 export function initState() {
   const versionEl = document.getElementById("appVersionText");
