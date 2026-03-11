@@ -43,13 +43,20 @@ function renderAppliance(applianceKey, panelId) {
       </div>
     </div>
 
-    <div class="responder-add-row">
-      <select class="field-input editable-field" id="${applianceKey}MemberSelect">
-        <option value="">Select member</option>
-        ${state.responders.members.map((m) => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join("")}
-      </select>
-      <button class="secondary-btn" data-action="add-member" data-appliance="${applianceKey}" type="button">Add Member</button>
-    </div>
+<div class="responder-add-row">
+  <input
+    class="field-input editable-field"
+    id="${applianceKey}MemberInput"
+    list="${applianceKey}MemberList"
+    type="text"
+    placeholder="Type member name"
+    autocomplete="off"
+  />
+  <datalist id="${applianceKey}MemberList">
+    ${state.responders.members.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+  </datalist>
+  <button class="secondary-btn" data-action="add-member" data-appliance="${applianceKey}" type="button">Add Member</button>
+</div>
 
     <div class="crew-list" id="${applianceKey}CrewList">
       ${appliance.crew.map((member) => renderCrewCard(applianceKey, member)).join("")}
