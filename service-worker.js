@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "conn-sheet-v16";
+const CACHE_NAME = "conn-sheet-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
