@@ -13,6 +13,25 @@ export function bindOcrEvents() {
 }
 
 async function handleScreenshotUpload(event) {
+
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const dataUrl = await fileToDataUrl(file);
+
+  state.incident.pagerScreenshot = dataUrl;
+
+  const preview = document.getElementById("pagerPreview");
+
+  if (preview) {
+    preview.src = dataUrl;
+    preview.classList.remove("hidden");
+  }
+
+  setScanStatus("Screenshot loaded. Press Scan Screenshot.", "scan-idle");
+
+  saveState();
+}
   const file = event.target.files?.[0];
   if (!file) return;
 
