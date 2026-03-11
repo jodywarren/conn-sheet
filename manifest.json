@@ -1,1 +1,25 @@
 
+{
+  "name": "Turn Out Sheet",
+  "short_name": "Turnout",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#b00020",
+  "description": "Connewarre Fire Brigade Turn Out Sheet",
+  "icons": [
+    {
+      "src": "./connewarre-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./connewarre-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
