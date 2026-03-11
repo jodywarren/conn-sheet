@@ -1,9 +1,4 @@
-import {
-  state,
-  setCurrentPage,
-  fillProfileInputs,
-  saveProfileFromInputs
-} from "./state.js";
+import { state, setCurrentPage, saveState } from "./state.js";
 
 export function bindShellEvents() {
   bindTabs();
@@ -38,7 +33,7 @@ function bindSettings() {
   const modal = document.getElementById("settingsModal");
 
   openBtn?.addEventListener("click", () => {
-    fillProfileInputs();
+    loadProfileInputsFromState();
     modal?.classList.remove("hidden");
   });
 
@@ -47,7 +42,36 @@ function bindSettings() {
   });
 
   saveBtn?.addEventListener("click", () => {
-    saveProfileFromInputs();
+    saveProfileInputsToState();
+    saveState();
     modal?.classList.add("hidden");
   });
+}
+
+function loadProfileInputsFromState() {
+  const nameEl = document.getElementById("profileName");
+  const memberEl = document.getElementById("profileMemberNumber");
+  const contactEl = document.getElementById("profileContactNumber");
+  const emailEl = document.getElementById("profileEmail");
+  const brigadeEl = document.getElementById("profileBrigade");
+
+  if (nameEl) nameEl.value = state.profile?.name || "";
+  if (memberEl) memberEl.value = state.profile?.memberNumber || "";
+  if (contactEl) contactEl.value = state.profile?.contactNumber || "";
+  if (emailEl) emailEl.value = state.profile?.email || "";
+  if (brigadeEl) brigadeEl.value = state.profile?.brigade || "Connewarre";
+}
+
+function saveProfileInputsToState() {
+  const nameEl = document.getElementById("profileName");
+  const memberEl = document.getElementById("profileMemberNumber");
+  const contactEl = document.getElementById("profileContactNumber");
+  const emailEl = document.getElementById("profileEmail");
+  const brigadeEl = document.getElementById("profileBrigade");
+
+  state.profile.name = nameEl?.value.trim() || "";
+  state.profile.memberNumber = memberEl?.value.trim() || "";
+  state.profile.contactNumber = contactEl?.value.trim() || "";
+  state.profile.email = emailEl?.value.trim() || "";
+  state.profile.brigade = brigadeEl?.value.trim() || "Connewarre";
 }
