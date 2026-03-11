@@ -11,12 +11,28 @@ export async function initResponders() {
 
 async function loadMembers() {
   try {
-    const res = await fetch("./CONN.members.json");
-    const data = await res.json();
-    state.responders.members = Array.isArray(data) ? data : [];
+    const [connRes, grovRes, fresRes] = await Promise.all([
+      fetch("./CONN.members.json"),
+      fetch("./GROV.members.json"),
+      fetch("./FRES.members.json")
+    ]);
+
+    const connData = await connRes.json();
+    const grovData = await grovRes.json();
+    const fresData = await fresRes.json();
+
+    state.responders.members = {
+      conn: Array.isArray(connData) ? connData : [],
+      grov: Array.isArray(grovData) ? grovData : [],
+      fres: Array.isArray(fresData) ? fresData : []
+    };
   } catch (error) {
     console.error("Failed to load members:", error);
-    state.responders.members = [];
+    state.responders.members = {
+      conn: [],
+      grov: [],
+      fres: []
+    };
   }
 }
 
@@ -33,6 +49,7 @@ function renderAppliance(applianceKey, panelId) {
 
   const appliance = state.responders.appliances[applianceKey];
   const statusClass = getApplianceStatusClass(appliance);
+  const availableMembers = getMembersForAppliance(applianceKey);
 
   panel.className = `appliance-panel ${statusClass}`;
   panel.innerHTML = `
@@ -55,7 +72,7 @@ function renderAppliance(applianceKey, panelId) {
         autocomplete="off"
       />
       <datalist id="${applianceKey}MemberList">
-        ${state.responders.members.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+        ${availableMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
       </datalist>
       <button class="secondary-btn" data-action="add-member" data-appliance="${applianceKey}" type="button">Add Member</button>
     </div>
@@ -68,13 +85,25 @@ function renderAppliance(applianceKey, panelId) {
   bindAppliancePanelEvents(panel, applianceKey);
 }
 
+function getMembersForAppliance(applianceKey) {
+  if (applianceKey === "mtdpt") {
+    return [
+      ...(state.responders.members.conn || []),
+      ...(state.responders.members.grov || []),
+      ...(state.responders.members.fres || [])
+    ];
+  }
+
+  return state.responders.members.conn || [];
+}
+
 function renderCrewCard(applianceKey, member) {
   return `
     <div class="crew-card" data-member-id="${member.id}">
       <div class="crew-card-top">
         <div>
           <strong>${escapeHtml(member.name)}</strong>
-          <div class="subtle">${escapeHtml(member.phone || "")}</div>
+          <div class="subtle">${escapeHtml(member.phone || "")}${member.sourceBrigade ? ` • ${escapeHtml(member.sourceBrigade)}` : ""}</div>
         </div>
         <button class="tiny-btn" data-action="remove-member" data-appliance="${applianceKey}" data-member-id="${member.id}" type="button">Remove</button>
       </div>
@@ -187,7 +216,9 @@ function addMemberToAppliance(applianceKey) {
   const selectedName = input?.value.trim().toUpperCase() || "";
   if (!selectedName) return;
 
-  const memberData = state.responders.members.find(
+  const availableMembers = getMembersForAppliance(applianceKey);
+
+  const memberData = availableMembers.find(
     (m) => String(m.name || "").trim().toUpperCase() === selectedName
   );
 
@@ -216,6 +247,7 @@ function addMemberToAppliance(applianceKey) {
     id: uid(),
     name: memberData.name,
     phone: memberData.phone || "",
+    sourceBrigade: getSourceBrigadeForMember(memberData.name),
     isDriver: false,
     isCrewLeader: false,
     isOic: false,
@@ -228,6 +260,22 @@ function addMemberToAppliance(applianceKey) {
   saveState();
   renderRespondersPage();
   focusMemberInput(applianceKey);
+}
+
+function getSourceBrigadeForMember(name) {
+  const target = String(name || "").trim().toUpperCase();
+
+  if ((state.responders.members.conn || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
+    return "CONN";
+  }
+  if ((state.responders.members.grov || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
+    return "GROV";
+  }
+  if ((state.responders.members.fres || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
+    return "FRES";
+  }
+
+  return "";
 }
 
 function isMemberAlreadyAssigned(targetName) {
