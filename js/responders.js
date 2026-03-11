@@ -103,10 +103,24 @@ function renderCrewCard(applianceKey, member) {
       <div class="crew-card-top">
         <div>
           <strong>${escapeHtml(member.name)}</strong>
-          <div class="subtle">${escapeHtml(member.phone || "")}${member.sourceBrigade ? ` • ${escapeHtml(member.sourceBrigade)}` : ""}</div>
+        <div class="subtle">${buildMemberSubline(member)}</div>
         </div>
         <button class="tiny-btn" data-action="remove-member" data-appliance="${applianceKey}" data-member-id="${member.id}" type="button">Remove</button>
       </div>
+function buildMemberSubline(member) {
+  const parts = [];
+
+  if (member.phone) {
+    parts.push(escapeHtml(member.phone));
+  }
+
+  const brigadeLabel = getDisplayBrigadeLabel(member.sourceBrigade);
+  if (brigadeLabel) {
+    parts.push(escapeHtml(brigadeLabel));
+  }
+
+  return parts.join(" • ");
+}
 
       <div class="chips crew-chip-row">
         <button class="chip-btn ${member.isDriver ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isDriver" type="button">Driver</button>
@@ -329,4 +343,12 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+function getDisplayBrigadeLabel(sourceBrigade) {
+  const code = String(sourceBrigade || "").trim().toUpperCase();
+
+  if (code === "GROV") return "Grovedale";
+  if (code === "FRES") return "Freshwater Creek";
+
+  return "";
 }
