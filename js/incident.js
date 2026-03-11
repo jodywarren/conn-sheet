@@ -6,6 +6,7 @@ export function bindIncidentInputs() {
   bindSelect("distanceToScene");
   bindSelect("weather1");
   bindSelect("weather2");
+  bindSceneBrigades();
 }
 
 function bindBasicFields() {
@@ -41,6 +42,75 @@ function bindSelect(id) {
   });
 }
 
+function bindSceneBrigades() {
+  const input = document.getElementById("sceneBrigadeInput");
+  const addBtn = document.getElementById("addSceneBrigadeBtn");
+
+  if (!input || !addBtn) return;
+
+  addBtn.addEventListener("click", () => {
+    addSceneBrigadeFromInput();
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addSceneBrigadeFromInput();
+    }
+  });
+}
+
+function addSceneBrigadeFromInput() {
+  const input = document.getElementById("sceneBrigadeInput");
+  if (!input) return;
+
+  const code = input.value.trim().toUpperCase();
+  if (!code) return;
+
+  if (!state.incident.brigadesOnScene.includes(code)) {
+    state.incident.brigadesOnScene.push(code);
+  }
+
+  input.value = "";
+  renderSceneBrigadeChips();
+  saveState();
+  input.focus();
+}
+
+export function setSceneBrigades(codes = []) {
+  state.incident.brigadesOnScene = [...new Set(codes.filter(Boolean))];
+  renderSceneBrigadeChips();
+  saveState();
+}
+
+export function renderSceneBrigadeChips() {
+  const wrap = document.getElementById("sceneBrigadeChips");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  state.incident.brigadesOnScene.forEach((code) => {
+    const chip = document.createElement("div");
+    chip.className = "scene-chip";
+
+    const text = document.createElement("span");
+    text.textContent = code;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", () => {
+      state.incident.brigadesOnScene = state.incident.brigadesOnScene.filter((x) => x !== code);
+      renderSceneBrigadeChips();
+      saveState();
+    });
+
+    chip.appendChild(text);
+    chip.appendChild(removeBtn);
+    wrap.appendChild(chip);
+  });
+}
+
 export function loadIncidentIntoInputs() {
   const fieldIds = [
     "eventNumber",
@@ -62,4 +132,6 @@ export function loadIncidentIntoInputs() {
     if (!el) return;
     el.value = state.incident[id] || "";
   });
+
+  renderSceneBrigadeChips();
 }
