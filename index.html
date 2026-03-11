@@ -50,6 +50,21 @@
           </div>
 
           <div class="section">
+            <h2 class="section-title">Pager Screenshot</h2>
+
+            <div class="row wrap">
+              <input id="pagerUpload" class="field-input editable-field file-input" type="file" accept="image/*" />
+              <button id="scanPagerBtn" class="primary-btn" type="button">Scan Screenshot</button>
+            </div>
+
+            <div id="scanStatus" class="scan-status scan-idle">Waiting for screenshot</div>
+
+            <div class="preview-wrap">
+              <img id="pagerPreview" class="pager-preview hidden" alt="Pager screenshot preview" />
+            </div>
+          </div>
+
+          <div class="section">
             <h2 class="section-title">Core Incident Details</h2>
 
             <div class="grid">
@@ -75,7 +90,7 @@
 
               <label>
                 Incident Type
-                <input id="incidentType" class="field-input editable-field" type="text" placeholder="STRU / ALAR / INCI">
+                <input id="incidentType" class="field-input editable-field" type="text" placeholder="STRU / ALAR / INCI / RESC">
               </label>
             </div>
           </div>
@@ -152,25 +167,36 @@
                 </select>
               </label>
             </div>
+
+            <div class="section">
+              <h3 class="section-title">Brigades On Scene</h3>
+
+              <div class="row wrap">
+                <input id="sceneBrigadeInput" class="field-input editable-field" type="text" placeholder="Type brigade code eg CONN">
+                <button id="addSceneBrigadeBtn" class="secondary-btn" type="button">Add</button>
+              </div>
+
+              <div id="sceneBrigadeChips" class="chip-wrap"></div>
+            </div>
           </div>
         </div>
       </section>
 
-<section id="respondersPage" class="page">
-  <div class="card">
-    <div class="section-head">
-      <div>
-        <h2>Responders</h2>
-        <p class="subtle">Assign appliance codes and crew roles.</p>
-      </div>
-      <button class="secondary-btn" type="button">Save Draft</button>
-    </div>
+      <section id="respondersPage" class="page">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <h2>Responders</h2>
+              <p class="subtle">Assign appliance codes and crew roles.</p>
+            </div>
+            <button class="secondary-btn" type="button">Save Draft</button>
+          </div>
 
-    <div id="conn1Panel" class="appliance-panel"></div>
-    <div id="conn2Panel" class="appliance-panel"></div>
-    <div id="mtdptPanel" class="appliance-panel"></div>
-  </div>
-</section>
+          <div id="conn1Panel" class="appliance-panel"></div>
+          <div id="conn2Panel" class="appliance-panel"></div>
+          <div id="mtdptPanel" class="appliance-panel"></div>
+        </div>
+      </section>
 
       <section id="sendPage" class="page">
         <div class="card">
@@ -230,6 +256,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
