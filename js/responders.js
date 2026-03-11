@@ -98,15 +98,22 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
   panel.querySelectorAll("[data-action='add-member']").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const select = document.getElementById(`${applianceKey}MemberSelect`);
-      const selectedName = select?.value || "";
-      if (!selectedName) return;
+const input = document.getElementById(`${applianceKey}MemberInput`);
+const selectedName = input?.value.trim().toUpperCase() || "";
+if (!selectedName) return;
 
       const appliance = state.responders.appliances[applianceKey];
       const alreadyExists = appliance.crew.some((m) => m.name === selectedName);
       if (alreadyExists) return;
 
-      const memberData = state.responders.members.find((m) => m.name === selectedName);
+      const memberData = state.responders.members.find(
+  (m) => String(m.name || "").trim().toUpperCase() === selectedName
+);
+
+if (!memberData) {
+  window.alert("Select a valid member from the list.");
+  return;
+}
       appliance.crew.push({
         id: uid(),
         name: memberData?.name || selectedName,
@@ -118,7 +125,7 @@ function bindAppliancePanelEvents(panel, applianceKey) {
         isInjured: false
       });
 
-      if (select) select.value = "";
+      if (input) input.value = "";
       renderRespondersPage();
     });
   });
