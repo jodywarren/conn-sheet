@@ -1,5 +1,4 @@
-
-const CACHE_NAME = "conn-sheet-v18";
+const CACHE_NAME = "conn-sheet-v19";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +7,9 @@ const APP_SHELL = [
   "./manifest.json",
   "./service-worker.js",
   "./connewarre-logo.png",
+  "./CONN.members.json",
+  "./GROV.members.json",
+  "./FRES.members.json",
   "./js/state.js",
   "./js/helpers.js",
   "./js/render.js",
@@ -36,8 +38,6 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
-    })
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
   );
 });
