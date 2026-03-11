@@ -515,3 +515,83 @@ label{
 .crew-chip-row{
   margin-top:10px;
 }
+.file-input{
+  min-width:280px;
+}
+
+.preview-wrap{
+  margin-top:12px;
+}
+
+.pager-preview{
+  width:100%;
+  max-width:420px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  display:block;
+}
+
+.scan-status{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:700;
+  border:1px solid var(--border);
+}
+
+.scan-idle{
+  background:#f1f3f5;
+  color:var(--text);
+}
+
+.scan-working{
+  background:#fff4d6;
+  color:#7b5b00;
+  border-color:#e6c36b;
+}
+
+.scan-good{
+  background:var(--good-bg);
+  color:var(--good-text);
+  border-color:var(--good-border);
+}
+
+.scan-warn{
+  background:#fff4d6;
+  color:#7b5b00;
+  border-color:#e6c36b;
+}
+
+.scan-error{
+  background:var(--cfa-red-soft);
+  color:#7d0017;
+  border-color:var(--cfa-red-border);
+}
+
+.chip-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+.scene-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:var(--cfa-red-soft);
+  border:1px solid var(--cfa-red-border);
+  color:#7d0017;
+  font-weight:700;
+}
+
+.scene-chip button{
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:700;
+  color:inherit;
+}
