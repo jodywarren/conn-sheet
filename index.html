@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en-AU">
 <head>
@@ -51,112 +50,108 @@
           </div>
 
           <div class="section">
-<h2 class="section-title">Core Incident Details</h2>
+            <h2 class="section-title">Core Incident Details</h2>
 
-<div class="grid">
+            <div class="grid">
+              <label>
+                Event Number
+                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="F2603-----">
+              </label>
 
-<label>
-Event Number
-<input id="eventNumber" class="field-input editable-field" type="text" placeholder="F2603-----">
-</label>
+              <label>
+                Pager Date
+                <input id="pagerDate" class="field-input editable-field" type="date">
+              </label>
 
-<label>
-Pager Date
-<input id="pagerDate" class="field-input editable-field" type="date">
-</label>
+              <label>
+                Pager Time
+                <input id="pagerTime" class="field-input editable-field" type="time">
+              </label>
 
-<label>
-Pager Time
-<input id="pagerTime" class="field-input editable-field" type="time">
-</label>
+              <label>
+                Brigade Code
+                <input id="brigadeCode" class="field-input editable-field" type="text" placeholder="CONN">
+              </label>
 
-<label>
-Brigade Code
-<input id="brigadeCode" class="field-input editable-field" type="text" placeholder="CONN">
-</label>
+              <label>
+                Incident Type
+                <input id="incidentType" class="field-input editable-field" type="text" placeholder="STRU / ALAR / INCI">
+              </label>
+            </div>
+          </div>
 
-<label>
-Incident Type
-<input id="incidentType" class="field-input editable-field" type="text" placeholder="STRU / ALAR / INCI">
-</label>
+          <div class="section">
+            <label>
+              Pager Details
+              <textarea id="pagerDetails" class="field-input editable-field" rows="3"></textarea>
+            </label>
 
-</div>
+            <label>
+              Actual Location
+              <input id="actualLocation" class="field-input editable-field" type="text">
+            </label>
 
-<div class="section">
+            <label>
+              Control Name
+              <input id="controlName" class="field-input editable-field" type="text">
+            </label>
+          </div>
 
-<label>
-Pager Details
-<textarea id="pagerDetails" class="field-input editable-field" rows="3"></textarea>
-</label>
+          <div class="section">
+            <h2 class="section-title">Operational Details</h2>
 
-<label>
-Actual Location
-<input id="actualLocation" class="field-input editable-field" type="text">
-</label>
+            <div class="grid">
+              <label>
+                First Agency On Scene
+                <select id="firstAgency" class="field-input editable-field">
+                  <option value="">Select agency</option>
+                  <option>CFA</option>
+                  <option>FRV</option>
+                  <option>Police</option>
+                  <option>Ambulance</option>
+                  <option>SES</option>
+                </select>
+              </label>
 
-<label>
-Control Name
-<input id="controlName" class="field-input editable-field" type="text">
-</label>
+              <label>
+                Distance to Scene
+                <select id="distanceToScene" class="field-input editable-field">
+                  <option value="">Select distance</option>
+                  <option>1 km</option>
+                  <option>2 km</option>
+                  <option>3 km</option>
+                  <option>5 km</option>
+                  <option>10 km</option>
+                  <option>20 km</option>
+                </select>
+              </label>
 
- <div class="section">
+              <label>
+                Weather
+                <select id="weather1" class="field-input editable-field">
+                  <option value="">Select weather</option>
+                  <option>Cool</option>
+                  <option>Hot</option>
+                  <option>Rain</option>
+                  <option>Windy</option>
+                  <option>Sunny</option>
+                  <option>Overcast</option>
+                </select>
+              </label>
 
-<h2 class="section-title">Operational Details</h2>
-
-<label>
-First Agency On Scene
-<select id="firstAgency" class="field-input editable-field">
-<option value="">Select agency</option>
-<option>CFA</option>
-<option>FRV</option>
-<option>Police</option>
-<option>Ambulance</option>
-<option>SES</option>
-</select>
-</label>
-
-<label>
-Distance to Scene
-<select id="distanceToScene" class="field-input editable-field">
-<option value="">Select distance</option>
-<option>1 km</option>
-<option>2 km</option>
-<option>3 km</option>
-<option>5 km</option>
-<option>10 km</option>
-<option>20 km</option>
-</select>
-</label>
-
-<label>
-Weather
-<select id="weather1" class="field-input editable-field">
-<option value="">Select weather</option>
-<option>Cool</option>
-<option>Hot</option>
-<option>Rain</option>
-<option>Windy</option>
-<option>Sunny</option>
-<option>Overcast</option>
-</select>
-</label>
-
-<label>
-Additional Weather
-<select id="weather2" class="field-input editable-field">
-<option value="">None</option>
-<option>Cool</option>
-<option>Hot</option>
-<option>Rain</option>
-<option>Windy</option>
-<option>Sunny</option>
-<option>Overcast</option>
-</select>
-</label>
-
-</div> 
-  
-</div>
+              <label>
+                Additional Weather
+                <select id="weather2" class="field-input editable-field">
+                  <option value="">None</option>
+                  <option>Cool</option>
+                  <option>Hot</option>
+                  <option>Rain</option>
+                  <option>Windy</option>
+                  <option>Sunny</option>
+                  <option>Overcast</option>
+                </select>
+              </label>
+            </div>
           </div>
         </div>
       </section>
@@ -166,7 +161,7 @@ Additional Weather
           <div class="section-head">
             <div>
               <h2>Responders</h2>
-              <p class="subtle">Responder panels will be added in Pack 2.</p>
+              <p class="subtle">Responder panels will be added in the next pack.</p>
             </div>
             <button class="secondary-btn" type="button">Save Draft</button>
           </div>
@@ -190,7 +185,7 @@ Additional Weather
           <div class="section-head">
             <div>
               <h2>Send Report</h2>
-              <p class="subtle">Report builder will be added in Pack 3.</p>
+              <p class="subtle">Report builder will be added in a later pack.</p>
             </div>
             <button class="secondary-btn" type="button">Save Draft</button>
           </div>
