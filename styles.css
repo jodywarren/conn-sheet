@@ -328,3 +328,89 @@ label{
     margin-left:0;
   }
 }
+.appliance-panel{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+  margin-top:16px;
+  background:#fafafa;
+}
+
+.appliance-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.appliance-title{
+  font-size:18px;
+  font-weight:800;
+}
+
+.appliance-code-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.chip-btn{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--cfa-red-border);
+  background:var(--cfa-red-soft);
+  color:#7d0017;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.chip-btn.active{
+  background:var(--good-bg);
+  border-color:var(--good-border);
+  color:var(--good-text);
+}
+
+.responder-add-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-top:14px;
+  flex-wrap:wrap;
+}
+
+.responder-add-row .field-input{
+  flex:1;
+  min-width:240px;
+}
+
+.crew-list{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.crew-card{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  background:white;
+}
+
+.crew-card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.crew-chip-row{
+  margin-top:10px;
+}
