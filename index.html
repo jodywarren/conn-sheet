@@ -1,1 +1,144 @@
 
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#b00020" />
+  <meta name="description" content="Connewarre Fire Brigade Turn Out Sheet" />
+  <title>Turn Out Sheet</title>
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./connewarre-logo.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-wrap">
+        <div class="logo-frame">
+          <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo" />
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
+        <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
+      </div>
+    </header>
+
+    <nav class="top-nav">
+      <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
+      <button class="tab-btn" data-page="respondersPage" type="button">Responders</button>
+      <button class="tab-btn" data-page="sendPage" type="button">Send Report</button>
+      <button class="tab-btn settings-tab" id="openSettingsBtn" type="button" aria-label="Profile and settings">⚙</button>
+    </nav>
+
+    <section class="status-wrap">
+      <div id="connectionBanner" class="status-banner online">Online</div>
+      <div id="draftMeta" class="status-meta">Draft autosave ready.</div>
+    </section>
+
+    <main class="main">
+      <section id="incidentPage" class="page active">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <h1>TURN OUT SHEET</h1>
+              <p class="subtle">Version <span id="appVersionText">3.0.0</span></p>
+            </div>
+            <button class="secondary-btn" type="button">Save Draft</button>
+          </div>
+
+          <div class="section">
+            <h2 class="section-title">Incident</h2>
+            <p class="subtle">This is the clean rebuild shell. Incident fields come next.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="respondersPage" class="page">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <h2>Responders</h2>
+              <p class="subtle">Responder panels will be added in Pack 2.</p>
+            </div>
+            <button class="secondary-btn" type="button">Save Draft</button>
+          </div>
+
+          <div class="placeholder-panel">
+            <strong>CONN 1</strong>
+          </div>
+
+          <div class="placeholder-panel">
+            <strong>CONN 2</strong>
+          </div>
+
+          <div class="placeholder-panel">
+            <strong>MTD P/T</strong>
+          </div>
+        </div>
+      </section>
+
+      <section id="sendPage" class="page">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <h2>Send Report</h2>
+              <p class="subtle">Report builder will be added in Pack 3.</p>
+            </div>
+            <button class="secondary-btn" type="button">Save Draft</button>
+          </div>
+
+          <div class="placeholder-panel">
+            <strong>Report preview placeholder</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="row between">
+        <h2>Profile / Settings</h2>
+        <button id="closeSettingsBtn" class="tiny-btn" type="button">Close</button>
+      </div>
+
+      <div class="grid">
+        <label>
+          Name
+          <input id="profileName" class="field-input editable-field" type="text" />
+        </label>
+
+        <label>
+          CFA Member Number
+          <input id="profileMemberNumber" class="field-input editable-field" type="text" />
+        </label>
+
+        <label>
+          Contact Number
+          <input id="profileContactNumber" class="field-input editable-field" type="text" />
+        </label>
+
+        <label>
+          Email
+          <input id="profileEmail" class="field-input editable-field" type="email" />
+        </label>
+
+        <label>
+          Brigade
+          <input id="profileBrigade" class="field-input editable-field" type="text" value="Connewarre" />
+        </label>
+      </div>
+
+      <div class="actions right">
+        <button id="saveProfileBtn" class="primary-btn" type="button">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
