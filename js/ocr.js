@@ -9,46 +9,34 @@ export function bindOcrEvents() {
   const scanBtn = document.getElementById("scanPagerBtn");
 
   upload?.addEventListener("change", handleScreenshotUpload);
-  scanBtn?.addEventListener("click", runOcrFromPreview);
+
+  scanBtn?.addEventListener("click", () => {
+    console.log("SCAN BUTTON CLICKED");
+    setScanStatus("Scan button pressed...", "scan-working");
+    runOcrFromPreview();
+  });
 }
 
 async function handleScreenshotUpload(event) {
-
   const file = event.target.files?.[0];
   if (!file) return;
 
   const dataUrl = await fileToDataUrl(file);
-
   state.incident.pagerScreenshot = dataUrl;
 
   const preview = document.getElementById("pagerPreview");
-
   if (preview) {
     preview.src = dataUrl;
     preview.classList.remove("hidden");
   }
 
   setScanStatus("Screenshot loaded. Press Scan Screenshot.", "scan-idle");
-
-  saveState();
-}
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  const dataUrl = await fileToDataUrl(file);
-  state.incident.pagerScreenshot = dataUrl;
-
-  const preview = document.getElementById("pagerPreview");
-  if (preview) {
-    preview.src = dataUrl;
-    preview.classList.remove("hidden");
-  }
-
-  setScanStatus("Screenshot loaded. Ready to scan.", "scan-idle");
   saveState();
 }
 
 async function runOcrFromPreview() {
+  console.log("runOcrFromPreview started");
+
   if (!window.Tesseract) {
     setScanStatus("OCR library not loaded.", "scan-error");
     return;
@@ -62,15 +50,24 @@ async function runOcrFromPreview() {
   try {
     setScanStatus("Reading screenshot...", "scan-working");
 
-    const result = await Tesseract.recognize(state.incident.pagerScreenshot, "eng", {
-      logger: (msg) => {
-        if (msg.status === "recognizing text" && typeof msg.progress === "number") {
-          setScanStatus(`Reading screenshot... ${Math.round(msg.progress * 100)}%`, "scan-working");
+    const result = await window.Tesseract.recognize(
+      state.incident.pagerScreenshot,
+      "eng",
+      {
+        logger: (msg) => {
+          if (msg.status === "recognizing text" && typeof msg.progress === "number") {
+            setScanStatus(
+              `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
+              "scan-working"
+            );
+          }
         }
       }
-    });
+    );
 
     const rawText = result?.data?.text || "";
+    console.log("OCR RAW TEXT:", rawText);
+
     const normalized = normalizeOcrText(rawText);
     const parsed = parsePagerText(normalized);
 
@@ -78,6 +75,7 @@ async function runOcrFromPreview() {
     loadIncidentIntoInputs();
 
     const confidence = getScanConfidence(parsed);
+
     if (confidence.status === "good") {
       setScanStatus("Scan complete", "scan-good");
     } else if (confidence.status === "warn") {
@@ -88,7 +86,7 @@ async function runOcrFromPreview() {
 
     saveState();
   } catch (error) {
-    console.error(error);
+    console.error("OCR FAILED:", error);
     setScanStatus("Scan failed. Check screenshot or enter details manually.", "scan-error");
   }
 }
