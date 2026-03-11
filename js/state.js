@@ -14,9 +14,20 @@ export const state = {
     email: "",
     brigade: "Connewarre"
   },
-  responders: {
-    oicName: ""
-  }
+responders: {
+  oicName: ""
+},
+
+incident: {
+  eventNumber: "",
+  pagerDate: "",
+  pagerTime: "",
+  brigadeCode: "",
+  incidentType: "",
+  pagerDetails: "",
+  actualLocation: "",
+  controlName: ""
+}
 };
 
 export function initState() {
