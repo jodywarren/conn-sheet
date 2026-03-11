@@ -1,4 +1,4 @@
-import { state, renderOicBanner } from "./state.js";
+import { state, renderOicBanner, saveState } from "./state.js";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -32,7 +32,9 @@ function renderAppliance(applianceKey, panelId) {
   if (!panel) return;
 
   const appliance = state.responders.appliances[applianceKey];
+  const statusClass = getApplianceStatusClass(appliance);
 
+  panel.className = `appliance-panel ${statusClass}`;
   panel.innerHTML = `
     <div class="appliance-head">
       <div class="appliance-title">${appliance.label}</div>
@@ -43,20 +45,20 @@ function renderAppliance(applianceKey, panelId) {
       </div>
     </div>
 
-<div class="responder-add-row">
-  <input
-    class="field-input editable-field"
-    id="${applianceKey}MemberInput"
-    list="${applianceKey}MemberList"
-    type="text"
-    placeholder="Type member name"
-    autocomplete="off"
-  />
-  <datalist id="${applianceKey}MemberList">
-    ${state.responders.members.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
-  </datalist>
-  <button class="secondary-btn" data-action="add-member" data-appliance="${applianceKey}" type="button">Add Member</button>
-</div>
+    <div class="responder-add-row">
+      <input
+        class="field-input editable-field"
+        id="${applianceKey}MemberInput"
+        list="${applianceKey}MemberList"
+        type="text"
+        placeholder="Type member name"
+        autocomplete="off"
+      />
+      <datalist id="${applianceKey}MemberList">
+        ${state.responders.members.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+      </datalist>
+      <button class="secondary-btn" data-action="add-member" data-appliance="${applianceKey}" type="button">Add Member</button>
+    </div>
 
     <div class="crew-list" id="${applianceKey}CrewList">
       ${appliance.crew.map((member) => renderCrewCard(applianceKey, member)).join("")}
@@ -92,43 +94,27 @@ function bindAppliancePanelEvents(panel, applianceKey) {
   panel.querySelectorAll("[data-action='set-code']").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.responders.appliances[applianceKey].code = btn.dataset.code;
+      saveState();
       renderRespondersPage();
+      focusMemberInput(applianceKey);
     });
   });
 
   panel.querySelectorAll("[data-action='add-member']").forEach((btn) => {
     btn.addEventListener("click", () => {
-const input = document.getElementById(`${applianceKey}MemberInput`);
-const selectedName = input?.value.trim().toUpperCase() || "";
-if (!selectedName) return;
-
-      const appliance = state.responders.appliances[applianceKey];
-      const alreadyExists = appliance.crew.some((m) => m.name === selectedName);
-      if (alreadyExists) return;
-
-      const memberData = state.responders.members.find(
-  (m) => String(m.name || "").trim().toUpperCase() === selectedName
-);
-
-if (!memberData) {
-  window.alert("Select a valid member from the list.");
-  return;
-}
-      appliance.crew.push({
-        id: uid(),
-        name: memberData?.name || selectedName,
-        phone: memberData?.phone || "",
-        isDriver: false,
-        isCrewLeader: false,
-        isOic: false,
-        isBa: false,
-        isInjured: false
-      });
-
-      if (input) input.value = "";
-      renderRespondersPage();
+      addMemberToAppliance(applianceKey);
     });
   });
+
+  const input = document.getElementById(`${applianceKey}MemberInput`);
+  if (input) {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addMemberToAppliance(applianceKey);
+      }
+    });
+  }
 
   panel.querySelectorAll("[data-action='remove-member']").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -142,7 +128,9 @@ if (!memberData) {
         state.responders.oicName = "";
       }
 
+      saveState();
       renderRespondersPage();
+      focusMemberInput(applianceKey);
     });
   });
 
@@ -187,9 +175,74 @@ if (!memberData) {
         syncOicName();
       }
 
+      saveState();
       renderRespondersPage();
+      focusMemberInput(applianceKey);
     });
   });
+}
+
+function addMemberToAppliance(applianceKey) {
+  const input = document.getElementById(`${applianceKey}MemberInput`);
+  const selectedName = input?.value.trim().toUpperCase() || "";
+  if (!selectedName) return;
+
+  const memberData = state.responders.members.find(
+    (m) => String(m.name || "").trim().toUpperCase() === selectedName
+  );
+
+  if (!memberData) {
+    window.alert("Select a valid member from the list.");
+    focusMemberInput(applianceKey);
+    return;
+  }
+
+  if (isMemberAlreadyAssigned(selectedName)) {
+    window.alert("Member already assigned to another appliance.");
+    focusMemberInput(applianceKey);
+    return;
+  }
+
+  const appliance = state.responders.appliances[applianceKey];
+  const alreadyExists = appliance.crew.some(
+    (m) => String(m.name || "").trim().toUpperCase() === selectedName
+  );
+  if (alreadyExists) {
+    focusMemberInput(applianceKey);
+    return;
+  }
+
+  appliance.crew.push({
+    id: uid(),
+    name: memberData.name,
+    phone: memberData.phone || "",
+    isDriver: false,
+    isCrewLeader: false,
+    isOic: false,
+    isBa: false,
+    isInjured: false
+  });
+
+  if (input) input.value = "";
+
+  saveState();
+  renderRespondersPage();
+  focusMemberInput(applianceKey);
+}
+
+function isMemberAlreadyAssigned(targetName) {
+  return Object.values(state.responders.appliances).some((appliance) =>
+    appliance.crew.some(
+      (member) => String(member.name || "").trim().toUpperCase() === targetName
+    )
+  );
+}
+
+function focusMemberInput(applianceKey) {
+  setTimeout(() => {
+    const input = document.getElementById(`${applianceKey}MemberInput`);
+    input?.focus();
+  }, 0);
 }
 
 function clearAllOic() {
@@ -210,6 +263,15 @@ function syncOicName() {
     });
   });
   state.responders.oicName = found;
+}
+
+function getApplianceStatusClass(appliance) {
+  if (!appliance.crew.length) return "appliance-empty";
+
+  const hasDriver = appliance.crew.some((member) => member.isDriver);
+  if (!hasDriver) return "appliance-warning";
+
+  return "appliance-ready";
 }
 
 function escapeHtml(value) {
