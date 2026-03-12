@@ -417,15 +417,6 @@ function extractPagerTime(text) {
   return `${fallback[1]}:${fallback[2]}`;
 }
 
-  // Fallback only if a proper header time is not found
-  const fallbackMatch = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/);
-  if (fallbackMatch) {
-    return `${fallbackMatch[1]}:${fallbackMatch[2]}`;
-  }
-
-  return "";
-}
-
 function validateEventNumberAgainstDate(eventNumber, pagerDate) {
   if (!eventNumber || !pagerDate) return false;
 
