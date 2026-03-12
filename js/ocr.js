@@ -571,11 +571,17 @@ function extractPagerDetailsFromBody(body, addressInfo) {
   if (!text) return "";
 
   if (!addressInfo) {
-    return text.replace(/\s{2,}/g, " ").trim();
+    return text
+      .replace(/\bRESPOND\s*>?$/g, "")
+      .replace(/\bSINCE ALERT\b.*$/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
   }
 
   return text
     .slice(0, addressInfo.start)
+    .replace(/\bRESPOND\s*>?$/g, "")
+    .replace(/\bSINCE ALERT\b.*$/g, "")
     .replace(/\s{2,}/g, " ")
     .replace(/[-/,\s]+$/, "")
     .trim();
