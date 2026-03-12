@@ -6,7 +6,7 @@ export function bindIncidentInputs() {
   bindSelect("distanceToScene");
   bindSelect("weather1");
   bindSelect("weather2");
-  bindSceneBrigades();
+  bindSceneUnits();
 }
 
 function bindTextInputs() {
@@ -30,6 +30,7 @@ function bindTextInputs() {
     el.addEventListener("input", () => {
       state.incident[id] = el.value.trim();
       saveState();
+      applyFieldCompletionStates();
     });
   });
 
@@ -39,6 +40,7 @@ function bindTextInputs() {
       state.incident.actualAddress = actualAddressEl.value.trim();
       state.incident.actualAddressEdited = true;
       saveState();
+      applyFieldCompletionStates();
     });
   }
 }
@@ -50,72 +52,79 @@ function bindSelect(id) {
   el.addEventListener("change", () => {
     state.incident[id] = el.value;
     saveState();
+    applyFieldCompletionStates();
   });
 }
 
-function bindSceneBrigades() {
-  const input = document.getElementById("sceneBrigadeInput");
-  const addBtn = document.getElementById("addSceneBrigadeBtn");
+function bindSceneUnits() {
+  const input = document.getElementById("sceneUnitInput");
+  const addBtn = document.getElementById("addSceneUnitBtn");
 
   if (!input || !addBtn) return;
 
-  addBtn.addEventListener("click", () => {
-    addSceneBrigadeFromInput();
-  });
+  addBtn.addEventListener("click", addSceneUnitFromInput);
 
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      addSceneBrigadeFromInput();
+      addSceneUnitFromInput();
     }
   });
 }
 
-function addSceneBrigadeFromInput() {
-  const input = document.getElementById("sceneBrigadeInput");
+function addSceneUnitFromInput() {
+  const input = document.getElementById("sceneUnitInput");
   if (!input) return;
 
   const code = input.value.trim().toUpperCase();
   if (!code) return;
 
-  if (!state.incident.brigadesOnScene.includes(code)) {
-    state.incident.brigadesOnScene.push(code);
+  if (!state.incident.sceneUnits.includes(code)) {
+    state.incident.sceneUnits.push(code);
   }
 
   input.value = "";
-  renderSceneBrigadeChips();
+  renderSceneUnitChips();
   saveState();
   input.focus();
 }
 
-export function setSceneBrigades(codes = []) {
-  state.incident.brigadesOnScene = [...new Set(codes.filter(Boolean).map((x) => String(x).trim().toUpperCase()))];
-  renderSceneBrigadeChips();
+export function setPagedSceneUnits(codes = []) {
+  const cleaned = [...new Set(codes.filter(Boolean).map((x) => String(x).trim().toUpperCase()))];
+  state.incident.pagedSceneUnits = cleaned;
+  state.incident.sceneUnits = cleaned.slice();
+  renderSceneUnitChips();
   saveState();
 }
 
-export function mergeSceneBrigades(codes = []) {
-  const merged = new Set(state.incident.brigadesOnScene);
+export function mergePagedSceneUnits(codes = []) {
+  const paged = new Set(state.incident.pagedSceneUnits || []);
+  const visible = new Set(state.incident.sceneUnits || []);
 
   codes.forEach((code) => {
     const clean = String(code || "").trim().toUpperCase();
-    if (clean) merged.add(clean);
+    if (!clean) return;
+    paged.add(clean);
+    visible.add(clean);
   });
 
-  state.incident.brigadesOnScene = [...merged];
-  renderSceneBrigadeChips();
+  state.incident.pagedSceneUnits = [...paged];
+  state.incident.sceneUnits = [...visible];
+  renderSceneUnitChips();
   saveState();
 }
 
-export function renderSceneBrigadeChips() {
-  const wrap = document.getElementById("sceneBrigadeChips");
+export function renderSceneUnitChips() {
+  const wrap = document.getElementById("sceneUnitChips");
   if (!wrap) return;
 
   wrap.innerHTML = "";
 
-  state.incident.brigadesOnScene.forEach((code) => {
+  (state.incident.sceneUnits || []).forEach((code) => {
     const chip = document.createElement("div");
-    chip.className = "scene-chip";
+    const isPaged = (state.incident.pagedSceneUnits || []).includes(code);
+
+    chip.className = `scene-chip ${isPaged ? "from-pager" : "manual-unit"}`;
 
     const text = document.createElement("span");
     text.textContent = code;
@@ -124,8 +133,9 @@ export function renderSceneBrigadeChips() {
     removeBtn.type = "button";
     removeBtn.textContent = "✕";
     removeBtn.addEventListener("click", () => {
-      state.incident.brigadesOnScene = state.incident.brigadesOnScene.filter((x) => x !== code);
-      renderSceneBrigadeChips();
+      state.incident.sceneUnits = state.incident.sceneUnits.filter((x) => x !== code);
+      state.incident.pagedSceneUnits = state.incident.pagedSceneUnits.filter((x) => x !== code);
+      renderSceneUnitChips();
       saveState();
     });
 
@@ -136,7 +146,36 @@ export function renderSceneBrigadeChips() {
 }
 
 export function loadIncidentIntoInputs() {
-  const fieldIds = [
+  const fieldMap = {
+    eventNumber: state.incident.eventNumber,
+    pagerDate: state.incident.pagerDate,
+    pagerTime: state.incident.pagerTime,
+    alertAreaCode: state.incident.alertAreaCode,
+    brigadeRole: state.incident.brigadeRole,
+    incidentType: state.incident.incidentType,
+    responseCode: state.incident.responseCode,
+    pagerDetails: state.incident.pagerDetails,
+    scannedAddress: state.incident.scannedAddress,
+    actualAddress: state.incident.actualAddress,
+    controlName: state.incident.controlName,
+    firstAgency: state.incident.firstAgency,
+    distanceToScene: state.incident.distanceToScene,
+    weather1: state.incident.weather1,
+    weather2: state.incident.weather2
+  };
+
+  Object.entries(fieldMap).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value || "";
+  });
+
+  renderSceneUnitChips();
+  applyFieldCompletionStates();
+}
+
+export function applyFieldCompletionStates() {
+  const ids = [
     "eventNumber",
     "pagerDate",
     "pagerTime",
@@ -154,11 +193,11 @@ export function loadIncidentIntoInputs() {
     "weather2"
   ];
 
-  fieldIds.forEach((id) => {
+  ids.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.value = state.incident[id] || "";
-  });
 
-  renderSceneBrigadeChips();
+    const value = String(el.value || "").trim();
+    el.classList.toggle("field-complete", value.length > 0);
+  });
 }
