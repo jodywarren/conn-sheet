@@ -393,13 +393,12 @@ function extractPagerDate(text) {
 }
 
 function extractPagerTime(text) {
-  const fullText = String(text || "");
+  const headerMatch = String(text || "").match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
 
-  // Prefer pager card header time near the top of the block, usually HH:MM:SS
-  const headerMatch = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
-  if (headerMatch) {
-    return `${headerMatch[1]}:${headerMatch[2]}`;
-  }
+  if (!headerMatch) return "";
+
+  return `${headerMatch[1]}:${headerMatch[2]}`;
+}
 
   // Fallback only if a proper header time is not found
   const fallbackMatch = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/);
