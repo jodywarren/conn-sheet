@@ -54,7 +54,7 @@ function renderAppliance(applianceKey, panelId) {
   panel.className = `appliance-panel ${statusClass}`;
   panel.innerHTML = `
     <div class="appliance-head">
-      <div class="appliance-title">${appliance.label}</div>
+      <div class="appliance-title">${escapeHtml(appliance.label)}</div>
       <div class="appliance-code-row">
         <button class="chip-btn ${appliance.code === "C1" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C1" type="button">Code 1</button>
         <button class="chip-btn ${appliance.code === "C3" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C3" type="button">Code 3</button>
@@ -103,10 +103,22 @@ function renderCrewCard(applianceKey, member) {
       <div class="crew-card-top">
         <div>
           <strong>${escapeHtml(member.name)}</strong>
-        <div class="subtle">${buildMemberSubline(member)}</div>
+          <div class="subtle">${buildMemberSubline(member)}</div>
         </div>
         <button class="tiny-btn" data-action="remove-member" data-appliance="${applianceKey}" data-member-id="${member.id}" type="button">Remove</button>
       </div>
+
+      <div class="chips crew-chip-row">
+        <button class="chip-btn ${member.isDriver ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isDriver" type="button">Driver</button>
+        <button class="chip-btn ${member.isCrewLeader ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isCrewLeader" type="button">CL</button>
+        <button class="chip-btn ${member.isOic ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isOic" type="button">OIC</button>
+        <button class="chip-btn ${member.isBa ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isBa" type="button">BA</button>
+        <button class="chip-btn ${member.isInjured ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isInjured" type="button">Injured</button>
+      </div>
+    </div>
+  `;
+}
+
 function buildMemberSubline(member) {
   const parts = [];
 
@@ -120,17 +132,6 @@ function buildMemberSubline(member) {
   }
 
   return parts.join(" • ");
-}
-
-      <div class="chips crew-chip-row">
-        <button class="chip-btn ${member.isDriver ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isDriver" type="button">Driver</button>
-        <button class="chip-btn ${member.isCrewLeader ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isCrewLeader" type="button">CL</button>
-        <button class="chip-btn ${member.isOic ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isOic" type="button">OIC</button>
-        <button class="chip-btn ${member.isBa ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isBa" type="button">BA</button>
-        <button class="chip-btn ${member.isInjured ? "active" : ""}" data-action="toggle-flag" data-appliance="${applianceKey}" data-member-id="${member.id}" data-flag="isInjured" type="button">Injured</button>
-      </div>
-    </div>
-  `;
 }
 
 function bindAppliancePanelEvents(panel, applianceKey) {
@@ -169,6 +170,7 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
       if (removed?.isOic) {
         state.responders.oicName = "";
+        state.responders.oicPhone = "";
       }
 
       saveState();
@@ -200,13 +202,17 @@ function bindAppliancePanelEvents(panel, applianceKey) {
         }
         member.isCrewLeader = !member.isCrewLeader;
       } else if (flag === "isOic") {
+        const turningOn = !member.isOic;
         clearAllOic();
-        if (!member.isOic) {
+
+        if (turningOn) {
           member.isOic = true;
-          state.responders.oicName = member.name;
+          state.responders.oicName = member.name || "";
+          state.responders.oicPhone = member.phone || "";
         } else {
           member.isOic = false;
           state.responders.oicName = "";
+          state.responders.oicPhone = "";
         }
       } else if (flag === "isBa") {
         member.isBa = !member.isBa;
@@ -215,7 +221,7 @@ function bindAppliancePanelEvents(panel, applianceKey) {
       }
 
       if (flag !== "isOic") {
-        syncOicName();
+        syncOicFromCrew();
       }
 
       saveState();
@@ -252,6 +258,7 @@ function addMemberToAppliance(applianceKey) {
   const alreadyExists = appliance.crew.some(
     (m) => String(m.name || "").trim().toUpperCase() === selectedName
   );
+
   if (alreadyExists) {
     focusMemberInput(applianceKey);
     return;
@@ -315,16 +322,21 @@ function clearAllOic() {
   });
 }
 
-function syncOicName() {
-  let found = "";
+function syncOicFromCrew() {
+  let foundMember = null;
+
   Object.values(state.responders.appliances).forEach((appliance) => {
     appliance.crew.forEach((member) => {
       if (member.isOic) {
-        found = member.name;
+        foundMember = member;
       }
     });
   });
-  state.responders.oicName = found;
+
+  if (foundMember) {
+    state.responders.oicName = foundMember.name || "";
+    state.responders.oicPhone = foundMember.phone || "";
+  }
 }
 
 function getApplianceStatusClass(appliance) {
@@ -344,11 +356,13 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function getDisplayBrigadeLabel(sourceBrigade) {
   const code = String(sourceBrigade || "").trim().toUpperCase();
 
   if (code === "GROV") return "Grovedale";
   if (code === "FRES") return "Freshwater Creek";
+  if (code === "CONN") return "Connewarre";
 
   return "";
 }
