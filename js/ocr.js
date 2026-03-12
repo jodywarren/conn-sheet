@@ -222,6 +222,7 @@ function splitPagerBlocks(text) {
 
   for (const line of lines) {
     const upper = line.toUpperCase();
+
     const isHeader =
       upper.includes("EMERGENCY") ||
       upper.includes("EMERGENCV") ||
@@ -379,30 +380,39 @@ function extractEventNumber(text) {
 
 function extractPagerDate(text) {
   const fullText = String(text || "");
+  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  let match = fullText.match(/\bEMERGENCY\b[\s\S]{0,40}?(\d{2})-(\d{2})-(\d{4})\b/);
-  if (match) {
-    return `${match[3]}-${match[2]}-${match[1]}`;
+  for (const line of lines) {
+    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
+    if (match) {
+      const dd = match[1];
+      const mm = match[2];
+      const yyyy = match[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
   }
 
-  match = fullText.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
-  if (!match) return "";
+  const fallback = fullText.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
+  if (!fallback) return "";
 
-  return `${match[3]}-${match[2]}-${match[1]}`;
+  return `${fallback[3]}-${fallback[2]}-${fallback[1]}`;
 }
 
 function extractPagerTime(text) {
   const fullText = String(text || "");
+  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  let match = fullText.match(/\bEMERGENCY\b[\s\S]{0,25}?([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
-  if (match) {
-    return `${match[1]}:${match[2]}`;
+  for (const line of lines) {
+    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
   }
 
-  match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
-  if (!match) return "";
+  const fallback = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (!fallback) return "";
 
-  return `${match[1]}:${match[2]}`;
+  return `${fallback[1]}:${fallback[2]}`;
 }
 
 function validateEventNumberAgainstDate(eventNumber, pagerDate) {
@@ -422,8 +432,8 @@ function extractAlertAreaCode(text) {
   const letters = rawCode
     .slice(0, 4)
     .replace(/0/g, "O")
-    .replace(/6RV/g, "GROV")
-    .replace(/GRV/g, "GROV");
+    .replace(/^GRV$/, "GROV")
+    .replace(/^GR0V$/, "GROV");
   const suffix = rawCode
     .slice(4)
     .replace(/Z/g, "2")
@@ -433,7 +443,7 @@ function extractAlertAreaCode(text) {
 }
 
 function extractPrimaryBrigade(alertAreaCode) {
-  return normalizeBrigadeCode(String(alertAreaCode || "").replace(/\d+/g, ""));
+  return normalizeSceneUnit(String(alertAreaCode || "").replace(/\d+/g, ""));
 }
 
 function deriveBrigadeRole(primaryBrigade) {
@@ -577,33 +587,37 @@ function extractSceneUnits(text) {
 
     if (cleaned.startsWith("C") && cleaned.length > 1) {
       const stripped = cleaned.slice(1);
-      const brigade = normalizeBrigadeCode(stripped);
-      if (KNOWN_BRIGADE_CODES.includes(brigade)) {
-        cleaned = brigade;
+      const unit = normalizeSceneUnit(stripped);
+      if ((KNOWN_BRIGADE_CODES.includes(unit) || KNOWN_OTHER_UNITS.includes(unit)) && !units.includes(unit)) {
+        units.push(unit);
       }
-    } else {
-      cleaned = normalizeBrigadeCode(cleaned);
+      return;
     }
 
-    if (KNOWN_BRIGADE_CODES.includes(cleaned) || KNOWN_OTHER_UNITS.includes(cleaned)) {
-      if (!units.includes(cleaned)) {
-        units.push(cleaned);
-      }
+    cleaned = normalizeSceneUnit(cleaned);
+    if ((KNOWN_BRIGADE_CODES.includes(cleaned) || KNOWN_OTHER_UNITS.includes(cleaned)) && !units.includes(cleaned)) {
+      units.push(cleaned);
     }
   });
 
   return units;
 }
 
-function normalizeBrigadeCode(code) {
+function normalizeSceneUnit(code) {
   const clean = String(code || "").trim().toUpperCase();
 
+  if (clean === "AFP" || clean === "AFPR" || clean === "FP" || clean === "POLICE") return "POLICE";
   if (clean === "GRV" || clean === "GROV" || clean === "GR0V") return "GROV";
-  if (clean === "C0NN" || clean === "CONN") return "CONN";
+  if (clean === "CONN" || clean === "C0NN") return "CONN";
   if (clean === "FRES") return "FRES";
   if (clean === "BARW") return "BARW";
   if (clean === "TRQY" || clean === "TQRY") return "TRQY";
   if (clean === "MTDU") return "MTDU";
+  if (clean === "P64") return "P64";
+  if (clean === "P63B") return "P63B";
+  if (clean === "R63") return "R63";
+  if (clean === "STHB1") return "STHB1";
+  if (clean === "AV") return "AV";
   if (clean === "MODE") return "MODE";
 
   return clean;
