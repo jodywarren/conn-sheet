@@ -184,17 +184,13 @@
             </div>
 
             <div class="section">
-              <h3 class="section-title">Brigades On Scene</h3>
+  <div class="row wrap">
+    <input id="sceneUnitInput" class="field-input editable-field" type="text" placeholder="Add another appliance or unit">
+    <button id="addSceneUnitBtn" class="secondary-btn orange-btn" type="button">Add another appliance</button>
+  </div>
 
-              <div class="row wrap">
-                <input id="sceneBrigadeInput" class="field-input editable-field" type="text" placeholder="Type brigade code eg CONN">
-                <button id="addSceneBrigadeBtn" class="secondary-btn" type="button">Add</button>
-              </div>
-
-              <div id="sceneBrigadeChips" class="chip-wrap"></div>
-            </div>
-          </div>
-        </div>
+  <div id="sceneUnitChips" class="chip-wrap"></div>
+</div>
       </section>
 
       <section id="respondersPage" class="page">
@@ -210,6 +206,7 @@
           <div id="conn1Panel" class="appliance-panel"></div>
           <div id="conn2Panel" class="appliance-panel"></div>
           <div id="mtdptPanel" class="appliance-panel"></div>
+          <div id="otherRespondingPanel" class="appliance-panel"></div>
         </div>
       </section>
 
