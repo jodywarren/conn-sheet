@@ -381,23 +381,40 @@ function extractEventNumber(text) {
 }
 
 function extractPagerDate(text) {
-  const match = String(text || "").match(/\b([01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
+  const fullText = String(text || "");
+  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  if (!match) return "";
+  for (const line of lines) {
+    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
+    if (match) {
+      const dd = match[1];
+      const mm = match[2];
+      const yyyy = match[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+  }
 
-  const dd = match[2];
-  const mm = match[3];
-  const yyyy = match[4];
+  const fallback = fullText.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
+  if (!fallback) return "";
 
-  return `${yyyy}-${mm}-${dd}`;
+  return `${fallback[3]}-${fallback[2]}-${fallback[1]}`;
 }
 
 function extractPagerTime(text) {
-  const headerMatch = String(text || "").match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
+  const fullText = String(text || "");
+  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  if (!headerMatch) return "";
+  for (const line of lines) {
+    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+  }
 
-  return `${headerMatch[1]}:${headerMatch[2]}`;
+  const fallback = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (!fallback) return "";
+
+  return `${fallback[1]}:${fallback[2]}`;
 }
 
   // Fallback only if a proper header time is not found
@@ -419,14 +436,17 @@ function validateEventNumberAgainstDate(eventNumber, pagerDate) {
 }
 
 function extractAlertAreaCode(text) {
-  const match = String(text || "").match(/\bALERT\s+([A-Z]{4}[0-9Z]{1,2})\b/);
+  const match = String(text || "").match(/\bALERT\s+([A-Z]{4}[0-9ZO]{1,2})\b/);
   if (!match) return "";
 
-  let code = match[1];
-  code = code.replace(/Z/g, "2");
-  code = code.replace(/O/g, "0");
+  const rawCode = match[1];
+  const letters = rawCode.slice(0, 4);
+  const suffix = rawCode
+    .slice(4)
+    .replace(/Z/g, "2")
+    .replace(/O/g, "0");
 
-  return code;
+  return `${letters}${suffix}`;
 }
 
 function extractPrimaryBrigade(alertAreaCode) {
