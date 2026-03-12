@@ -403,7 +403,6 @@ function extractPagerDate(text) {
 function extractPagerTime(text) {
   const fullText = String(text || "");
   const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
-
   for (const line of lines) {
     const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
     if (match) {
