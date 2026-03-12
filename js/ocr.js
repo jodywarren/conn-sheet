@@ -216,11 +216,12 @@ function splitPagerBlocks(text) {
   for (const line of lines) {
     const upper = line.toUpperCase();
 
-    const isHeader =
-      upper.includes("EMERGENCY") ||
-      upper.includes("EMERGENCV") ||
-      upper.includes("NON EMERGENCY") ||
-      upper.includes("ADMIN");
+const isHeader =
+  upper.includes("EMERGENCY") ||
+  upper.includes("EMERGENCV") ||
+  upper.startsWith("ALERT ") ||
+  upper.includes("NON EMERGENCY") ||
+  upper.includes("ADMIN");
 
     if (isHeader && currentBlock.length) {
       blocks.push(currentBlock.join("\n"));
@@ -241,7 +242,15 @@ function getBlockType(blockText) {
   const text = String(blockText || "").toUpperCase();
 
   if (text.includes("NON EMERGENCY")) return "NON EMERGENCY";
-  if (text.includes("EMERGENCY") || text.includes("EMERGENCV")) return "EMERGENCY";
+
+  if (
+    text.includes("EMERGENCY") ||
+    text.includes("EMERGENCV") ||
+    text.includes("ALERT ")
+  ) {
+    return "EMERGENCY";
+  }
+
   if (text.includes("ADMIN")) return "ADMIN";
 
   return "UNKNOWN";
