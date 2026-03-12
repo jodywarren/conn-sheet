@@ -40,6 +40,7 @@ export function renderRespondersPage() {
   renderAppliance("conn1", "conn1Panel");
   renderAppliance("conn2", "conn2Panel");
   renderAppliance("mtdpt", "mtdptPanel");
+  renderOtherResponding("otherRespondingPanel");
   renderOicBanner();
 }
 
@@ -85,25 +86,13 @@ function renderAppliance(applianceKey, panelId) {
   bindAppliancePanelEvents(panel, applianceKey);
 }
 
-function getMembersForAppliance(applianceKey) {
-  if (applianceKey === "mtdpt") {
-    return [
-      ...(state.responders.members.conn || []),
-      ...(state.responders.members.grov || []),
-      ...(state.responders.members.fres || [])
-    ];
-  }
-
-  return state.responders.members.conn || [];
-}
-
 function renderCrewCard(applianceKey, member) {
   return `
     <div class="crew-card" data-member-id="${member.id}">
       <div class="crew-card-top">
         <div>
           <strong>${escapeHtml(member.name)}</strong>
-          <div class="subtle">${buildMemberSubline(member)}</div>
+          <div class="subtle">${buildMemberSubline(member.phone, member.sourceBrigade)}</div>
         </div>
         <button class="tiny-btn" data-action="remove-member" data-appliance="${applianceKey}" data-member-id="${member.id}" type="button">Remove</button>
       </div>
@@ -119,19 +108,117 @@ function renderCrewCard(applianceKey, member) {
   `;
 }
 
-function buildMemberSubline(member) {
-  const parts = [];
+function renderOtherResponding(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
 
-  if (member.phone) {
-    parts.push(escapeHtml(member.phone));
-  }
+  const allMembers = getAllMembers();
 
-  const brigadeLabel = getDisplayBrigadeLabel(member.sourceBrigade);
-  if (brigadeLabel) {
-    parts.push(escapeHtml(brigadeLabel));
-  }
+  panel.className = "appliance-panel";
+  panel.innerHTML = `
+    <div class="appliance-head">
+      <div class="appliance-title">Other Responding</div>
+    </div>
 
-  return parts.join(" • ");
+    <div class="other-responding-section">
+      <div class="subhead">Station</div>
+      <div class="responder-add-row">
+        <input
+          class="field-input editable-field"
+          id="stationResponderNameInput"
+          list="stationResponderNameList"
+          type="text"
+          placeholder="Type member name"
+          autocomplete="off"
+        />
+        <datalist id="stationResponderNameList">
+          ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+        </datalist>
+
+        <input
+          class="field-input editable-field"
+          id="stationResponderNumberInput"
+          type="text"
+          placeholder="Number"
+          autocomplete="off"
+        />
+
+        <button class="secondary-btn" id="addStationResponderBtn" type="button">Add</button>
+      </div>
+
+      <div class="crew-list">
+        ${state.responders.stationResponders.map((member) => renderStationResponderCard(member)).join("")}
+      </div>
+    </div>
+
+    <div class="other-responding-section">
+      <div class="subhead">Direct</div>
+      <div class="responder-add-row">
+        <input
+          class="field-input editable-field"
+          id="directResponderNameInput"
+          list="directResponderNameList"
+          type="text"
+          placeholder="Type member name"
+          autocomplete="off"
+        />
+        <datalist id="directResponderNameList">
+          ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+        </datalist>
+
+        <input
+          class="field-input editable-field"
+          id="directResponderNumberInput"
+          type="text"
+          placeholder="Number"
+          autocomplete="off"
+        />
+
+        <button class="secondary-btn" id="addDirectResponderBtn" type="button">Add</button>
+      </div>
+
+      <div class="crew-list">
+        ${state.responders.directResponders.map((member) => renderDirectResponderCard(member)).join("")}
+      </div>
+    </div>
+  `;
+
+  bindOtherRespondingEvents(panel);
+}
+
+function renderStationResponderCard(member) {
+  return `
+    <div class="crew-card" data-member-id="${member.id}">
+      <div class="crew-card-top">
+        <div>
+          <strong>${escapeHtml(member.name)}</strong>
+          <div class="subtle">${escapeHtml(member.number || "")}</div>
+        </div>
+        <button class="tiny-btn" data-action="remove-station" data-member-id="${member.id}" type="button">Remove</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderDirectResponderCard(member) {
+  return `
+    <div class="crew-card" data-member-id="${member.id}">
+      <div class="crew-card-top">
+        <div>
+          <strong>${escapeHtml(member.name)}</strong>
+          <div class="subtle">${escapeHtml(member.number || "")}</div>
+        </div>
+        <button class="tiny-btn" data-action="remove-direct" data-member-id="${member.id}" type="button">Remove</button>
+      </div>
+
+      <div class="chips crew-chip-row">
+        <button class="chip-btn ${member.isCrewLeader ? "active" : ""}" data-action="toggle-direct-flag" data-member-id="${member.id}" data-flag="isCrewLeader" type="button">CL</button>
+        <button class="chip-btn ${member.isOic ? "active" : ""}" data-action="toggle-direct-flag" data-member-id="${member.id}" data-flag="isOic" type="button">OIC</button>
+        <button class="chip-btn ${member.isBa ? "active" : ""}" data-action="toggle-direct-flag" data-member-id="${member.id}" data-flag="isBa" type="button">BA</button>
+        <button class="chip-btn ${member.isInjured ? "active" : ""}" data-action="toggle-direct-flag" data-member-id="${member.id}" data-flag="isInjured" type="button">Injured</button>
+      </div>
+    </div>
+  `;
 }
 
 function bindAppliancePanelEvents(panel, applianceKey) {
@@ -221,12 +308,128 @@ function bindAppliancePanelEvents(panel, applianceKey) {
       }
 
       if (flag !== "isOic") {
-        syncOicFromCrew();
+        syncOicFromAllResponse();
       }
 
       saveState();
       renderRespondersPage();
       focusMemberInput(applianceKey);
+    });
+  });
+}
+
+function bindOtherRespondingEvents(panel) {
+  const stationNameInput = document.getElementById("stationResponderNameInput");
+  const stationNumberInput = document.getElementById("stationResponderNumberInput");
+  const addStationBtn = document.getElementById("addStationResponderBtn");
+
+  if (stationNameInput) {
+    stationNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addStationResponder();
+      }
+    });
+  }
+
+  if (stationNumberInput) {
+    stationNumberInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addStationResponder();
+      }
+    });
+  }
+
+  if (addStationBtn) {
+    addStationBtn.addEventListener("click", addStationResponder);
+  }
+
+  const directNameInput = document.getElementById("directResponderNameInput");
+  const directNumberInput = document.getElementById("directResponderNumberInput");
+  const addDirectBtn = document.getElementById("addDirectResponderBtn");
+
+  if (directNameInput) {
+    directNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addDirectResponder();
+      }
+    });
+  }
+
+  if (directNumberInput) {
+    directNumberInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addDirectResponder();
+      }
+    });
+  }
+
+  if (addDirectBtn) {
+    addDirectBtn.addEventListener("click", addDirectResponder);
+  }
+
+  panel.querySelectorAll("[data-action='remove-station']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const memberId = btn.dataset.memberId;
+      state.responders.stationResponders = state.responders.stationResponders.filter((m) => m.id !== memberId);
+      saveState();
+      renderRespondersPage();
+    });
+  });
+
+  panel.querySelectorAll("[data-action='remove-direct']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const memberId = btn.dataset.memberId;
+      const removed = state.responders.directResponders.find((m) => m.id === memberId);
+      state.responders.directResponders = state.responders.directResponders.filter((m) => m.id !== memberId);
+
+      if (removed?.isOic) {
+        state.responders.oicName = "";
+        state.responders.oicPhone = "";
+      }
+
+      saveState();
+      renderRespondersPage();
+    });
+  });
+
+  panel.querySelectorAll("[data-action='toggle-direct-flag']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const memberId = btn.dataset.memberId;
+      const flag = btn.dataset.flag;
+      const member = state.responders.directResponders.find((m) => m.id === memberId);
+      if (!member) return;
+
+      if (flag === "isCrewLeader") {
+        member.isCrewLeader = !member.isCrewLeader;
+      } else if (flag === "isOic") {
+        const turningOn = !member.isOic;
+        clearAllOic();
+
+        if (turningOn) {
+          member.isOic = true;
+          state.responders.oicName = member.name || "";
+          state.responders.oicPhone = member.number || "";
+        } else {
+          member.isOic = false;
+          state.responders.oicName = "";
+          state.responders.oicPhone = "";
+        }
+      } else if (flag === "isBa") {
+        member.isBa = !member.isBa;
+      } else if (flag === "isInjured") {
+        member.isInjured = !member.isInjured;
+      }
+
+      if (flag !== "isOic") {
+        syncOicFromAllResponse();
+      }
+
+      saveState();
+      renderRespondersPage();
     });
   });
 }
@@ -248,21 +451,13 @@ function addMemberToAppliance(applianceKey) {
     return;
   }
 
-  if (isMemberAlreadyAssigned(selectedName)) {
-    window.alert("Member already assigned to another appliance.");
+  if (isMemberAlreadyAssignedAnywhere(selectedName)) {
+    window.alert("Member already assigned elsewhere.");
     focusMemberInput(applianceKey);
     return;
   }
 
   const appliance = state.responders.appliances[applianceKey];
-  const alreadyExists = appliance.crew.some(
-    (m) => String(m.name || "").trim().toUpperCase() === selectedName
-  );
-
-  if (alreadyExists) {
-    focusMemberInput(applianceKey);
-    return;
-  }
 
   appliance.crew.push({
     id: uid(),
@@ -283,6 +478,87 @@ function addMemberToAppliance(applianceKey) {
   focusMemberInput(applianceKey);
 }
 
+function addStationResponder() {
+  const nameInput = document.getElementById("stationResponderNameInput");
+  const numberInput = document.getElementById("stationResponderNumberInput");
+
+  const name = String(nameInput?.value || "").trim();
+  const number = String(numberInput?.value || "").trim();
+
+  if (!name) return;
+
+  if (isMemberAlreadyAssignedAnywhere(name.toUpperCase())) {
+    window.alert("Member already assigned elsewhere.");
+    return;
+  }
+
+  const matched = findMemberByName(name);
+  state.responders.stationResponders.push({
+    id: uid(),
+    name: matched?.name || name,
+    number: number || matched?.phone || ""
+  });
+
+  if (nameInput) nameInput.value = "";
+  if (numberInput) numberInput.value = "";
+
+  saveState();
+  renderRespondersPage();
+}
+
+function addDirectResponder() {
+  const nameInput = document.getElementById("directResponderNameInput");
+  const numberInput = document.getElementById("directResponderNumberInput");
+
+  const name = String(nameInput?.value || "").trim();
+  const number = String(numberInput?.value || "").trim();
+
+  if (!name) return;
+
+  if (isMemberAlreadyAssignedAnywhere(name.toUpperCase())) {
+    window.alert("Member already assigned elsewhere.");
+    return;
+  }
+
+  const matched = findMemberByName(name);
+  state.responders.directResponders.push({
+    id: uid(),
+    name: matched?.name || name,
+    number: number || matched?.phone || "",
+    isCrewLeader: false,
+    isOic: false,
+    isBa: false,
+    isInjured: false
+  });
+
+  if (nameInput) nameInput.value = "";
+  if (numberInput) numberInput.value = "";
+
+  saveState();
+  renderRespondersPage();
+}
+
+function getMembersForAppliance(applianceKey) {
+  if (applianceKey === "mtdpt") {
+    return getAllMembers();
+  }
+
+  return state.responders.members.conn || [];
+}
+
+function getAllMembers() {
+  return [
+    ...(state.responders.members.conn || []),
+    ...(state.responders.members.grov || []),
+    ...(state.responders.members.fres || [])
+  ];
+}
+
+function findMemberByName(name) {
+  const target = String(name || "").trim().toUpperCase();
+  return getAllMembers().find((m) => String(m.name || "").trim().toUpperCase() === target) || null;
+}
+
 function getSourceBrigadeForMember(name) {
   const target = String(name || "").trim().toUpperCase();
 
@@ -299,12 +575,22 @@ function getSourceBrigadeForMember(name) {
   return "";
 }
 
-function isMemberAlreadyAssigned(targetName) {
-  return Object.values(state.responders.appliances).some((appliance) =>
-    appliance.crew.some(
-      (member) => String(member.name || "").trim().toUpperCase() === targetName
-    )
+function isMemberAlreadyAssignedAnywhere(targetName) {
+  const upper = String(targetName || "").trim().toUpperCase();
+
+  const inAppliances = Object.values(state.responders.appliances).some((appliance) =>
+    appliance.crew.some((member) => String(member.name || "").trim().toUpperCase() === upper)
   );
+
+  const inStation = (state.responders.stationResponders || []).some(
+    (member) => String(member.name || "").trim().toUpperCase() === upper
+  );
+
+  const inDirect = (state.responders.directResponders || []).some(
+    (member) => String(member.name || "").trim().toUpperCase() === upper
+  );
+
+  return inAppliances || inStation || inDirect;
 }
 
 function focusMemberInput(applianceKey) {
@@ -320,22 +606,33 @@ function clearAllOic() {
       member.isOic = false;
     });
   });
+
+  state.responders.directResponders.forEach((member) => {
+    member.isOic = false;
+  });
 }
 
-function syncOicFromCrew() {
-  let foundMember = null;
+function syncOicFromAllResponse() {
+  let found = null;
 
   Object.values(state.responders.appliances).forEach((appliance) => {
     appliance.crew.forEach((member) => {
-      if (member.isOic) {
-        foundMember = member;
-      }
+      if (member.isOic) found = { name: member.name || "", number: member.phone || "" };
     });
   });
 
-  if (foundMember) {
-    state.responders.oicName = foundMember.name || "";
-    state.responders.oicPhone = foundMember.phone || "";
+  if (!found) {
+    state.responders.directResponders.forEach((member) => {
+      if (member.isOic) found = { name: member.name || "", number: member.number || "" };
+    });
+  }
+
+  if (found) {
+    state.responders.oicName = found.name;
+    state.responders.oicPhone = found.number;
+  } else {
+    state.responders.oicName = "";
+    state.responders.oicPhone = "";
   }
 }
 
@@ -346,6 +643,21 @@ function getApplianceStatusClass(appliance) {
   if (!hasDriver) return "appliance-warning";
 
   return "appliance-ready";
+}
+
+function buildMemberSubline(phone, sourceBrigade) {
+  const parts = [];
+
+  if (phone) {
+    parts.push(escapeHtml(phone));
+  }
+
+  const brigadeLabel = getDisplayBrigadeLabel(sourceBrigade);
+  if (brigadeLabel) {
+    parts.push(escapeHtml(brigadeLabel));
+  }
+
+  return parts.join(" • ");
 }
 
 function escapeHtml(value) {
