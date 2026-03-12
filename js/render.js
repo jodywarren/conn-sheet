@@ -1,22 +1,31 @@
-import { state, setCurrentPage, saveState } from "./state.js";
+import {
+  state,
+  fillProfileInputs,
+  renderOicBanner,
+  saveProfileFromInputs,
+  saveState,
+  setCurrentPage
+} from "./state.js";
 
 export function bindShellEvents() {
-  bindTabs();
-  bindSettings();
-  showPage(state.ui?.currentPage || "incidentPage");
+  bindTabButtons();
+  bindSettingsModal();
+  bindOicEditor();
+  bindConnectionBanner();
+  showPage(state.ui.currentPage || "incidentPage");
 }
 
-function bindTabs() {
+function bindTabButtons() {
   document.querySelectorAll(".tab-btn[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      showPage(btn.dataset.page);
+      const pageId = btn.dataset.page;
+      showPage(pageId);
+      setCurrentPage(pageId);
     });
   });
 }
 
 function showPage(pageId) {
-  setCurrentPage(pageId);
-
   document.querySelectorAll(".page").forEach((page) => {
     page.classList.toggle("active", page.id === pageId);
   });
@@ -26,52 +35,77 @@ function showPage(pageId) {
   });
 }
 
-function bindSettings() {
+function bindSettingsModal() {
+  const modal = document.getElementById("settingsModal");
   const openBtn = document.getElementById("openSettingsBtn");
   const closeBtn = document.getElementById("closeSettingsBtn");
   const saveBtn = document.getElementById("saveProfileBtn");
-  const modal = document.getElementById("settingsModal");
 
-  openBtn?.addEventListener("click", () => {
-    loadProfileInputsFromState();
-    modal?.classList.remove("hidden");
-  });
+  if (openBtn && modal) {
+    openBtn.addEventListener("click", () => {
+      fillProfileInputs();
+      modal.classList.remove("hidden");
+    });
+  }
 
-  closeBtn?.addEventListener("click", () => {
-    modal?.classList.add("hidden");
-  });
+  if (closeBtn && modal) {
+    closeBtn.addEventListener("click", () => {
+      modal.classList.add("hidden");
+    });
+  }
 
-  saveBtn?.addEventListener("click", () => {
-    saveProfileInputsToState();
+  if (saveBtn && modal) {
+    saveBtn.addEventListener("click", () => {
+      saveProfileFromInputs();
+      modal.classList.add("hidden");
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        modal.classList.add("hidden");
+      }
+    });
+  }
+}
+
+function bindOicEditor() {
+  const editBtn = document.getElementById("editOicBtn");
+  if (!editBtn) return;
+
+  editBtn.addEventListener("click", () => {
+    const currentName = state.responders.oicName || "";
+    const currentPhone = state.responders.oicPhone || "";
+
+    const nameInput = window.prompt("OIC name", currentName);
+    if (nameInput === null) return;
+
+    const phoneInput = window.prompt("OIC phone number", currentPhone);
+    if (phoneInput === null) return;
+
+    state.responders.oicName = String(nameInput || "").trim();
+    state.responders.oicPhone = String(phoneInput || "").trim();
+
     saveState();
-    modal?.classList.add("hidden");
+    renderOicBanner();
   });
 }
 
-function loadProfileInputsFromState() {
-  const nameEl = document.getElementById("profileName");
-  const memberEl = document.getElementById("profileMemberNumber");
-  const contactEl = document.getElementById("profileContactNumber");
-  const emailEl = document.getElementById("profileEmail");
-  const brigadeEl = document.getElementById("profileBrigade");
+function bindConnectionBanner() {
+  updateConnectionBanner();
 
-  if (nameEl) nameEl.value = state.profile?.name || "";
-  if (memberEl) memberEl.value = state.profile?.memberNumber || "";
-  if (contactEl) contactEl.value = state.profile?.contactNumber || "";
-  if (emailEl) emailEl.value = state.profile?.email || "";
-  if (brigadeEl) brigadeEl.value = state.profile?.brigade || "Connewarre";
+  window.addEventListener("online", updateConnectionBanner);
+  window.addEventListener("offline", updateConnectionBanner);
 }
 
-function saveProfileInputsToState() {
-  const nameEl = document.getElementById("profileName");
-  const memberEl = document.getElementById("profileMemberNumber");
-  const contactEl = document.getElementById("profileContactNumber");
-  const emailEl = document.getElementById("profileEmail");
-  const brigadeEl = document.getElementById("profileBrigade");
+function updateConnectionBanner() {
+  const banner = document.getElementById("connectionBanner");
+  if (!banner) return;
 
-  state.profile.name = nameEl?.value.trim() || "";
-  state.profile.memberNumber = memberEl?.value.trim() || "";
-  state.profile.contactNumber = contactEl?.value.trim() || "";
-  state.profile.email = emailEl?.value.trim() || "";
-  state.profile.brigade = brigadeEl?.value.trim() || "Connewarre";
+  const online = navigator.onLine;
+
+  banner.textContent = online ? "Online" : "Offline";
+  banner.classList.toggle("online", online);
+  banner.classList.toggle("offline", !online);
 }
