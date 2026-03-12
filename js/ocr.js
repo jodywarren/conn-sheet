@@ -1,5 +1,5 @@
 import { state, saveState } from "./state.js";
-import { loadIncidentIntoInputs, mergeSceneBrigades, setSceneBrigades } from "./incident.js";
+import { loadIncidentIntoInputs, mergePagedSceneUnits, setPagedSceneUnits } from "./incident.js";
 
 const KNOWN_BRIGADE_CODES = [
   "CONN",
@@ -121,16 +121,16 @@ async function runOcrFromPreview() {
       primaryCandidate.eventNumber &&
       currentEvent === primaryCandidate.eventNumber;
 
-    const extraBrigades = collectAdditionalBrigades(parsedCandidates, primaryCandidate);
+    const extraSceneUnits = collectAdditionalSceneUnits(parsedCandidates, primaryCandidate);
 
     if (sameEventAsCurrent) {
-      if (extraBrigades.length) {
-        mergeSceneBrigades(extraBrigades);
+      if (extraSceneUnits.length) {
+        mergePagedSceneUnits(extraSceneUnits);
         loadIncidentIntoInputs();
         saveState();
-        setScanStatus("Scan complete. Additional brigades merged into this incident.", "scan-good");
+        setScanStatus("Scan complete. Additional scene units merged into this incident.", "scan-good");
       } else {
-        setScanStatus("Scan complete. Same event detected. No new brigades found.", "scan-good");
+        setScanStatus("Scan complete. Same event detected. No new scene units found.", "scan-good");
       }
       return;
     }
@@ -154,9 +154,9 @@ async function runOcrFromPreview() {
       state.incident.actualAddress = primaryCandidate.scannedAddress || "";
     }
 
-    setSceneBrigades(primaryCandidate.brigades || []);
-    if (extraBrigades.length) {
-      mergeSceneBrigades(extraBrigades);
+    setPagedSceneUnits(primaryCandidate.sceneUnits || []);
+    if (extraSceneUnits.length) {
+      mergePagedSceneUnits(extraSceneUnits);
     }
 
     loadIncidentIntoInputs();
@@ -222,7 +222,6 @@ function splitPagerBlocks(text) {
 
   for (const line of lines) {
     const upper = line.toUpperCase();
-
     const isHeader =
       upper.includes("EMERGENCY") ||
       upper.includes("EMERGENCV") ||
@@ -284,9 +283,8 @@ function parseCandidateBlock(blockText) {
   const bodyBeforeMap = extractBodyBeforeMap(text, incidentCodeRaw);
   const addressInfo = findAddressInBody(bodyBeforeMap);
   const scannedAddress = addressInfo?.text || "";
-  const pagerDetails = extractPagerDetailsFromBody(bodyBeforeMap, addressInfo);
-  const brigades = extractBrigades(text);
-  const otherUnits = extractOtherUnits(text);
+  const pagerDetails = extractFullPagerMessage(text);
+  const sceneUnits = extractSceneUnits(text);
 
   const score = scoreCandidate({
     type,
@@ -318,8 +316,7 @@ function parseCandidateBlock(blockText) {
     responseCode: splitCode.responseCode,
     scannedAddress,
     pagerDetails,
-    brigades,
-    otherUnits
+    sceneUnits
   };
 }
 
@@ -334,7 +331,7 @@ function choosePrimaryEmergencyCandidate(candidates) {
   return valid[0] || null;
 }
 
-function collectAdditionalBrigades(candidates, primaryCandidate) {
+function collectAdditionalSceneUnits(candidates, primaryCandidate) {
   if (!primaryCandidate?.eventNumber) return [];
 
   const extra = new Set();
@@ -346,10 +343,10 @@ function collectAdditionalBrigades(candidates, primaryCandidate) {
     if (candidate.isCancel) return;
     if (candidate.eventNumber !== primaryCandidate.eventNumber) return;
 
-    candidate.brigades.forEach((brigade) => extra.add(brigade));
+    candidate.sceneUnits.forEach((unit) => extra.add(unit));
   });
 
-  primaryCandidate.brigades.forEach((brigade) => extra.delete(brigade));
+  primaryCandidate.sceneUnits.forEach((unit) => extra.delete(unit));
 
   return [...extra];
 }
@@ -382,39 +379,30 @@ function extractEventNumber(text) {
 
 function extractPagerDate(text) {
   const fullText = String(text || "");
-  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  for (const line of lines) {
-    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
-    if (match) {
-      const dd = match[1];
-      const mm = match[2];
-      const yyyy = match[3];
-      return `${yyyy}-${mm}-${dd}`;
-    }
+  let match = fullText.match(/\bEMERGENCY\b[\s\S]{0,40}?(\d{2})-(\d{2})-(\d{4})\b/);
+  if (match) {
+    return `${match[3]}-${match[2]}-${match[1]}`;
   }
 
-  const fallback = fullText.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
-  if (!fallback) return "";
+  match = fullText.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
+  if (!match) return "";
 
-  return `${fallback[3]}-${fallback[2]}-${fallback[1]}`;
+  return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
 function extractPagerTime(text) {
   const fullText = String(text || "");
-  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  for (const line of lines) {
-    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
-    if (match) {
-      return `${match[1]}:${match[2]}`;
-    }
+  let match = fullText.match(/\bEMERGENCY\b[\s\S]{0,25}?([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (match) {
+    return `${match[1]}:${match[2]}`;
   }
 
-  const fallback = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
-  if (!fallback) return "";
+  match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (!match) return "";
 
-  return `${fallback[1]}:${fallback[2]}`;
+  return `${match[1]}:${match[2]}`;
 }
 
 function validateEventNumberAgainstDate(eventNumber, pagerDate) {
@@ -427,11 +415,15 @@ function validateEventNumberAgainstDate(eventNumber, pagerDate) {
 }
 
 function extractAlertAreaCode(text) {
-  const match = String(text || "").match(/\bALERT\s+([A-Z]{4}[0-9ZO]{1,2})\b/);
+  const match = String(text || "").match(/\bALERT\s+([A-Z0-9]{4}[0-9ZO]{1,2})\b/);
   if (!match) return "";
 
   const rawCode = match[1];
-  const letters = rawCode.slice(0, 4);
+  const letters = rawCode
+    .slice(0, 4)
+    .replace(/0/g, "O")
+    .replace(/6RV/g, "GROV")
+    .replace(/GRV/g, "GROV");
   const suffix = rawCode
     .slice(4)
     .replace(/Z/g, "2")
@@ -441,7 +433,7 @@ function extractAlertAreaCode(text) {
 }
 
 function extractPrimaryBrigade(alertAreaCode) {
-  return String(alertAreaCode || "").replace(/\d+/g, "");
+  return normalizeBrigadeCode(String(alertAreaCode || "").replace(/\d+/g, ""));
 }
 
 function deriveBrigadeRole(primaryBrigade) {
@@ -450,7 +442,7 @@ function deriveBrigadeRole(primaryBrigade) {
 }
 
 function extractIncidentCodeRaw(text) {
-  const match = String(text || "").match(/\bALERT\s+[A-Z]{4}[0-9ZO]{1,2}\s+([A-Z&]{4,6}C[13])\b/);
+  const match = String(text || "").match(/\bALERT\s+[A-Z0-9]{4}[0-9ZO]{1,2}\s+([A-Z&]{4,6}C[13])\b/);
   if (!match) return "";
   return match[1];
 }
@@ -491,7 +483,7 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
   let working = String(text || "");
 
   if (incidentCodeRaw) {
-    const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}[0-9ZO]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
+    const alertPattern = new RegExp(`\\bALERT\\s+[A-Z0-9]{4}[0-9ZO]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
     const alertMatch = working.match(alertPattern);
 
     if (alertMatch) {
@@ -516,11 +508,19 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
     .trim();
 }
 
+function extractFullPagerMessage(text) {
+  return String(text || "")
+    .replace(/\bRESPOND\s*>?$/gm, "")
+    .replace(/\b\d{1,2}:\d{2}:\d{2}\s+SINCE ALERT\b.*$/gm, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function findAddressInBody(body) {
   const text = String(body || "").trim();
   if (!text) return null;
 
-  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\/\s*[A-Z0-9' -]+?(?:\s+[A-Z][A-Z' -]+){0,3}/g;
+  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\/\s*[A-Z0-9' -]+?(?:\s+[A-Z][A-Z' -]+){0,4}/g;
   const numberedRegex = /\b\d+\s+[A-Z0-9' -]+?(?:RD|ROAD|ST|STREET|DR|DRIVE|AVE|AV|AVENUE|HWY|HIGHWAY|CRT|COURT|CT|CRES|CRESCENT|PL|PLACE|WAY|LN|LANE)\b(?:\s+[A-Z][A-Z' -]+){0,4}/g;
 
   const candidates = [];
@@ -564,54 +564,7 @@ function cleanAddress(value) {
     .trim();
 }
 
-function extractPagerDetailsFromBody(body, addressInfo) {
-  const text = String(body || "").trim();
-  if (!text) return "";
-
-  if (!addressInfo) {
-    return text
-      .replace(/\bRESPOND\s*>?$/g, "")
-      .replace(/\bSINCE ALERT\b.*$/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  }
-
-  return text
-    .slice(0, addressInfo.start)
-    .replace(/\bRESPOND\s*>?$/g, "")
-    .replace(/\bSINCE ALERT\b.*$/g, "")
-    .replace(/\s{2,}/g, " ")
-    .replace(/[-/,\s]+$/, "")
-    .trim();
-}
-
-function extractBrigades(text) {
-  const tokens = String(text || "")
-    .split(/\s+/)
-    .map((token) => token.replace(/[^A-Z0-9]/g, ""))
-    .filter(Boolean);
-
-  const brigades = [];
-
-  tokens.forEach((token) => {
-    let cleaned = token;
-
-    if (cleaned.startsWith("C") && cleaned.length > 1) {
-      const stripped = cleaned.slice(1);
-      if (KNOWN_BRIGADE_CODES.includes(stripped)) {
-        cleaned = stripped;
-      }
-    }
-
-    if (KNOWN_BRIGADE_CODES.includes(cleaned) && !brigades.includes(cleaned)) {
-      brigades.push(cleaned);
-    }
-  });
-
-  return brigades;
-}
-
-function extractOtherUnits(text) {
+function extractSceneUnits(text) {
   const tokens = String(text || "")
     .split(/\s+/)
     .map((token) => token.replace(/[^A-Z0-9]/g, ""))
@@ -620,12 +573,40 @@ function extractOtherUnits(text) {
   const units = [];
 
   tokens.forEach((token) => {
-    if (KNOWN_OTHER_UNITS.includes(token) && !units.includes(token)) {
-      units.push(token);
+    let cleaned = token;
+
+    if (cleaned.startsWith("C") && cleaned.length > 1) {
+      const stripped = cleaned.slice(1);
+      const brigade = normalizeBrigadeCode(stripped);
+      if (KNOWN_BRIGADE_CODES.includes(brigade)) {
+        cleaned = brigade;
+      }
+    } else {
+      cleaned = normalizeBrigadeCode(cleaned);
+    }
+
+    if (KNOWN_BRIGADE_CODES.includes(cleaned) || KNOWN_OTHER_UNITS.includes(cleaned)) {
+      if (!units.includes(cleaned)) {
+        units.push(cleaned);
+      }
     }
   });
 
   return units;
+}
+
+function normalizeBrigadeCode(code) {
+  const clean = String(code || "").trim().toUpperCase();
+
+  if (clean === "GRV" || clean === "GROV" || clean === "GR0V") return "GROV";
+  if (clean === "C0NN" || clean === "CONN") return "CONN";
+  if (clean === "FRES") return "FRES";
+  if (clean === "BARW") return "BARW";
+  if (clean === "TRQY" || clean === "TQRY") return "TRQY";
+  if (clean === "MTDU") return "MTDU";
+  if (clean === "MODE") return "MODE";
+
+  return clean;
 }
 
 function escapeRegex(value) {
