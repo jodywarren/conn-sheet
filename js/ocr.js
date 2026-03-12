@@ -214,10 +214,13 @@ function splitPagerBlocks(text) {
   let currentBlock = [];
 
   for (const line of lines) {
+    const upper = line.toUpperCase();
+
     const isHeader =
-      line === "EMERGENCY" ||
-      line === "NON EMERGENCY" ||
-      line === "ADMIN";
+      upper.includes("EMERGENCY") ||
+      upper.includes("EMERGENCV") ||
+      upper.includes("NON EMERGENCY") ||
+      upper.includes("ADMIN");
 
     if (isHeader && currentBlock.length) {
       blocks.push(currentBlock.join("\n"));
