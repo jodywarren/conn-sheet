@@ -596,3 +596,31 @@ label{
   font-weight:700;
   color:inherit;
 }
+.field-complete {
+  border-color: #3ca35c !important;
+  background: #edf8ef !important;
+}
+
+.scene-chip.from-pager {
+  background: #dff3e4;
+  border: 1px solid #63a978;
+}
+
+.scene-chip.manual-unit {
+  background: #fff3e0;
+  border: 1px solid #f0a44b;
+}
+
+.orange-btn {
+  background: #f0a44b !important;
+  color: #111 !important;
+}
+
+.other-responding-section {
+  margin-top: 1rem;
+}
+
+.subhead {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
