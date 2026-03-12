@@ -97,20 +97,24 @@ async function runOcrFromPreview() {
     const blocks = splitPagerBlocks(cleanedText);
     const parsedCandidates = blocks.map(parseCandidateBlock);
 
+    console.log("OCR RAW TEXT:", rawText);
+    console.log("OCR CLEANED TEXT:", cleanedText);
+    console.log("OCR BLOCKS:", blocks);
+    console.log("OCR CANDIDATES:", parsedCandidates);
+
     const primaryCandidate = choosePrimaryEmergencyCandidate(parsedCandidates);
 
-if (!primaryCandidate) {
-  state.incident.pagerDetails = cleanedText;
-  loadIncidentIntoInputs();
-  saveState();
-  console.log("OCR RAW TEXT:", rawText);
-  console.log("OCR CLEANED TEXT:", cleanedText);
-  console.log("OCR BLOCKS:", blocks);
-  console.log("OCR CANDIDATES:", parsedCandidates);
-  setScanStatus("No valid EMERGENCY pager message found. OCR text loaded into Pager Details for review.", "scan-warn");
-  return;
-}
-    
+    if (!primaryCandidate) {
+      state.incident.pagerDetails = cleanedText;
+      loadIncidentIntoInputs();
+      saveState();
+      setScanStatus(
+        "No valid EMERGENCY pager message found. OCR text loaded into Pager Details for review.",
+        "scan-warn"
+      );
+      return;
+    }
+
     const currentEvent = String(state.incident.eventNumber || "").trim();
     const sameEventAsCurrent =
       currentEvent &&
@@ -193,10 +197,13 @@ function normalizeOcrText(text) {
     .replace(/INCII/g, "INCIC1")
     .replace(/INCICL/g, "INCIC1")
     .replace(/INCIC3I/g, "INCIC3")
+    .replace(/INCII3/g, "INCIC3")
+    .replace(/\bINCI3\b/g, "INCIC3")
     .replace(/HOME CHAT SETTINGS/g, "")
     .replace(/PLEASE UPDATE YOUR AVAILABILITY/g, "")
     .replace(/REFRESH FILTER SORT/g, "")
     .replace(/ALERTING SERVICE/g, "")
+    .replace(/SUPPLEMENTARY/g, "")
     .replace(/AT ATTENDING/g, "")
     .replace(/[^\S\n]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
@@ -216,12 +223,12 @@ function splitPagerBlocks(text) {
   for (const line of lines) {
     const upper = line.toUpperCase();
 
-const isHeader =
-  upper.includes("EMERGENCY") ||
-  upper.includes("EMERGENCV") ||
-  upper.startsWith("ALERT ") ||
-  upper.includes("NON EMERGENCY") ||
-  upper.includes("ADMIN");
+    const isHeader =
+      upper.includes("EMERGENCY") ||
+      upper.includes("EMERGENCV") ||
+      upper.startsWith("ALERT ") ||
+      upper.includes("NON EMERGENCY") ||
+      upper.includes("ADMIN");
 
     if (isHeader && currentBlock.length) {
       blocks.push(currentBlock.join("\n"));
@@ -351,8 +358,8 @@ function scoreCandidate(candidate) {
   let score = 0;
 
   if (candidate.type === "EMERGENCY") score += 40;
-  if (candidate.alertAreaCode) score += 20;
-  if (candidate.incidentCodeRaw) score += 20;
+  if (candidate.alertAreaCode) score += 15;
+  if (candidate.incidentCodeRaw) score += 15;
   if (candidate.eventNumber) score += 20;
   if (candidate.eventMatchesDate) score += 20;
   if (candidate.pagerDate) score += 10;
@@ -401,10 +408,8 @@ function extractAlertAreaCode(text) {
   if (!match) return "";
 
   let code = match[1];
-
-  // OCR correction rules
-  code = code.replace(/Z/g, "2");   // GROVZ → GROV2
-  code = code.replace(/O/g, "0");   // O ↔ 0 mistakes
+  code = code.replace(/Z/g, "2");
+  code = code.replace(/O/g, "0");
 
   return code;
 }
@@ -419,8 +424,9 @@ function deriveBrigadeRole(primaryBrigade) {
 }
 
 function extractIncidentCodeRaw(text) {
-  const match = String(text || "").match(/\bALERT\s+[A-Z]{4}\d{1,2}\s+([A-Z&]{4,6}C[13])\b/);
-  return match?.[1] || "";
+  const match = String(text || "").match(/\bALERT\s+[A-Z]{4}[0-9Z]{1,2}\s+([A-Z&]{4,6}C[13])\b/);
+  if (!match) return "";
+  return match[1];
 }
 
 function splitIncidentCode(rawCode) {
@@ -435,7 +441,16 @@ function splitIncidentCode(rawCode) {
 
   const responseSuffix = clean.endsWith("C3") ? "C3" : clean.endsWith("C1") ? "C1" : "";
   const family = responseSuffix ? clean.slice(0, -2) : clean;
-  const incidentFamily = family === "G&S" ? "G&S" : family.slice(0, 4);
+
+  let incidentFamily = family;
+  if (family.startsWith("INCI")) incidentFamily = "INCI";
+  else if (family.startsWith("RESC")) incidentFamily = "RESC";
+  else if (family.startsWith("STRU")) incidentFamily = "STRU";
+  else if (family.startsWith("ALAR")) incidentFamily = "ALAR";
+  else if (family.startsWith("NSTR")) incidentFamily = "NSTR";
+  else if (family.startsWith("G&S")) incidentFamily = "G&S";
+  else incidentFamily = family.slice(0, 4);
+
   const incidentType = INCIDENT_TYPE_LABELS[incidentFamily] || incidentFamily;
   const responseCode = responseSuffix === "C1" ? "Code 1" : responseSuffix === "C3" ? "Code 3" : "";
 
@@ -449,12 +464,14 @@ function splitIncidentCode(rawCode) {
 function extractBodyBeforeMap(text, incidentCodeRaw) {
   let working = String(text || "");
 
-  const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}\\d{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
-  const alertMatch = working.match(alertPattern);
+  if (incidentCodeRaw) {
+    const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}[0-9Z]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
+    const alertMatch = working.match(alertPattern);
 
-  if (alertMatch) {
-    const startIndex = alertMatch.index + alertMatch[0].length;
-    working = working.slice(startIndex).trim();
+    if (alertMatch) {
+      const startIndex = (alertMatch.index || 0) + alertMatch[0].length;
+      working = working.slice(startIndex).trim();
+    }
   }
 
   const mapMatch = working.match(/\bM\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)/);
@@ -490,9 +507,16 @@ function findAddressInBody(body) {
   }
 
   while ((match = numberedRegex.exec(text)) !== null) {
+    let value = cleanAddress(match[0]);
+
+    const slashIndex = value.indexOf("/");
+    if (slashIndex > -1) {
+      value = value.slice(0, slashIndex).trim();
+    }
+
     candidates.push({
       type: "numbered",
-      text: cleanAddress(match[0]),
+      text: value,
       start: match.index,
       end: match.index + match[0].length
     });
@@ -507,6 +531,7 @@ function findAddressInBody(body) {
 function cleanAddress(value) {
   return String(value || "")
     .replace(/\s{2,}/g, " ")
+    .replace(/\s*\/\s*/g, " / ")
     .trim();
 }
 
@@ -534,11 +559,17 @@ function extractBrigades(text) {
   const brigades = [];
 
   tokens.forEach((token) => {
-    if (token.startsWith("C") && token.length === 5) {
-      const stripped = token.slice(1);
-      if (KNOWN_BRIGADE_CODES.includes(stripped) && !brigades.includes(stripped)) {
-        brigades.push(stripped);
+    let cleaned = token;
+
+    if (cleaned.startsWith("C") && cleaned.length > 1) {
+      const stripped = cleaned.slice(1);
+      if (KNOWN_BRIGADE_CODES.includes(stripped)) {
+        cleaned = stripped;
       }
+    }
+
+    if (KNOWN_BRIGADE_CODES.includes(cleaned) && !brigades.includes(cleaned)) {
+      brigades.push(cleaned);
     }
   });
 
