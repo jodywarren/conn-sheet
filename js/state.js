@@ -35,7 +35,8 @@ function createDefaultState() {
       firsCode: "",
       pagerScreenshot: "",
 
-      brigadesOnScene: [],
+      sceneUnits: [],
+      pagedSceneUnits: [],
 
       firstAgency: "",
       firstAgencyOther: "",
@@ -91,6 +92,9 @@ function createDefaultState() {
         }
       },
 
+      stationResponders: [],
+      directResponders: [],
+
       oicName: "",
       oicPhone: ""
     }
@@ -99,7 +103,7 @@ function createDefaultState() {
 
 export const state = createDefaultState();
 
-const STORAGE_KEY = "conn_turnout_state_v5";
+const STORAGE_KEY = "conn_turnout_state_v6";
 
 export function initState() {
   loadState();
@@ -107,7 +111,7 @@ export function initState() {
 
   const versionTarget = document.getElementById("appVersionText");
   if (versionTarget) {
-    versionTarget.textContent = "3.1.0";
+    versionTarget.textContent = "3.2.0";
   }
 }
 
@@ -153,7 +157,7 @@ export function renderOicBanner() {
   }
 
   if (!phone) {
-    banner.textContent = `OIC: ${name} • Phone missing`;
+    banner.textContent = `OIC: ${name} • Number missing`;
     banner.classList.add("missing");
     return;
   }
@@ -186,13 +190,8 @@ export function loadState() {
     const saved = JSON.parse(raw);
     const fresh = createDefaultState();
 
-    if (saved.ui) {
-      Object.assign(fresh.ui, saved.ui);
-    }
-
-    if (saved.profile) {
-      Object.assign(fresh.profile, saved.profile);
-    }
+    if (saved.ui) Object.assign(fresh.ui, saved.ui);
+    if (saved.profile) Object.assign(fresh.profile, saved.profile);
 
     if (saved.incident) {
       Object.assign(fresh.incident, saved.incident);
@@ -205,8 +204,19 @@ export function loadState() {
         Object.assign(fresh.incident.flags, saved.incident.flags);
       }
 
-      if (!Array.isArray(fresh.incident.brigadesOnScene)) {
-        fresh.incident.brigadesOnScene = [];
+      if (!Array.isArray(fresh.incident.sceneUnits)) {
+        const legacy = [];
+        if (Array.isArray(saved.incident.brigadesOnScene)) {
+          legacy.push(...saved.incident.brigadesOnScene);
+        }
+        if (Array.isArray(saved.incident.otherUnitsOnScene)) {
+          legacy.push(...saved.incident.otherUnitsOnScene);
+        }
+        fresh.incident.sceneUnits = [...new Set(legacy)];
+      }
+
+      if (!Array.isArray(fresh.incident.pagedSceneUnits)) {
+        fresh.incident.pagedSceneUnits = [...fresh.incident.sceneUnits];
       }
 
       if (!fresh.incident.actualAddress && saved.incident.actualLocation) {
@@ -240,6 +250,14 @@ export function loadState() {
 
       if (saved.responders.appliances) {
         Object.assign(fresh.responders.appliances, saved.responders.appliances);
+      }
+
+      if (Array.isArray(saved.responders.stationResponders)) {
+        fresh.responders.stationResponders = saved.responders.stationResponders;
+      }
+
+      if (Array.isArray(saved.responders.directResponders)) {
+        fresh.responders.directResponders = saved.responders.directResponders;
       }
 
       if (typeof saved.responders.oicName === "string") {
