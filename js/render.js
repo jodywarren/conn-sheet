@@ -44,6 +44,7 @@ function bindSettingsModal() {
   if (openBtn && modal) {
     openBtn.addEventListener("click", () => {
       fillProfileInputs();
+      applyProfileCompletionStates();
       modal.classList.remove("hidden");
     });
   }
@@ -57,6 +58,7 @@ function bindSettingsModal() {
   if (saveBtn && modal) {
     saveBtn.addEventListener("click", () => {
       saveProfileFromInputs();
+      applyProfileCompletionStates();
       modal.classList.add("hidden");
     });
   }
@@ -68,6 +70,20 @@ function bindSettingsModal() {
       }
     });
   }
+
+  [
+    "profileName",
+    "profileMemberNumber",
+    "profileContactNumber",
+    "profileEmail",
+    "profileBrigade"
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.addEventListener("input", applyProfileCompletionStates);
+    el.addEventListener("change", applyProfileCompletionStates);
+  });
 }
 
 function bindOicEditor() {
@@ -104,8 +120,23 @@ function updateConnectionBanner() {
   if (!banner) return;
 
   const online = navigator.onLine;
-
   banner.textContent = online ? "Online" : "Offline";
   banner.classList.toggle("online", online);
   banner.classList.toggle("offline", !online);
+}
+
+function applyProfileCompletionStates() {
+  [
+    "profileName",
+    "profileMemberNumber",
+    "profileContactNumber",
+    "profileEmail",
+    "profileBrigade"
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const value = String(el.value || "").trim();
+    el.classList.toggle("field-complete", value.length > 0);
+  });
 }
