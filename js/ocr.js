@@ -513,7 +513,6 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
     if (eventMatch) {
       working = working.slice(0, eventMatch.index).trim();
     }
-  }
 
   return working.replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
 }
