@@ -238,7 +238,7 @@ function getBlockType(blockText) {
   const text = String(blockText || "").toUpperCase();
 
   if (text.includes("NON EMERGENCY")) return "NON EMERGENCY";
-  if (text.includes("EMERGENCY")) return "EMERGENCY";
+  if (text.includes("EMERGENCY") || text.includes("EMERGENCV")) return "EMERGENCY";
   if (text.includes("ADMIN")) return "ADMIN";
 
   return "UNKNOWN";
