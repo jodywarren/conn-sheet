@@ -138,7 +138,8 @@ function renderOtherResponding(panelId) {
         <input
           class="field-input editable-field"
           id="stationResponderNumberInput"
-          type="text"
+          type="tel"
+          inputmode="tel"
           placeholder="Number"
           autocomplete="off"
         />
@@ -169,7 +170,8 @@ function renderOtherResponding(panelId) {
         <input
           class="field-input editable-field"
           id="directResponderNumberInput"
-          type="text"
+          type="tel"
+          inputmode="tel"
           placeholder="Number"
           autocomplete="off"
         />
@@ -227,7 +229,6 @@ function bindAppliancePanelEvents(panel, applianceKey) {
       state.responders.appliances[applianceKey].code = btn.dataset.code;
       saveState();
       renderRespondersPage();
-      focusMemberInput(applianceKey);
     });
   });
 
@@ -262,7 +263,6 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
       saveState();
       renderRespondersPage();
-      focusMemberInput(applianceKey);
     });
   });
 
@@ -313,7 +313,6 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
       saveState();
       renderRespondersPage();
-      focusMemberInput(applianceKey);
     });
   });
 }
@@ -447,13 +446,11 @@ function addMemberToAppliance(applianceKey) {
 
   if (!memberData) {
     window.alert("Select a valid member from the list.");
-    focusMemberInput(applianceKey);
     return;
   }
 
   if (isMemberAlreadyAssignedAnywhere(selectedName)) {
     window.alert("Member already assigned elsewhere.");
-    focusMemberInput(applianceKey);
     return;
   }
 
@@ -475,7 +472,11 @@ function addMemberToAppliance(applianceKey) {
 
   saveState();
   renderRespondersPage();
-  focusMemberInput(applianceKey);
+
+  setTimeout(() => {
+    const field = document.getElementById(`${applianceKey}MemberInput`);
+    field?.focus();
+  }, 0);
 }
 
 function addStationResponder() {
@@ -562,15 +563,9 @@ function findMemberByName(name) {
 function getSourceBrigadeForMember(name) {
   const target = String(name || "").trim().toUpperCase();
 
-  if ((state.responders.members.conn || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
-    return "CONN";
-  }
-  if ((state.responders.members.grov || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
-    return "GROV";
-  }
-  if ((state.responders.members.fres || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) {
-    return "FRES";
-  }
+  if ((state.responders.members.conn || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) return "CONN";
+  if ((state.responders.members.grov || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) return "GROV";
+  if ((state.responders.members.fres || []).some((m) => String(m.name || "").trim().toUpperCase() === target)) return "FRES";
 
   return "";
 }
@@ -593,13 +588,6 @@ function isMemberAlreadyAssignedAnywhere(targetName) {
   return inAppliances || inStation || inDirect;
 }
 
-function focusMemberInput(applianceKey) {
-  setTimeout(() => {
-    const input = document.getElementById(`${applianceKey}MemberInput`);
-    input?.focus();
-  }, 0);
-}
-
 function clearAllOic() {
   Object.values(state.responders.appliances).forEach((appliance) => {
     appliance.crew.forEach((member) => {
@@ -607,7 +595,7 @@ function clearAllOic() {
     });
   });
 
-  state.responders.directResponders.forEach((member) => {
+  (state.responders.directResponders || []).forEach((member) => {
     member.isOic = false;
   });
 }
@@ -617,13 +605,17 @@ function syncOicFromAllResponse() {
 
   Object.values(state.responders.appliances).forEach((appliance) => {
     appliance.crew.forEach((member) => {
-      if (member.isOic) found = { name: member.name || "", number: member.phone || "" };
+      if (member.isOic) {
+        found = { name: member.name || "", number: member.phone || "" };
+      }
     });
   });
 
   if (!found) {
-    state.responders.directResponders.forEach((member) => {
-      if (member.isOic) found = { name: member.name || "", number: member.number || "" };
+    (state.responders.directResponders || []).forEach((member) => {
+      if (member.isOic) {
+        found = { name: member.name || "", number: member.number || "" };
+      }
     });
   }
 
