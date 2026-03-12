@@ -1,7 +1,7 @@
 import { state, saveState } from "./state.js";
 
 export function bindIncidentInputs() {
-  bindBasicFields();
+  bindTextInputs();
   bindSelect("firstAgency");
   bindSelect("distanceToScene");
   bindSelect("weather1");
@@ -9,19 +9,21 @@ export function bindIncidentInputs() {
   bindSceneBrigades();
 }
 
-function bindBasicFields() {
-  const fields = [
+function bindTextInputs() {
+  const plainFields = [
     "eventNumber",
     "pagerDate",
     "pagerTime",
-    "brigadeCode",
+    "alertAreaCode",
+    "brigadeRole",
     "incidentType",
+    "responseCode",
     "pagerDetails",
-    "actualLocation",
+    "scannedAddress",
     "controlName"
   ];
 
-  fields.forEach((id) => {
+  plainFields.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
 
@@ -30,6 +32,15 @@ function bindBasicFields() {
       saveState();
     });
   });
+
+  const actualAddressEl = document.getElementById("actualAddress");
+  if (actualAddressEl) {
+    actualAddressEl.addEventListener("input", () => {
+      state.incident.actualAddress = actualAddressEl.value.trim();
+      state.incident.actualAddressEdited = true;
+      saveState();
+    });
+  }
 }
 
 function bindSelect(id) {
@@ -78,7 +89,20 @@ function addSceneBrigadeFromInput() {
 }
 
 export function setSceneBrigades(codes = []) {
-  state.incident.brigadesOnScene = [...new Set(codes.filter(Boolean))];
+  state.incident.brigadesOnScene = [...new Set(codes.filter(Boolean).map((x) => String(x).trim().toUpperCase()))];
+  renderSceneBrigadeChips();
+  saveState();
+}
+
+export function mergeSceneBrigades(codes = []) {
+  const merged = new Set(state.incident.brigadesOnScene);
+
+  codes.forEach((code) => {
+    const clean = String(code || "").trim().toUpperCase();
+    if (clean) merged.add(clean);
+  });
+
+  state.incident.brigadesOnScene = [...merged];
   renderSceneBrigadeChips();
   saveState();
 }
@@ -116,10 +140,13 @@ export function loadIncidentIntoInputs() {
     "eventNumber",
     "pagerDate",
     "pagerTime",
-    "brigadeCode",
+    "alertAreaCode",
+    "brigadeRole",
     "incidentType",
+    "responseCode",
     "pagerDetails",
-    "actualLocation",
+    "scannedAddress",
+    "actualAddress",
     "controlName",
     "firstAgency",
     "distanceToScene",
