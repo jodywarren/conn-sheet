@@ -46,6 +46,8 @@ function createDefaultState() {
 
       distanceToScene: "",
 
+      otherAgencies: [],
+
       stopMessageReceived: false,
 
       hoses: {
@@ -103,7 +105,7 @@ function createDefaultState() {
 
 export const state = createDefaultState();
 
-const STORAGE_KEY = "conn_turnout_state_v6";
+const STORAGE_KEY = "conn_turnout_state_v7";
 
 export function initState() {
   loadState();
@@ -111,7 +113,7 @@ export function initState() {
 
   const versionTarget = document.getElementById("appVersionText");
   if (versionTarget) {
-    versionTarget.textContent = "3.2.0";
+    versionTarget.textContent = "3.3.0";
   }
 }
 
@@ -150,6 +152,8 @@ export function renderOicBanner() {
   const name = String(state.responders.oicName || "").trim();
   const phone = String(state.responders.oicPhone || "").trim();
 
+  banner.classList.remove("missing", "complete");
+
   if (!name) {
     banner.textContent = "APPOINT OIC";
     banner.classList.add("missing");
@@ -163,7 +167,7 @@ export function renderOicBanner() {
   }
 
   banner.textContent = `OIC: ${name} • ${phone}`;
-  banner.classList.remove("missing");
+  banner.classList.add("complete");
 }
 
 export function saveState() {
@@ -206,17 +210,17 @@ export function loadState() {
 
       if (!Array.isArray(fresh.incident.sceneUnits)) {
         const legacy = [];
-        if (Array.isArray(saved.incident.brigadesOnScene)) {
-          legacy.push(...saved.incident.brigadesOnScene);
-        }
-        if (Array.isArray(saved.incident.otherUnitsOnScene)) {
-          legacy.push(...saved.incident.otherUnitsOnScene);
-        }
+        if (Array.isArray(saved.incident.brigadesOnScene)) legacy.push(...saved.incident.brigadesOnScene);
+        if (Array.isArray(saved.incident.otherUnitsOnScene)) legacy.push(...saved.incident.otherUnitsOnScene);
         fresh.incident.sceneUnits = [...new Set(legacy)];
       }
 
       if (!Array.isArray(fresh.incident.pagedSceneUnits)) {
         fresh.incident.pagedSceneUnits = [...fresh.incident.sceneUnits];
+      }
+
+      if (!Array.isArray(fresh.incident.otherAgencies)) {
+        fresh.incident.otherAgencies = [];
       }
 
       if (!fresh.incident.actualAddress && saved.incident.actualLocation) {
