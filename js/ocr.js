@@ -99,11 +99,18 @@ async function runOcrFromPreview() {
 
     const primaryCandidate = choosePrimaryEmergencyCandidate(parsedCandidates);
 
-    if (!primaryCandidate) {
-      setScanStatus("No valid EMERGENCY pager message found. Check screenshot or enter details manually.", "scan-warn");
-      return;
-    }
-
+if (!primaryCandidate) {
+  state.incident.pagerDetails = cleanedText;
+  loadIncidentIntoInputs();
+  saveState();
+  console.log("OCR RAW TEXT:", rawText);
+  console.log("OCR CLEANED TEXT:", cleanedText);
+  console.log("OCR BLOCKS:", blocks);
+  console.log("OCR CANDIDATES:", parsedCandidates);
+  setScanStatus("No valid EMERGENCY pager message found. OCR text loaded into Pager Details for review.", "scan-warn");
+  return;
+}
+    
     const currentEvent = String(state.incident.eventNumber || "").trim();
     const sameEventAsCurrent =
       currentEvent &&
