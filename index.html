@@ -44,7 +44,7 @@
           <div class="section-head">
             <div>
               <h1>TURN OUT SHEET</h1>
-              <p class="subtle">Version <span id="appVersionText">3.0.0</span></p>
+              <p class="subtle">Version <span id="appVersionText">3.1.0</span></p>
             </div>
             <button class="secondary-btn" type="button">Save Draft</button>
           </div>
@@ -59,7 +59,6 @@
 
             <div id="scanStatus" class="scan-status scan-idle">Waiting for screenshot</div>
 
-            
             <div class="preview-wrap">
               <img id="pagerPreview" class="pager-preview hidden" alt="Pager screenshot preview" />
             </div>
@@ -71,7 +70,7 @@
             <div class="grid">
               <label>
                 Event Number
-                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="F2603-----">
+                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="FYYMM#####">
               </label>
 
               <label>
@@ -85,13 +84,23 @@
               </label>
 
               <label>
-                Brigade Code
-                <input id="brigadeCode" class="field-input editable-field" type="text" placeholder="CONN">
+                Alert Area Code
+                <input id="alertAreaCode" class="field-input" type="text" placeholder="CONN1" readonly>
+              </label>
+
+              <label>
+                Brigade Role
+                <input id="brigadeRole" class="field-input" type="text" placeholder="Primary / Support to GROV" readonly>
               </label>
 
               <label>
                 Incident Type
-                <input id="incidentType" class="field-input editable-field" type="text" placeholder="STRU / ALAR / INCI / RESC">
+                <input id="incidentType" class="field-input" type="text" placeholder="Incident / Rescue / Structure Fire / Alarm" readonly>
+              </label>
+
+              <label>
+                Response Code
+                <input id="responseCode" class="field-input" type="text" placeholder="Code 1 / Code 3" readonly>
               </label>
             </div>
           </div>
@@ -103,8 +112,13 @@
             </label>
 
             <label>
-              Actual Location
-              <input id="actualLocation" class="field-input editable-field" type="text">
+              Scanned Address
+              <input id="scannedAddress" class="field-input" type="text" readonly>
+            </label>
+
+            <label>
+              Actual Address
+              <input id="actualAddress" class="field-input editable-field" type="text">
             </label>
 
             <label>
