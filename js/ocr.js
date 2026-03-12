@@ -403,6 +403,7 @@ function extractPagerDate(text) {
 function extractPagerTime(text) {
   const fullText = String(text || "");
   const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
+
   for (const line of lines) {
     const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
     if (match) {
@@ -449,7 +450,7 @@ function deriveBrigadeRole(primaryBrigade) {
 }
 
 function extractIncidentCodeRaw(text) {
-  const match = String(text || "").match(/\bALERT\s+[A-Z]{4}[0-9Z]{1,2}\s+([A-Z&]{4,6}C[13])\b/);
+  const match = String(text || "").match(/\bALERT\s+[A-Z]{4}[0-9ZO]{1,2}\s+([A-Z&]{4,6}C[13])\b/);
   if (!match) return "";
   return match[1];
 }
@@ -489,9 +490,8 @@ function splitIncidentCode(rawCode) {
 function extractBodyBeforeMap(text, incidentCodeRaw) {
   let working = String(text || "");
 
-  // Start after ALERT + area code + incident code
   if (incidentCodeRaw) {
-    const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}[0-9Z]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
+    const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}[0-9ZO]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
     const alertMatch = working.match(alertPattern);
 
     if (alertMatch) {
@@ -500,13 +500,11 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
     }
   }
 
-  // Hard stop at event number. Anything after it is footer/noise.
   const eventMatch = working.match(/\bF\d{9}\b/);
   if (eventMatch) {
     working = working.slice(0, eventMatch.index).trim();
   }
 
-  // Then trim back to just before map reference if present
   const mapMatch = working.match(/\bM\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)/);
   if (mapMatch) {
     working = working.slice(0, mapMatch.index).trim();
@@ -539,8 +537,8 @@ function findAddressInBody(body) {
 
   while ((match = numberedRegex.exec(text)) !== null) {
     let value = cleanAddress(match[0]);
-
     const slashIndex = value.indexOf("/");
+
     if (slashIndex > -1) {
       value = value.slice(0, slashIndex).trim();
     }
