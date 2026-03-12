@@ -476,6 +476,7 @@ function splitIncidentCode(rawCode) {
 function extractBodyBeforeMap(text, incidentCodeRaw) {
   let working = String(text || "");
 
+  // Start after ALERT + area code + incident code
   if (incidentCodeRaw) {
     const alertPattern = new RegExp(`\\bALERT\\s+[A-Z]{4}[0-9Z]{1,2}\\s+${escapeRegex(incidentCodeRaw)}\\b`);
     const alertMatch = working.match(alertPattern);
@@ -485,6 +486,24 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
       working = working.slice(startIndex).trim();
     }
   }
+
+  // Hard stop at event number. Anything after it is footer/noise.
+  const eventMatch = working.match(/\bF\d{9}\b/);
+  if (eventMatch) {
+    working = working.slice(0, eventMatch.index).trim();
+  }
+
+  // Then trim back to just before map reference if present
+  const mapMatch = working.match(/\bM\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)/);
+  if (mapMatch) {
+    working = working.slice(0, mapMatch.index).trim();
+  }
+
+  return working
+    .replace(/\n+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
   const mapMatch = working.match(/\bM\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)/);
   if (mapMatch) {
