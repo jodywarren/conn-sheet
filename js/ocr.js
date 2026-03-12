@@ -381,10 +381,14 @@ function extractEventNumber(text) {
 }
 
 function extractPagerDate(text) {
-  const match = String(text || "").match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
+  const match = String(text || "").match(/\b([01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
+
   if (!match) return "";
 
-  const [, dd, mm, yyyy] = match;
+  const dd = match[2];
+  const mm = match[3];
+  const yyyy = match[4];
+
   return `${yyyy}-${mm}-${dd}`;
 }
 
