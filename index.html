@@ -13,18 +13,18 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="app-header">
-      <div class="brand-wrap">
-        <div class="logo-frame">
-          <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo" />
-        </div>
-      </div>
+  <header class="app-header">
+  <div class="brand-wrap full-banner">
+    <div class="logo-frame wide-logo-frame">
+      <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo wide-logo" />
+    </div>
+  </div>
 
-      <div class="header-actions">
-        <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
-        <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
-      </div>
-    </header>
+  <div class="header-actions">
+    <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
+    <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
+  </div>
+</header> 
 
     <nav class="top-nav">
       <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
@@ -143,47 +143,49 @@
                 </select>
               </label>
 
-              <label>
-                Distance to Scene
-                <select id="distanceToScene" class="field-input editable-field">
-                  <option value="">Select distance</option>
-                  <option>1 km</option>
-                  <option>2 km</option>
-                  <option>3 km</option>
-                  <option>5 km</option>
-                  <option>10 km</option>
-                  <option>20 km</option>
-                </select>
-              </label>
+<label>
+  Distance to Scene
+  <select id="distanceToScene" class="field-input editable-field">
+    <option value="">Select distance</option>
+    <option>1 km</option>
+    <option>2 km</option>
+    <option>3 km</option>
+    <option>4 km</option>
+    <option>5 km</option>
+    <option>6 km</option>
+    <option>7 km</option>
+    <option>8 km</option>
+    <option>9 km</option>
+    <option>10 km</option>
+  </select>
+</label>
 
-              <label>
-                Weather
-                <select id="weather1" class="field-input editable-field">
-                  <option value="">Select weather</option>
-                  <option>Cool</option>
-                  <option>Hot</option>
-                  <option>Rain</option>
-                  <option>Windy</option>
-                  <option>Sunny</option>
-                  <option>Overcast</option>
-                </select>
-              </label>
+<label>
+  Weather
+  <select id="weather1" class="field-input editable-field">
+    <option value="">Select weather</option>
+    <option>Cold</option>
+    <option>Mild</option>
+    <option>Warm</option>
+    <option>Hot</option>
+  </select>
+</label>
 
-              <label>
-                Additional Weather
-                <select id="weather2" class="field-input editable-field">
-                  <option value="">None</option>
-                  <option>Cool</option>
-                  <option>Hot</option>
-                  <option>Rain</option>
-                  <option>Windy</option>
-                  <option>Sunny</option>
-                  <option>Overcast</option>
-                </select>
-              </label>
-            </div>
+<label id="weather2Wrap" class="hidden">
+  Additional Weather
+  <select id="weather2" class="field-input editable-field">
+    <option value="">Select condition</option>
+    <option>Sunny</option>
+    <option>Overcast</option>
+    <option>Windy</option>
+    <option>Rain</option>
+    <option>Storm</option>
+    <option>Fog</option>
+    <option>Smoke</option>
+  </select>
+</label>
 
-            <div class="section">
+<div class="section">
   <div class="row wrap">
     <input id="sceneUnitInput" class="field-input editable-field" type="text" placeholder="Add another appliance or unit">
     <button id="addSceneUnitBtn" class="secondary-btn orange-btn" type="button">Add another appliance</button>
@@ -191,6 +193,16 @@
 
   <div id="sceneUnitChips" class="chip-wrap"></div>
 </div>
+
+<div class="section">
+  <div class="row between align-center agency-strip">
+    <div class="section-title-inline">Other Agencies</div>
+    <button id="addAgencyBtn" class="secondary-btn add-agency-btn needs-attention" type="button">Add Agency</button>
+  </div>
+
+  <div id="otherAgencyList" class="agency-list"></div>
+</div>
+
       </section>
 
       <section id="respondersPage" class="page">
@@ -243,12 +255,12 @@
 
         <label>
           CFA Member Number
-          <input id="profileMemberNumber" class="field-input editable-field" type="text" />
+          <input id="profileMemberNumber" class="field-input editable-field" type="text" inputmode="numeric" pattern="[0-9]*" />
         </label>
 
         <label>
           Contact Number
-          <input id="profileContactNumber" class="field-input editable-field" type="text" />
+          <input id="profileContactNumber" class="field-input editable-field" type="tel" inputmode="tel" />
         </label>
 
         <label>
