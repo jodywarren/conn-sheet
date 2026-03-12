@@ -505,18 +505,6 @@ function extractBodyBeforeMap(text, incidentCodeRaw) {
     .trim();
 }
 
-  const mapMatch = working.match(/\bM\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)/);
-  if (mapMatch) {
-    working = working.slice(0, mapMatch.index).trim();
-  } else {
-    const eventMatch = working.match(/\bF\d{9}\b/);
-    if (eventMatch) {
-      working = working.slice(0, eventMatch.index).trim();
-    }
-
-  return working.replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
-}
-
 function findAddressInBody(body) {
   const text = String(body || "").trim();
   if (!text) return null;
