@@ -397,8 +397,16 @@ function validateEventNumberAgainstDate(eventNumber, pagerDate) {
 }
 
 function extractAlertAreaCode(text) {
-  const match = String(text || "").match(/\bALERT\s+([A-Z]{4}\d{1,2})\b/);
-  return match?.[1] || "";
+  const match = String(text || "").match(/\bALERT\s+([A-Z]{4}[0-9Z]{1,2})\b/);
+  if (!match) return "";
+
+  let code = match[1];
+
+  // OCR correction rules
+  code = code.replace(/Z/g, "2");   // GROVZ → GROV2
+  code = code.replace(/O/g, "0");   // O ↔ 0 mistakes
+
+  return code;
 }
 
 function extractPrimaryBrigade(alertAreaCode) {
