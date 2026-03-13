@@ -916,6 +916,7 @@ body.dark-mode .agency-card.pending {
 
 body.dark-mode .agency-card.complete {
   background: #1d2b22;
+  
 }
 body.dark-mode,
 body.dark-mode .app-shell,
@@ -1009,6 +1010,7 @@ body.dark-mode .orange-btn {
 body.dark-mode #pagerUpload {
   background: #222a33 !important;
   color: #edf2f7 !important;
+  
 }
 body.dark-mode .file-input,
 body.dark-mode .file-input::file-selector-button,
@@ -1047,4 +1049,81 @@ body.dark-mode .orange-btn {
 body.dark-mode #pagerUpload {
   background: #222a33 !important;
   color: #edf2f7 !important;
+}
+/* ===== FINAL DARK MODE OVERRIDES ===== */
+
+body.dark-mode #scanPagerBtn,
+body.dark-mode #scanPagerBtn:link,
+body.dark-mode #scanPagerBtn:visited,
+body.dark-mode #scanPagerBtn:hover,
+body.dark-mode #scanPagerBtn:active {
+  background: #8f1226 !important;
+  border: 1px solid #c84a5e !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode #scanPagerBtn *,
+body.dark-mode .ops-chip,
+body.dark-mode .ops-chip:link,
+body.dark-mode .ops-chip:visited,
+body.dark-mode .ops-chip:hover,
+body.dark-mode .ops-chip:active,
+body.dark-mode .chip-btn,
+body.dark-mode .chip-btn:link,
+body.dark-mode .chip-btn:visited,
+body.dark-mode .chip-btn:hover,
+body.dark-mode .chip-btn:active {
+  color: #ffffff !important;
+}
+
+body.dark-mode .ops-chip,
+body.dark-mode .chip-btn {
+  background: #2a3440 !important;
+  border: 1px solid #556274 !important;
+}
+
+body.dark-mode .ops-chip.active,
+body.dark-mode .chip-btn.active {
+  background: #1f3a28 !important;
+  border: 1px solid #63a978 !important;
+  color: #eaffef !important;
+}
+
+body.dark-mode .appliance-code-row .chip-btn,
+body.dark-mode .crew-chip-row .chip-btn {
+  color: #ffffff !important;
+  background: #2a3440 !important;
+  border: 1px solid #556274 !important;
+}
+
+body.dark-mode .appliance-code-row .chip-btn.active,
+body.dark-mode .crew-chip-row .chip-btn.active {
+  background: #1f3a28 !important;
+  border: 1px solid #63a978 !important;
+  color: #eaffef !important;
+}
+
+body.dark-mode .scene-chip,
+body.dark-mode .scene-chip span,
+body.dark-mode .scene-chip button {
+  color: #ffffff !important;
+}
+
+body.dark-mode .scene-chip.from-pager {
+  background: #1f3a28 !important;
+  border: 1px solid #63a978 !important;
+  color: #eaffef !important;
+}
+
+body.dark-mode .scene-chip.manual-unit {
+  background: #4a3318 !important;
+  border: 1px solid #f0a44b !important;
+  color: #fff0d6 !important;
+}
+
+body.dark-mode .status-banner.online,
+body.dark-mode .status-banner.offline {
+  background: #222a33 !important;
+  border: 1px solid #556274 !important;
+  color: #ffffff !important;
 }
