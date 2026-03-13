@@ -436,6 +436,15 @@ function extractPagerTime(text) {
   return `${match[1]}:${match[2]}`;
 }
 
+function validateEventNumberAgainstDate(eventNumber, pagerDate) {
+  if (!eventNumber || !pagerDate) return false;
+
+  const year = pagerDate.slice(2, 4);
+  const month = pagerDate.slice(5, 7);
+
+  return eventNumber.slice(1, 3) === year && eventNumber.slice(3, 5) === month;
+}
+
 function extractAlertAreaCode(text) {
   const match = String(text || "").match(/\bALERT\s+([A-Z0-9]{4}[0-9ZO]{1,2})\b/);
   if (!match) return "";
