@@ -737,3 +737,183 @@ label{
 .hidden {
   display: none !important;
 }
+.field-complete {
+  border-color: #3ca35c !important;
+  background: #edf8ef !important;
+}
+
+.compact-header {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.left-brand,
+.right-oic {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo-frame {
+  min-height: 64px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+
+.oic-banner.complete {
+  background: #edf8ef;
+  border: 1px solid #3ca35c;
+  color: #1c6b3a;
+}
+
+.scene-chip.from-pager {
+  background: #dff3e4;
+  border: 1px solid #63a978;
+}
+
+.scene-chip.manual-unit {
+  background: #fff3e0;
+  border: 1px solid #f0a44b;
+}
+
+.orange-btn {
+  background: #f0a44b !important;
+  color: #111 !important;
+}
+
+.agency-list {
+  margin-top: 0.5rem;
+}
+
+.agency-card {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid #d7dbe2;
+  background: #fff;
+}
+
+.agency-card.complete {
+  background: #edf8ef;
+  border-color: #63a978;
+}
+
+.agency-card.pending {
+  background: #fff6f6;
+  border-color: #d47474;
+}
+
+.agency-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.agency-summary {
+  font-weight: 700;
+}
+
+.agency-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ops-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ops-chip {
+  background: #fff3e0;
+  border: 1px solid #f0a44b;
+  color: #111;
+}
+
+.ops-chip.active {
+  background: #dff3e4;
+  border-color: #63a978;
+  color: #1c6b3a;
+}
+
+.other-responding-section {
+  margin-top: 1rem;
+}
+
+.subhead {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.theme-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body.dark-mode {
+  background: #11151a;
+  color: #edf2f7;
+}
+
+body.dark-mode .app-shell,
+body.dark-mode .card,
+body.dark-mode .modal-card,
+body.dark-mode .appliance-panel,
+body.dark-mode .crew-card,
+body.dark-mode .placeholder-panel {
+  background: #1a2027;
+  color: #edf2f7;
+}
+
+body.dark-mode .field-input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode input {
+  background: #222a33;
+  color: #edf2f7;
+  border-color: #3a4654;
+}
+
+body.dark-mode .subtle,
+body.dark-mode .status-meta {
+  color: #b7c1cc;
+}
+
+body.dark-mode .tab-btn {
+  background: #222a33;
+  color: #edf2f7;
+}
+
+body.dark-mode .tab-btn.active {
+  background: #b00020;
+  color: #fff;
+}
+
+body.dark-mode .secondary-btn,
+body.dark-mode .tiny-btn {
+  background: #2a3440;
+  color: #edf2f7;
+  border-color: #45515f;
+}
+
+body.dark-mode .agency-card.pending {
+  background: #2a1f22;
+}
+
+body.dark-mode .agency-card.complete {
+  background: #1d2b22;
+}
