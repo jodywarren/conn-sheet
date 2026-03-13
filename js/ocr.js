@@ -282,8 +282,8 @@ function parseCandidateBlock(blockText) {
   const isCancel = /CANCEL RESPONSE NOT REQUIRED/.test(text);
 
   const eventNumber = extractEventNumber(text);
-  const pagerDate = extractPagerDate(text, eventNumber);
-  const pagerTime = pagerDate ? extractPagerTime(text) : "";
+const pagerDate = extractPagerDate(text, eventNumber);
+const pagerTime = extractPagerTime(text);
   const eventMatchesDate = validateEventNumberAgainstDate(eventNumber, pagerDate);
 
   const alertAreaCode = extractAlertAreaCode(text);
