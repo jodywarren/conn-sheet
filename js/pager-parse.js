@@ -360,11 +360,12 @@ function scoreAddressCandidate(line) {
   const cleaned = cleanAddressCandidate(line);
   let score = 0;
 
-  if (/\bCNR\b/.test(cleaned) && /\//.test(cleaned)) score += 5;
-  if (/\b\d+[A-Z]?\b/.test(cleaned)) score += 4;
-  if (looksLikeRoadWord(cleaned)) score += 3;
-  if ([...SUBURB_WORDS].some((word) => cleaned.includes(word))) score += 2;
-  if (cleaned.length >= 10) score += 1;
+  if (/^(E\d{1,3}|CFA)\b/.test(cleaned)) score -= 10;
+  if (/\bCNR\b/.test(cleaned) && /\//.test(cleaned)) score += 8;
+  if (/\b\d+[A-Z]?\b/.test(cleaned)) score += 6;
+  if (/\b(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/.test(cleaned)) score += 4;
+  if ([...SUBURB_WORDS].some((word) => cleaned.includes(word))) score += 4;
+  if (cleaned.length >= 12) score += 1;
 
   return score;
 }
