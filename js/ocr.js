@@ -377,25 +377,29 @@ function extractEventNumber(text) {
 }
 
 function extractPagerDate(text, eventNumber) {
-  const header = extractEmergencyHeaderLine(text);
-  if (!header) return "";
+  const fullText = String(text || "");
 
-  const match = header.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
-  if (!match) return "";
+  const matches = [...fullText.matchAll(/\b(\d{2})-(\d{2})-(\d{4})\b/g)];
+  if (!matches.length) return "";
 
-  const dd = match[1];
-  const mm = match[2];
-  const yyyy = match[3];
-  const date = `${yyyy}-${mm}-${dd}`;
+  for (const match of matches) {
+    const dd = match[1];
+    const mm = match[2];
+    const yyyy = match[3];
+    const date = `${yyyy}-${mm}-${dd}`;
 
-  return validateEventNumberAgainstDate(eventNumber, date) ? date : "";
+    if (validateEventNumberAgainstDate(eventNumber, date)) {
+      return date;
+    }
+  }
+
+  return "";
 }
 
 function extractPagerTime(text) {
-  const header = extractEmergencyHeaderLine(text);
-  if (!header) return "";
+  const fullText = String(text || "");
 
-  const match = header.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  const match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
   if (!match) return "";
 
   return `${match[1]}:${match[2]}`;
