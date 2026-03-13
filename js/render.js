@@ -3,14 +3,15 @@ import {
   fillProfileInputs,
   renderOicBanner,
   saveProfileFromInputs,
+  setCurrentPage,
   saveState,
-  setCurrentPage
+  applyTheme
 } from "./state.js";
 
 export function bindShellEvents() {
   bindTabButtons();
   bindSettingsModal();
-  bindOicEditor();
+  bindOicPicker();
   bindConnectionBanner();
   showPage(state.ui.currentPage || "incidentPage");
 }
@@ -59,6 +60,7 @@ function bindSettingsModal() {
     saveBtn.addEventListener("click", () => {
       saveProfileFromInputs();
       applyProfileCompletionStates();
+      applyTheme();
       modal.classList.add("hidden");
     });
   }
@@ -80,37 +82,77 @@ function bindSettingsModal() {
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-
     el.addEventListener("input", applyProfileCompletionStates);
     el.addEventListener("change", applyProfileCompletionStates);
   });
+
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("change", () => {
+      state.ui.theme = themeToggle.checked ? "dark" : "light";
+      applyTheme();
+      saveState();
+    });
+  }
 }
 
-function bindOicEditor() {
-  const editBtn = document.getElementById("editOicBtn");
-  if (!editBtn) return;
+function bindOicPicker() {
+  const modal = document.getElementById("oicModal");
+  const openBtn = document.getElementById("editOicBtn");
+  const closeBtn = document.getElementById("closeOicBtn");
+  const saveBtn = document.getElementById("saveOicBtn");
+  const nameInput = document.getElementById("oicSearchInput");
+  const phoneInput = document.getElementById("oicPhoneInput");
+  const list = document.getElementById("oicMembersList");
 
-  editBtn.addEventListener("click", () => {
-    const currentName = state.responders.oicName || "";
-    const currentPhone = state.responders.oicPhone || "";
+  if (!modal || !openBtn || !closeBtn || !saveBtn || !nameInput || !phoneInput || !list) return;
 
-    const nameInput = window.prompt("OIC name", currentName);
-    if (nameInput === null) return;
-
-    const phoneInput = window.prompt("OIC phone number", currentPhone);
-    if (phoneInput === null) return;
-
-    state.responders.oicName = String(nameInput || "").trim();
-    state.responders.oicPhone = String(phoneInput || "").trim();
-
-    saveState();
-    renderOicBanner();
+  openBtn.addEventListener("click", () => {
+    rebuildOicList();
+    nameInput.value = state.responders.oicName || "";
+    phoneInput.value = state.responders.oicPhone || "";
+    modal.classList.remove("hidden");
+    setTimeout(() => nameInput.focus(), 50);
   });
+
+  closeBtn.addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.classList.add("hidden");
+    }
+  });
+
+  nameInput.addEventListener("input", () => {
+    const member = findMemberByName(nameInput.value);
+    if (member) {
+      phoneInput.value = member.phone || "";
+    }
+  });
+
+  saveBtn.addEventListener("click", () => {
+    const member = findMemberByName(nameInput.value);
+
+    state.responders.oicName = member?.name || nameInput.value.trim();
+    state.responders.oicPhone = member?.phone || phoneInput.value.trim();
+
+    renderOicBanner();
+    saveState();
+    modal.classList.add("hidden");
+  });
+
+  function rebuildOicList() {
+    const members = getAllMembers();
+    list.innerHTML = members
+      .map((m) => `<option value="${escapeHtml(m.name)}"></option>`)
+      .join("");
+  }
 }
 
 function bindConnectionBanner() {
   updateConnectionBanner();
-
   window.addEventListener("online", updateConnectionBanner);
   window.addEventListener("offline", updateConnectionBanner);
 }
@@ -135,8 +177,29 @@ function applyProfileCompletionStates() {
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-
     const value = String(el.value || "").trim();
     el.classList.toggle("field-complete", value.length > 0);
   });
+}
+
+function getAllMembers() {
+  return [
+    ...(state.responders.members.conn || []),
+    ...(state.responders.members.grov || []),
+    ...(state.responders.members.fres || [])
+  ];
+}
+
+function findMemberByName(name) {
+  const target = String(name || "").trim().toUpperCase();
+  return getAllMembers().find((m) => String(m.name || "").trim().toUpperCase() === target) || null;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
