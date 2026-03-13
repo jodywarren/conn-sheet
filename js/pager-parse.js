@@ -111,12 +111,27 @@ function normaliseHeaderTypos(line) {
 
 function parseHeaderLine(line) {
   const fixed = normaliseHeaderTypos(line);
-  const match = fixed.match(/\bEMERGENCY\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
+
+  // Strict primary pattern.
+  let match = fixed.match(/\bEMERGENCY\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
+
+  // Fallback: allow minor OCR junk between time and date, but still require proper time/date shapes.
+  if (!match) {
+    match = fixed.match(/\bEMERGENCY\b.*?(\d{2}:\d{2}:\d{2}).*?(\d{2}-\d{2}-\d{4})\b/);
+  }
+
   if (!match) return null;
 
   const fullTime = match[1];
   const pagerDate = match[2];
   const pagerTime = fullTime.slice(0, 5);
+
+  // Reject obviously bad year ranges rather than silently accepting garbage.
+  const [, , yyyy] = pagerDate.split('-');
+  const yearNum = Number(yyyy);
+  if (!Number.isInteger(yearNum) || yearNum < 2020 || yearNum > 2035) {
+    return null;
+  }
 
   return {
     raw: line,
@@ -138,7 +153,13 @@ function findHeader(lines) {
 }
 
 function extractEventNumberCandidates(text) {
-  const matches = [...text.matchAll(/\bF(\d{2})(\d{2})(\d{5})\b/g)];
+  const cleaned = text
+    .replace(/\bO/g, '0')
+    .replace(/\bS(?=\d)/g, '5')
+    .replace(/(?<=\d)S(?=\d)/g, '5');
+
+  const matches = [...cleaned.matchAll(/\bF(\d{2})(\d{2})(\d{5})\b/g)];
+
   return matches.map((match) => ({
     value: match[0],
     yy: match[1],
@@ -161,6 +182,11 @@ function validateEventNumberAgainstDate(eventNumber, pagerDate) {
 
   const dateMM = dateMatch[2];
   const dateYY = dateMatch[3].slice(-2);
+  const fullYear = Number(dateMatch[3]);
+
+  if (!Number.isInteger(fullYear) || fullYear < 2020 || fullYear > 2035) {
+    return false;
+  }
 
   return eventYY === dateYY && eventMM === dateMM;
 }
@@ -169,15 +195,31 @@ function selectBestEventNumber(text, pagerDate) {
   const candidates = extractEventNumberCandidates(text);
   if (!candidates.length) return null;
 
+  // First preference: date-matched candidate when the header date is trustworthy.
   if (pagerDate) {
     const valid = candidates.filter((c) => validateEventNumberAgainstDate(c.value, pagerDate));
-    if (valid.length === 1) return valid[0].value;
-    if (valid.length > 1) return valid[0].value;
-    return null;
+    if (valid.length >= 1) return valid[0].value;
   }
 
-  // Without validated date, do not guess if multiple different event numbers appear.
-  if (candidates.length === 1) return candidates[0].value;
+  // Fallback: if exactly one candidate exists, use it even if date failed.
+  if (candidates.length === 1) {
+    return candidates[0].value;
+  }
+
+  // Fallback: prefer the first candidate that looks structurally sane.
+  const structurallyValid = candidates.filter((c) => {
+    const mm = Number(c.mm);
+    return mm >= 1 && mm <= 12;
+  });
+
+  if (structurallyValid.length === 1) {
+    return structurallyValid[0].value;
+  }
+
+  if (structurallyValid.length > 1) {
+    return structurallyValid[0].value;
+  }
+
   return null;
 }
 
