@@ -83,18 +83,20 @@ const processedImage = await preprocessPagerImage(state.incident.pagerScreenshot
 const result = await window.Tesseract.recognize(
   processedImage,
   "eng",
-        logger: (msg) => {
-          if (msg.status === "recognizing text" && typeof msg.progress === "number") {
-            setScanStatus(
-              `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
-              "scan-working"
-            );
-          }
-        }
+  {
+    logger: (msg) => {
+      if (msg.status === "recognizing text" && typeof msg.progress === "number") {
+        setScanStatus(
+          `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
+          "scan-working"
+        );
       }
-    );
+    }
+  }
+);
 
-    const rawText = result?.data?.text || "";
+const rawText = result?.data?.text || "";
+
     const cleanedText = normalizeOcrText(rawText);
     const blocks = splitPagerBlocks(cleanedText);
     const parsedCandidates = blocks.map(parseCandidateBlock);
