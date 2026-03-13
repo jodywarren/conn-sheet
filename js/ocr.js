@@ -197,12 +197,27 @@ function normalizeOcrText(text) {
     .replace(/INCIC3I/g, "INCIC3")
     .replace(/INCII3/g, "INCIC3")
     .replace(/\bINCI3\b/g, "INCIC3")
+
+    /* remove obvious phone UI junk */
     .replace(/HOME CHAT SETTINGS/g, "")
     .replace(/PLEASE UPDATE YOUR AVAILABILITY/g, "")
     .replace(/REFRESH FILTER SORT/g, "")
     .replace(/ALERTING SERVICE/g, "")
     .replace(/SUPPLEMENTARY/g, "")
     .replace(/AT ATTENDING/g, "")
+
+    /* force EMERGENCY header onto its own line */
+    .replace(
+      /\b(EMERGENCY|EMERGENCV)\s+([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+(\d{2})-(\d{2})-(\d{4})\b/g,
+      "\n$1 $2:$3:$4 $5-$6-$7\n"
+    )
+
+    /* force NON EMERGENCY header onto its own line */
+    .replace(/\bNON EMERGENCY\b/g, "\nNON EMERGENCY\n")
+
+    /* force ALERT area line onto its own line */
+    .replace(/\b(ALERT\s+[A-Z0-9]{4}[0-9ZO]{1,2}\s+[A-Z&]{4,6}C[13])\b/g, "\n$1")
+
     .replace(/[^\S\n]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .toUpperCase()
