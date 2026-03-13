@@ -1,5 +1,5 @@
 // ocr-image.js
-// Image loading, optional internal cropping, and OCR preprocessing only.
+// Image loading, internal cropping, and OCR preprocessing only.
 // No Tesseract calls.
 // No pager parsing.
 // No DOM/state writes.
@@ -46,7 +46,6 @@ function fileToImage(file) {
 function drawImageToCanvas(img) {
   const canvas = createCanvas(img.naturalWidth || img.width, img.naturalHeight || img.height);
   const ctx = get2dContext(canvas, { willReadFrequently: true });
-
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
@@ -59,7 +58,6 @@ function cropCanvas(sourceCanvas, crop) {
 
   const out = createCanvas(sw, sh);
   const ctx = get2dContext(out);
-
   ctx.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
   return out;
 }
@@ -88,7 +86,6 @@ function grayscaleCanvas(sourceCanvas) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
-
     const gray = Math.round((0.299 * r) + (0.587 * g) + (0.114 * b));
     data[i] = gray;
     data[i + 1] = gray;
@@ -138,7 +135,7 @@ function thresholdCanvas(sourceCanvas, threshold = 165) {
     data[i + 2] = value;
   }
 
-  ctx.putImageData(imageData, 0, 0);
+  ctx.putImageData(imageData, imageData.width ? 0 : 0, 0);
   return out;
 }
 
@@ -187,18 +184,6 @@ function despeckleCanvas(sourceCanvas) {
   return out;
 }
 
-function canvasToBlob(canvas, type = 'image/png', quality = 0.92) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('Failed to create image blob'));
-        return;
-      }
-      resolve(blob);
-    }, type, quality);
-  });
-}
-
 function scanHorizontalInkDensity(grayCanvas, startY, endY) {
   const ctx = get2dContext(grayCanvas, { willReadFrequently: true });
   const { width, height } = grayCanvas;
@@ -232,34 +217,39 @@ function scanHorizontalInkDensity(grayCanvas, startY, endY) {
   return rows;
 }
 
-function estimateAlertCardCrop(sourceCanvas) {
+function buildBaseCrops(sourceCanvas) {
   const width = sourceCanvas.width;
   const height = sourceCanvas.height;
 
-  // First remove obvious top/bottom app chrome by rule-of-thumb.
-  // This is safer than trying to be too clever and accidentally cutting the alert.
-  const safeTop = Math.floor(height * 0.10);
-  const safeBottom = Math.floor(height * 0.93);
-
-  const baseCrop = {
-    x: Math.floor(width * 0.04),
-    y: safeTop,
-    width: Math.floor(width * 0.92),
-    height: Math.max(1, safeBottom - safeTop)
+  return {
+    fullTrim: {
+      x: Math.floor(width * 0.03),
+      y: Math.floor(height * 0.08),
+      width: Math.floor(width * 0.94),
+      height: Math.floor(height * 0.82)
+    },
+    centralCard: {
+      x: Math.floor(width * 0.05),
+      y: Math.floor(height * 0.14),
+      width: Math.floor(width * 0.90),
+      height: Math.floor(height * 0.62)
+    }
   };
+}
 
-  const baseCanvas = cropCanvas(sourceCanvas, baseCrop);
+function estimateAlertCardCrop(sourceCanvas) {
+  const { fullTrim } = buildBaseCrops(sourceCanvas);
+  const baseCanvas = cropCanvas(sourceCanvas, fullTrim);
   const gray = grayscaleCanvas(baseCanvas);
   const rows = scanHorizontalInkDensity(gray, 0, gray.height);
 
-  // Search for a dense text/header region in upper half.
-  const searchLimit = Math.max(20, Math.floor(rows.length * 0.45));
+  const searchLimit = Math.max(20, Math.floor(rows.length * 0.55));
   let bestRowIndex = 0;
   let bestScore = -Infinity;
 
   for (let i = 0; i < searchLimit; i += 1) {
     const row = rows[i];
-    const score = (row.darkRatio * 100) + (row.transitions * 0.15);
+    const score = (row.darkRatio * 100) + (row.transitions * 0.12);
 
     if (score > bestScore) {
       bestScore = score;
@@ -267,105 +257,102 @@ function estimateAlertCardCrop(sourceCanvas) {
     }
   }
 
-  // Start slightly above detected header/text area.
   const cropStartY = clamp(bestRowIndex - Math.floor(gray.height * 0.03), 0, gray.height - 1);
 
-  // End before obvious footer controls if present.
-  const lowerRows = rows.slice(Math.floor(rows.length * 0.55));
-  let footerStart = rows.length;
+  let cropEndY = Math.floor(gray.height * 0.78);
+  const lowerRows = rows.slice(Math.floor(rows.length * 0.50));
 
   for (let i = 0; i < lowerRows.length; i += 1) {
-    const rowIndex = Math.floor(rows.length * 0.55) + i;
+    const rowIndex = Math.floor(rows.length * 0.50) + i;
     const row = rows[rowIndex];
 
-    // Footer/nav bars often have moderate density but low text transitions.
-    if (row.darkRatio > 0.18 && row.transitions < 14) {
-      footerStart = rowIndex;
+    if (row.darkRatio > 0.20 && row.transitions < 12) {
+      cropEndY = rowIndex - Math.floor(gray.height * 0.02);
       break;
     }
   }
 
-  let cropEndY = footerStart - Math.floor(gray.height * 0.02);
-  if (!Number.isFinite(cropEndY) || cropEndY <= cropStartY + 80) {
-    cropEndY = Math.floor(gray.height * 0.86);
-  }
+  cropEndY = clamp(cropEndY, cropStartY + 120, gray.height);
 
-  cropEndY = clamp(cropEndY, cropStartY + 80, gray.height);
-
-  // Slight side trim helps remove rounded-card borders and side icons.
-  const finalCrop = {
-    x: baseCrop.x + Math.floor(baseCanvas.width * 0.02),
-    y: baseCrop.y + cropStartY,
+  return {
+    x: fullTrim.x + Math.floor(baseCanvas.width * 0.02),
+    y: fullTrim.y + cropStartY,
     width: Math.floor(baseCanvas.width * 0.96),
     height: cropEndY - cropStartY
   };
-
-  return finalCrop;
 }
 
-function buildPreprocessedVariants(croppedCanvas) {
-  const variants = [];
-
-  const scaled = scaleCanvas(croppedCanvas, 1.8);
-  variants.push({
-    key: 'cropped-color-2x',
-    label: 'Cropped color',
+function addRegionVariants(targetList, regionKey, regionLabel, regionCanvas) {
+  const scaled = scaleCanvas(regionCanvas, 1.8);
+  targetList.push({
+    key: `${regionKey}-color`,
+    label: `${regionLabel} color`,
     canvas: scaled
   });
 
   const gray = grayscaleCanvas(scaled);
-  variants.push({
-    key: 'cropped-gray-2x',
-    label: 'Cropped grayscale',
+  targetList.push({
+    key: `${regionKey}-gray`,
+    label: `${regionLabel} grayscale`,
     canvas: gray
   });
 
-  const grayContrast = contrastCanvas(gray, 42, 4);
-  variants.push({
-    key: 'cropped-gray-contrast',
-    label: 'Cropped grayscale contrast',
+  const grayContrast = contrastCanvas(gray, 42, 6);
+  targetList.push({
+    key: `${regionKey}-contrast`,
+    label: `${regionLabel} contrast`,
     canvas: grayContrast
   });
 
   const denoised = despeckleCanvas(grayContrast);
-  variants.push({
-    key: 'cropped-gray-denoised',
-    label: 'Cropped grayscale denoised',
+  targetList.push({
+    key: `${regionKey}-denoised`,
+    label: `${regionLabel} denoised`,
     canvas: denoised
   });
 
-  const binary = thresholdCanvas(denoised, 168);
-  variants.push({
-    key: 'cropped-binary',
-    label: 'Cropped binary',
-    canvas: binary
+  const binary1 = thresholdCanvas(denoised, 160);
+  targetList.push({
+    key: `${regionKey}-binary160`,
+    label: `${regionLabel} binary 160`,
+    canvas: binary1
   });
 
-  return variants;
+  const binary2 = thresholdCanvas(denoised, 175);
+  targetList.push({
+    key: `${regionKey}-binary175`,
+    label: `${regionLabel} binary 175`,
+    canvas: binary2
+  });
 }
 
 export async function prepareOcrImage(file) {
   const image = await fileToImage(file);
   const originalCanvas = drawImageToCanvas(image);
 
-  const internalCrop = estimateAlertCardCrop(originalCanvas);
-  const croppedCanvas = cropCanvas(originalCanvas, internalCrop);
-  const variants = buildPreprocessedVariants(croppedCanvas);
+  const baseCrops = buildBaseCrops(originalCanvas);
+  const fullTrimCanvas = cropCanvas(originalCanvas, baseCrops.fullTrim);
+  const centralCardCanvas = cropCanvas(originalCanvas, baseCrops.centralCard);
+  const estimatedCrop = estimateAlertCardCrop(originalCanvas);
+  const estimatedCanvas = cropCanvas(originalCanvas, estimatedCrop);
+
+  const variants = [];
+  addRegionVariants(variants, 'fulltrim', 'Full trimmed', fullTrimCanvas);
+  addRegionVariants(variants, 'central', 'Central card', centralCardCanvas);
+  addRegionVariants(variants, 'estimated', 'Estimated alert card', estimatedCanvas);
 
   return {
     source: {
       width: originalCanvas.width,
       height: originalCanvas.height
     },
-    crop: internalCrop,
+    crop: estimatedCrop,
     originalCanvas,
-    croppedCanvas,
+    fullTrimCanvas,
+    centralCardCanvas,
+    croppedCanvas: estimatedCanvas,
     variants
   };
-}
-
-export async function variantToBlob(variantCanvas) {
-  return canvasToBlob(variantCanvas, 'image/png', 0.92);
 }
 
 export function variantToDataUrl(variantCanvas) {
@@ -373,7 +360,9 @@ export function variantToDataUrl(variantCanvas) {
 }
 
 export function getBestPreviewCanvas(prepared) {
+  if (prepared?.centralCardCanvas) return prepared.centralCardCanvas;
   if (prepared?.croppedCanvas) return prepared.croppedCanvas;
+  if (prepared?.fullTrimCanvas) return prepared.fullTrimCanvas;
   if (prepared?.originalCanvas) return prepared.originalCanvas;
   return null;
 }
