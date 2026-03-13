@@ -10,8 +10,10 @@ export function bindIncidentInputs() {
   bindSelect("distanceToScene");
   bindSelect("weather1");
   bindSelect("weather2");
+  bindSelect("signalCode");
   bindSceneUnits();
   bindOtherAgencyControls();
+  bindOperationalChips();
 }
 
 function bindTextInputs() {
@@ -25,7 +27,10 @@ function bindTextInputs() {
     "responseCode",
     "pagerDetails",
     "scannedAddress",
-    "controlName"
+    "controlName",
+    "actualAddress",
+    "injuryNotes",
+    "signalNotes"
   ];
 
   plainFields.forEach((id) => {
@@ -33,21 +38,14 @@ function bindTextInputs() {
     if (!el) return;
 
     el.addEventListener("input", () => {
+      if (id === "actualAddress") {
+        state.incident.actualAddressEdited = true;
+      }
       state.incident[id] = el.value.trim();
       saveState();
       applyFieldCompletionStates();
     });
   });
-
-  const actualAddressEl = document.getElementById("actualAddress");
-  if (actualAddressEl) {
-    actualAddressEl.addEventListener("input", () => {
-      state.incident.actualAddress = actualAddressEl.value.trim();
-      state.incident.actualAddressEdited = true;
-      saveState();
-      applyFieldCompletionStates();
-    });
-  }
 }
 
 function bindSelect(id) {
@@ -58,8 +56,8 @@ function bindSelect(id) {
     state.incident[id] = el.value;
     saveState();
 
-    if (id === "weather1") {
-      toggleWeather2Visibility();
+    if (id === "signalCode") {
+      toggleSignalNotes();
     }
 
     applyFieldCompletionStates();
@@ -184,57 +182,65 @@ function createEmptyAgency() {
     station: "",
     localHq: "",
     office: "",
-    notes: ""
+    notes: "",
+    expanded: true
   };
+}
+
+function getAgencySummary(agency) {
+  const type = agency.type || "Add Agency";
+  const who = agency.name || agency.agencyName || "";
+  const number = agency.contactNumber || "";
+  return [type, who, number].filter(Boolean).join(" • ");
 }
 
 function getAgencyFieldConfig(type) {
   switch (type) {
     case "Police":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "badgeNumber", label: "Badge number" },
-        { key: "station", label: "Station" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "badgeNumber", label: "Badge number", mode: "numeric" },
+        { key: "station", label: "Station", mode: "text" }
       ];
     case "Ambulance":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "idNumber", label: "ID number" },
-        { key: "station", label: "Station" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "idNumber", label: "ID number", mode: "numeric" },
+        { key: "station", label: "Station", mode: "text" }
       ];
     case "SES":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "localHq", label: "Local HQ" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "localHq", label: "Local HQ", mode: "text" }
       ];
     case "Powercor":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "office", label: "Depot / office" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "office", label: "Depot / office", mode: "text" }
       ];
     case "Gas":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "office", label: "Depot / office" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "office", label: "Depot / office", mode: "text" }
       ];
     case "Council":
       return [
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "office", label: "Office" },
-        { key: "notes", label: "Other notes" }
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "office", label: "Office", mode: "text" },
+        { key: "notes", label: "Other notes", mode: "text" }
       ];
     case "Other":
       return [
-        { key: "agencyName", label: "Agency name" },
-        { key: "name", label: "Name" },
-        { key: "contactNumber", label: "Contact number" },
-        { key: "notes", label: "Notes" }
+        { key: "agencyName", label: "Agency name", mode: "text" },
+        { key: "name", label: "Name", mode: "text" },
+        { key: "contactNumber", label: "Contact number", mode: "tel" },
+        { key: "notes", label: "Notes", mode: "text" }
       ];
     default:
       return [];
@@ -243,10 +249,8 @@ function getAgencyFieldConfig(type) {
 
 function isAgencyComplete(agency) {
   if (!agency || !agency.type) return false;
-
   const fields = getAgencyFieldConfig(agency.type);
   if (!fields.length) return false;
-
   return fields.every((field) => String(agency[field.key] || "").trim().length > 0);
 }
 
@@ -260,52 +264,73 @@ export function renderOtherAgencies() {
   (state.incident.otherAgencies || []).forEach((agency) => {
     const fields = getAgencyFieldConfig(agency.type);
     const complete = isAgencyComplete(agency);
-
     const card = document.createElement("div");
-    card.className = `agency-card ${complete ? "complete" : "pending"}`;
+    card.className = `agency-card ${complete ? "complete" : "pending"} ${agency.expanded ? "expanded" : "collapsed"}`;
 
-    card.innerHTML = `
-      <div class="agency-card-head">
-        <div class="agency-card-title">${agency.type || "Add Agency"}</div>
-        <button class="tiny-btn" type="button" data-remove-agency="${agency.id}">Remove</button>
-      </div>
+    if (!agency.expanded) {
+      card.innerHTML = `
+        <div class="agency-card-head">
+          <div class="agency-summary">${escapeHtml(getAgencySummary(agency))}</div>
+          <div class="agency-actions">
+            <button class="tiny-btn" type="button" data-edit-agency="${agency.id}">Edit</button>
+            <button class="tiny-btn" type="button" data-remove-agency="${agency.id}">Remove</button>
+          </div>
+        </div>
+      `;
+    } else {
+      card.innerHTML = `
+        <div class="agency-card-head">
+          <div class="agency-summary">${escapeHtml(agency.type || "Add Agency")}</div>
+          <div class="agency-actions">
+            <button class="tiny-btn" type="button" data-save-agency="${agency.id}">Save</button>
+            <button class="tiny-btn" type="button" data-remove-agency="${agency.id}">Remove</button>
+          </div>
+        </div>
 
-      <div class="grid">
-        <label>
-          Agency
-          <select class="field-input editable-field agency-field ${agency.type ? "field-complete" : ""}" data-agency-id="${agency.id}" data-field="type">
-            <option value="">Select agency</option>
-            <option ${agency.type === "Police" ? "selected" : ""}>Police</option>
-            <option ${agency.type === "Ambulance" ? "selected" : ""}>Ambulance</option>
-            <option ${agency.type === "SES" ? "selected" : ""}>SES</option>
-            <option ${agency.type === "Powercor" ? "selected" : ""}>Powercor</option>
-            <option ${agency.type === "Gas" ? "selected" : ""}>Gas</option>
-            <option ${agency.type === "Council" ? "selected" : ""}>Council</option>
-            <option ${agency.type === "Other" ? "selected" : ""}>Other</option>
-          </select>
-        </label>
-
-        ${fields.map((field) => `
+        <div class="grid agency-grid">
           <label>
-            ${field.label}
-            <input
-              class="field-input editable-field agency-field ${String(agency[field.key] || "").trim() ? "field-complete" : ""}"
-              type="text"
-              value="${escapeHtml(agency[field.key] || "")}"
-              data-agency-id="${agency.id}"
-              data-field="${field.key}"
-            />
+            Agency
+            <select class="field-input editable-field agency-field ${agency.type ? "field-complete" : ""}" data-agency-id="${agency.id}" data-field="type">
+              <option value="">Select agency</option>
+              <option ${agency.type === "Police" ? "selected" : ""}>Police</option>
+              <option ${agency.type === "Ambulance" ? "selected" : ""}>Ambulance</option>
+              <option ${agency.type === "SES" ? "selected" : ""}>SES</option>
+              <option ${agency.type === "Powercor" ? "selected" : ""}>Powercor</option>
+              <option ${agency.type === "Gas" ? "selected" : ""}>Gas</option>
+              <option ${agency.type === "Council" ? "selected" : ""}>Council</option>
+              <option ${agency.type === "Other" ? "selected" : ""}>Other</option>
+            </select>
           </label>
-        `).join("")}
-      </div>
-    `;
+
+          ${fields.map((field) => {
+            const val = String(agency[field.key] || "");
+            const inputType = field.mode === "tel" ? "tel" : "text";
+            const inputMode = field.mode === "numeric" ? "numeric" : field.mode === "tel" ? "tel" : "text";
+
+            return `
+              <label>
+                ${field.label}
+                <input
+                  class="field-input editable-field agency-field ${val.trim() ? "field-complete" : ""}"
+                  type="${inputType}"
+                  inputmode="${inputMode}"
+                  value="${escapeHtml(val)}"
+                  data-agency-id="${agency.id}"
+                  data-field="${field.key}"
+                />
+              </label>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
 
     wrap.appendChild(card);
   });
 
   addBtn.textContent = state.incident.otherAgencies.length ? "Add another agency" : "Add Agency";
-  addBtn.classList.toggle("has-complete", (state.incident.otherAgencies || []).every(isAgencyComplete) && state.incident.otherAgencies.length > 0);
-  addBtn.classList.toggle("needs-attention", !(state.incident.otherAgencies || []).every(isAgencyComplete));
+  addBtn.classList.remove("has-complete", "needs-attention");
+  addBtn.classList.add("orange-btn");
 
   bindRenderedOtherAgencyEvents();
 }
@@ -320,6 +345,28 @@ function bindRenderedOtherAgencyEvents() {
     });
   });
 
+  document.querySelectorAll("[data-edit-agency]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const agency = state.incident.otherAgencies.find((item) => item.id === btn.dataset.editAgency);
+      if (!agency) return;
+      agency.expanded = true;
+      renderOtherAgencies();
+      saveState();
+    });
+  });
+
+  document.querySelectorAll("[data-save-agency]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const agency = state.incident.otherAgencies.find((item) => item.id === btn.dataset.saveAgency);
+      if (!agency) return;
+      if (isAgencyComplete(agency)) {
+        agency.expanded = false;
+        renderOtherAgencies();
+        saveState();
+      }
+    });
+  });
+
   document.querySelectorAll(".agency-field").forEach((el) => {
     const eventName = el.tagName === "SELECT" ? "change" : "input";
 
@@ -328,10 +375,69 @@ function bindRenderedOtherAgencyEvents() {
       if (!agency) return;
 
       agency[el.dataset.field] = String(el.value || "").trim();
-      renderOtherAgencies();
-      saveState();
+
+      if (el.dataset.field === "type") {
+        renderOtherAgencies();
+      } else {
+        el.classList.toggle("field-complete", String(el.value || "").trim().length > 0);
+        saveState();
+      }
     });
   });
+}
+
+function bindOperationalChips() {
+  bindFlagChip("membersBeforeChip", "membersBefore");
+  bindFlagChip("hotDebriefChip", "hotDebrief");
+  bindFlagChip("aarRequiredChip", "aarRequired");
+  bindFlagChip("injuryChip", "injury");
+
+  const signalChip = document.getElementById("signalChip");
+  if (signalChip) {
+    signalChip.addEventListener("click", () => {
+      const active = signalChip.classList.toggle("active");
+      if (!active) {
+        state.incident.signalCode = "";
+        state.incident.signalNotes = "";
+      }
+      toggleSignalNotes();
+      saveState();
+    });
+  }
+}
+
+function bindFlagChip(chipId, flagKey) {
+  const chip = document.getElementById(chipId);
+  if (!chip) return;
+
+  chip.addEventListener("click", () => {
+    state.incident.flags[flagKey] = !state.incident.flags[flagKey];
+
+    if (flagKey === "injury" && !state.incident.flags[flagKey]) {
+      state.incident.injuryNotes = "";
+    }
+
+    saveState();
+    toggleInjuryNotes();
+    applyOperationalChipStates();
+    applyFieldCompletionStates();
+  });
+}
+
+function toggleInjuryNotes() {
+  const wrap = document.getElementById("injuryNotesWrap");
+  if (!wrap) return;
+  wrap.classList.toggle("hidden", !state.incident.flags.injury);
+}
+
+function toggleSignalNotes() {
+  const chip = document.getElementById("signalChip");
+  const wrap = document.getElementById("signalWrap");
+  const notesWrap = document.getElementById("signalNotesWrap");
+
+  const active = chip?.classList.contains("active");
+  if (wrap) wrap.classList.toggle("hidden", !active);
+  if (notesWrap) notesWrap.classList.toggle("hidden", !(active && state.incident.signalCode));
 }
 
 export function loadIncidentIntoInputs() {
@@ -350,7 +456,10 @@ export function loadIncidentIntoInputs() {
     firstAgency: state.incident.firstAgency,
     distanceToScene: state.incident.distanceToScene,
     weather1: state.incident.weather1,
-    weather2: state.incident.weather2
+    weather2: state.incident.weather2,
+    injuryNotes: state.incident.injuryNotes,
+    signalCode: state.incident.signalCode,
+    signalNotes: state.incident.signalNotes
   };
 
   Object.entries(fieldMap).forEach(([id, value]) => {
@@ -359,28 +468,30 @@ export function loadIncidentIntoInputs() {
     el.value = value || "";
   });
 
-  toggleWeather2Visibility();
   renderSceneUnitChips();
   renderOtherAgencies();
+  applyOperationalChipStates();
+  toggleInjuryNotes();
+  toggleSignalNotes();
   applyFieldCompletionStates();
 }
 
-function toggleWeather2Visibility() {
-  const wrap = document.getElementById("weather2Wrap");
-  if (!wrap) return;
+function applyOperationalChipStates() {
+  setChipState("membersBeforeChip", state.incident.flags.membersBefore);
+  setChipState("hotDebriefChip", state.incident.flags.hotDebrief);
+  setChipState("aarRequiredChip", state.incident.flags.aarRequired);
+  setChipState("injuryChip", state.incident.flags.injury);
+  setChipState("signalChip", Boolean(state.incident.signalCode) || document.getElementById("signalChip")?.classList.contains("active"));
+}
 
-  const selected = String(state.incident.weather1 || "").trim();
-  wrap.classList.toggle("hidden", !selected);
-
-  if (!selected) {
-    state.incident.weather2 = "";
-    const el = document.getElementById("weather2");
-    if (el) el.value = "";
-  }
+function setChipState(id, active) {
+  const chip = document.getElementById(id);
+  if (!chip) return;
+  chip.classList.toggle("active", !!active);
 }
 
 export function applyFieldCompletionStates() {
-  const ids = [
+  const requiredIds = [
     "eventNumber",
     "pagerDate",
     "pagerTime",
@@ -391,17 +502,22 @@ export function applyFieldCompletionStates() {
     "pagerDetails",
     "scannedAddress",
     "actualAddress",
-    "controlName",
     "firstAgency",
     "distanceToScene",
-    "weather1",
-    "weather2"
+    "weather1"
   ];
 
-  ids.forEach((id) => {
+  requiredIds.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
+    const value = String(el.value || "").trim();
+    el.classList.toggle("field-complete", value.length > 0);
+  });
 
+  const optionalIds = ["weather2", "controlName", "injuryNotes", "signalNotes", "signalCode"];
+  optionalIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
     const value = String(el.value || "").trim();
     el.classList.toggle("field-complete", value.length > 0);
   });
@@ -410,7 +526,7 @@ export function applyFieldCompletionStates() {
 function normalizeSceneUnit(raw) {
   const code = String(raw || "").trim().toUpperCase();
 
-  if (code === "AFP" || code === "AFPR" || code === "FP") return "POLICE";
+  if (code === "AFP" || code === "AFPR" || code === "FP") return "Police";
   return code;
 }
 
