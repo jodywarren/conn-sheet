@@ -327,17 +327,29 @@ function lineLooksLikeAddress(line) {
 function cleanAddressCandidate(line) {
   let value = stripLeadingKnownTags(line);
 
-  // Keep both roads for CNR.
+  // Remove obvious CFA logo OCR junk at start only.
+  value = value.replace(/^(E\d{1,3}|CFA)\s+/i, '').trim();
+
+  // Normalize pager road abbreviations exactly as pager uses them.
+  value = value
+    .replace(/\bSTREET\b/g, 'ST')
+    .replace(/\bROAD\b/g, 'RD')
+    .replace(/\bAVENUE\b/g, 'AV');
+
+  // Keep CNR addresses intact with both roads and suburb.
   if (/\bCNR\b/.test(value)) {
     return normaliseAddressPunctuation(value);
   }
 
-  // For non-CNR addresses, trim obvious trailing extra slash-road fragments.
-  // Example: "28 FREDA RD ARMSTRONG CREEK / SOMETHING"
-  if (!/\bCNR\b/.test(value) && /\//.test(value)) {
-    const parts = value.split('/').map((part) => collapseSpaces(part));
-    if (parts.length > 1) {
-      value = parts[0];
+  // For numbered addresses, trim slash-road extras only if present.
+  // Example: 12 LYONS DR ARMSTRONG CREEK / PETUNIA CR
+  if (/\b\d+[A-Z]?\b/.test(value) && /\//.test(value) && !/\bCNR\b/.test(value)) {
+    const suburbMatch = value.match(/\b(ARMSTRONG CREEK|MOUNT DUNEED|CONNEWARRE|GROVEDALE|FRESHWATER CREEK|BARWON HEADS|TORQUAY|MODEWARRE|GEELONG|MARSHALL|LEOPOLD|BELMONT|WAURN PONDS)\b/);
+    if (suburbMatch) {
+      const suburbEnd = value.indexOf(suburbMatch[0]) + suburbMatch[0].length;
+      value = value.slice(0, suburbEnd).trim();
+    } else {
+      value = value.split('/')[0].trim();
     }
   }
 
