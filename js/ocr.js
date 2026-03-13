@@ -377,14 +377,26 @@ function extractEventNumber(text) {
 
 function extractPagerDate(text, eventNumber) {
   const fullText = String(text || "");
-  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
 
-  for (const line of lines) {
-    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\s+(\d{2})-(\d{2})-(\d{4})\b/);
-    if (match) {
-      const date = `${match[3]}-${match[2]}-${match[1]}`;
-      return validateEventNumberAgainstDate(eventNumber, date) ? date : "";
-    }
+  const match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+(\d{2})-(\d{2})-(\d{4})\b/);
+  if (!match) return "";
+
+  const dd = match[4];
+  const mm = match[5];
+  const yyyy = match[6];
+  const date = `${yyyy}-${mm}-${dd}`;
+
+  return validateEventNumberAgainstDate(eventNumber, date) ? date : "";
+}
+
+function extractPagerTime(text) {
+  const fullText = String(text || "");
+
+  const match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
+  if (!match) return "";
+
+  return `${match[1]}:${match[2]}`;
+}
   }
 
   return "";
