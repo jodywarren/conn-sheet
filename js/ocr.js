@@ -527,7 +527,7 @@ function findAddressInBody(body) {
   const text = String(body || "").trim();
   if (!text) return null;
 
-  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\s*\/\s*[A-Z0-9' -]+?(?=\s+M\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)|\s+ARMSTRONG CREEK|\s+MOUNT DUNEED|\s+CHARLEMONT|\s*$)/g;
+  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\/\s*[A-Z0-9' -]+?(?:\s+[A-Z][A-Z' -]+){0,4}/g;
   const numberedRegex = /\b\d+\s+[A-Z0-9' -]+?(?:RD|ROAD|ST|STREET|DR|DRIVE|AVE|AV|AVENUE|HWY|HIGHWAY|CRT|COURT|CT|CRES|CRESCENT|PL|PLACE|WAY|LN|LANE)\b(?:\s+[A-Z][A-Z' -]+){0,4}/g;
 
   const candidates = [];
@@ -548,26 +548,6 @@ function findAddressInBody(body) {
       if (slashIndex > -1) {
         value = value.slice(0, slashIndex).trim();
       }
-    }
-
-    candidates.push({
-      text: value,
-      start: match.index
-    });
-  }
-
-  if (!candidates.length) return null;
-
-  candidates.sort((a, b) => b.start - a.start);
-  return candidates[0];
-}
-
-  while ((match = numberedRegex.exec(text)) !== null) {
-    let value = cleanAddress(match[0]);
-    const slashIndex = value.indexOf("/");
-
-    if (slashIndex > -1) {
-      value = value.slice(0, slashIndex).trim();
     }
 
     candidates.push({
