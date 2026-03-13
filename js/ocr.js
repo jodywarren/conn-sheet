@@ -444,7 +444,15 @@ export function bindOcrEvents() {
     return;
   }
 
-  pagerUpload.addEventListener('change', () => {
+export function bindOcrEvents() {
+  const pagerUpload = qs('pagerUpload');
+  const scanPagerBtn = qs('scanPagerBtn');
+
+  if (!pagerUpload || !scanPagerBtn) {
+    console.warn('OCR controls not found in DOM');
+    return;
+  }
+
   pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
     if (!file) {
@@ -458,7 +466,6 @@ export function bindOcrEvents() {
     if (ocrBusy) return;
     await runPagerOcrIntoIncident(file);
   });
-  
 
   scanPagerBtn.addEventListener('click', async () => {
     if (ocrBusy) return;
