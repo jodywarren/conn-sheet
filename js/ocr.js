@@ -1,23 +1,14 @@
 // ocr.js
 // OCR orchestration and DOM binding for the Incident page only.
 // Keeps existing layout/workflow intact.
-//
-// Handles:
-// - screenshot file input
-// - preview image
-// - image preprocessing
-// - OCR read
-// - pager candidate scoring
-// - strict writeback into existing incident inputs
-//
-// Does NOT redesign UI or change page layout.
 
+import { state, saveState } from './state.js';
+import { loadIncidentIntoInputs, setPagedSceneUnits } from './incident.js';
 import { prepareOcrImage, getBestPreviewCanvas, variantToDataUrl } from './ocr-image.js';
 import { readPreparedOcr } from './ocr-read.js';
 import { scorePagerCandidates } from './pager-score.js';
 import { shouldAutoCopyActualAddress } from './pager-parse.js';
 
-let actualAddressManuallyEdited = false;
 let ocrBusy = false;
 
 function isNonEmptyString(value) {
@@ -72,38 +63,6 @@ function setPreviewFromCanvas(canvas) {
 
   img.src = variantToDataUrl(canvas);
   img.classList.remove('hidden');
-}
-
-function getInputValue(id) {
-  const el = qs(id);
-  return el ? el.value : '';
-}
-
-function setInputValue(id, value) {
-  const el = qs(id);
-  if (!el) return false;
-
-  const nextValue = value ?? '';
-  el.value = nextValue;
-
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-  return true;
-}
-
-function getIncidentStateFromDom() {
-  return {
-    eventNumber: getInputValue('eventNumber'),
-    pagerDate: getInputValue('pagerDate'),
-    pagerTime: getInputValue('pagerTime'),
-    alertAreaCode: getInputValue('alertAreaCode'),
-    brigadeRole: getInputValue('brigadeRole'),
-    incidentType: getInputValue('incidentType'),
-    responseCode: getInputValue('responseCode'),
-    pagerDetails: getInputValue('pagerDetails'),
-    scannedAddress: getInputValue('scannedAddress'),
-    actualAddress: getInputValue('actualAddress')
-  };
 }
 
 function countFilledMergedFields(merged) {
@@ -186,7 +145,6 @@ function chooseBestScoredResult(scoredCandidates) {
 }
 
 function convertPagerDateToInputDate(value) {
-  // OCR parser returns DD-MM-YYYY
   if (!value || !/^\d{2}-\d{2}-\d{4}$/.test(value)) return '';
   const [dd, mm, yyyy] = value.split('-');
   return `${yyyy}-${mm}-${dd}`;
@@ -196,9 +154,10 @@ function normaliseSceneUnits(sceneUnits) {
   return uniqueStrings(sceneUnits || []);
 }
 
-function buildIncidentPatchFromScoredResult(scoredResult, currentIncident = {}, options = {}) {
+function buildIncidentPatchFromScoredResult(scoredResult) {
   const merged = scoredResult?.merged || {};
-  const currentActualAddress = cleanString(currentIncident.actualAddress || '');
+  const currentActualAddress = cleanString(state?.incident?.actualAddress || '');
+  const actualAddressEdited = !!state?.incident?.actualAddressEdited;
   const scannedAddress = cleanString(merged.scannedAddress || '');
 
   const patch = {
@@ -215,7 +174,7 @@ function buildIncidentPatchFromScoredResult(scoredResult, currentIncident = {}, 
   };
 
   const shouldCopy = scannedAddress
-    ? shouldAutoCopyActualAddress(currentActualAddress, !!options.actualAddressManuallyEdited)
+    ? shouldAutoCopyActualAddress(currentActualAddress, actualAddressEdited)
     : false;
 
   if (shouldCopy) {
@@ -242,54 +201,30 @@ function buildNonEmptyPatch(patch) {
   return out;
 }
 
-function existingSceneUnitTexts() {
-  const wrap = qs('sceneUnitChips');
-  if (!wrap) return [];
+function applyPatchToIncidentState(patch) {
+  if (!state?.incident) return;
 
-  return Array.from(wrap.querySelectorAll('.chip, .chip-btn, .unit-chip, button, span'))
-    .map((el) => cleanString(el.textContent || ''))
-    .filter(Boolean);
-}
+  if (patch.eventNumber) state.incident.eventNumber = patch.eventNumber;
+  if (patch.pagerDate) state.incident.pagerDate = patch.pagerDate;
+  if (patch.pagerTime) state.incident.pagerTime = patch.pagerTime;
+  if (patch.alertAreaCode) state.incident.alertAreaCode = patch.alertAreaCode;
+  if (patch.brigadeRole) state.incident.brigadeRole = patch.brigadeRole;
+  if (patch.incidentType) state.incident.incidentType = patch.incidentType;
+  if (patch.responseCode) state.incident.responseCode = patch.responseCode;
+  if (patch.pagerDetails) state.incident.pagerDetails = patch.pagerDetails;
+  if (patch.scannedAddress) state.incident.scannedAddress = patch.scannedAddress;
 
-function addSceneUnitThroughUi(unit) {
-  const input = qs('sceneUnitInput');
-  const btn = qs('addSceneUnitBtn');
-  if (!input || !btn || !unit) return false;
-
-  input.value = unit;
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  btn.click();
-  return true;
-}
-
-function applySceneUnitsToUi(units) {
-  const desired = normaliseSceneUnits(units);
-  if (!desired.length) return;
-
-  const existing = new Set(existingSceneUnitTexts().map((t) => t.toUpperCase()));
-
-  for (const unit of desired) {
-    const key = unit.toUpperCase();
-    if (existing.has(key)) continue;
-    addSceneUnitThroughUi(unit);
-    existing.add(key);
+  if (patch.actualAddress) {
+    state.incident.actualAddress = patch.actualAddress;
   }
-}
 
-function applyIncidentPatchToDom(patch) {
-  if (patch.eventNumber) setInputValue('eventNumber', patch.eventNumber);
-  if (patch.pagerDate) setInputValue('pagerDate', patch.pagerDate);
-  if (patch.pagerTime) setInputValue('pagerTime', patch.pagerTime);
-  if (patch.alertAreaCode) setInputValue('alertAreaCode', patch.alertAreaCode);
-  if (patch.brigadeRole) setInputValue('brigadeRole', patch.brigadeRole);
-  if (patch.incidentType) setInputValue('incidentType', patch.incidentType);
-  if (patch.responseCode) setInputValue('responseCode', patch.responseCode);
-  if (patch.pagerDetails) setInputValue('pagerDetails', patch.pagerDetails);
-  if (patch.scannedAddress) setInputValue('scannedAddress', patch.scannedAddress);
-  if (patch.actualAddress) setInputValue('actualAddress', patch.actualAddress);
-  if (Array.isArray(patch.sceneUnits) && patch.sceneUnits.length) {
-    applySceneUnitsToUi(patch.sceneUnits);
+  if (Array.isArray(patch.sceneUnits) && patch.sceneUnits.length > 0) {
+    setPagedSceneUnits(patch.sceneUnits);
+  } else {
+    saveState();
   }
+
+  loadIncidentIntoInputs();
 }
 
 function buildDebugSummary(chosenCandidate, allScoredCandidates) {
@@ -434,10 +369,7 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
             setScanStatus('Scoring pager blocks...', 'scan-working');
             break;
           case 'score-complete':
-            setScanStatus(
-              payload.message || 'Scoring complete',
-              extraction?.success ? 'scan-success' : 'scan-working'
-            );
+            setScanStatus(payload.message || 'Scoring complete', 'scan-working');
             break;
           default:
             break;
@@ -445,16 +377,11 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
       }
     });
 
-    const currentIncident = getIncidentStateFromDom();
-    const rawPatch = buildIncidentPatchFromScoredResult(
-      extraction.chosenResult,
-      currentIncident,
-      { actualAddressManuallyEdited }
-    );
+    const rawPatch = buildIncidentPatchFromScoredResult(extraction.chosenResult);
     const patch = buildNonEmptyPatch(rawPatch);
 
     if (extraction.success) {
-      applyIncidentPatchToDom(patch);
+      applyPatchToIncidentState(patch);
       setScanStatus('OCR complete. Check the populated fields.', 'scan-success');
     } else {
       setScanStatus('OCR could not safely extract a valid emergency page. Please correct fields manually.', 'scan-error');
@@ -500,11 +427,9 @@ export function createPagerOcrController(integration = {}) {
   };
 }
 
-export function buildIncidentPatchForPreview(extractionResult, currentIncident = {}, options = {}) {
+export function buildIncidentPatchForPreview(extractionResult) {
   const patch = buildIncidentPatchFromScoredResult(
-    extractionResult?.chosenResult || extractionResult,
-    currentIncident,
-    { actualAddressManuallyEdited: !!options.actualAddressManuallyEdited }
+    extractionResult?.chosenResult || extractionResult
   );
 
   return buildNonEmptyPatch(patch);
@@ -513,17 +438,10 @@ export function buildIncidentPatchForPreview(extractionResult, currentIncident =
 export function bindOcrEvents() {
   const pagerUpload = qs('pagerUpload');
   const scanPagerBtn = qs('scanPagerBtn');
-  const actualAddressInput = qs('actualAddress');
 
   if (!pagerUpload || !scanPagerBtn) {
     console.warn('OCR controls not found in DOM');
     return;
-  }
-
-  if (actualAddressInput) {
-    actualAddressInput.addEventListener('input', () => {
-      actualAddressManuallyEdited = true;
-    });
   }
 
   pagerUpload.addEventListener('change', () => {
