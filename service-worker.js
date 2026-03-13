@@ -1,4 +1,4 @@
-const CACHE_NAME = "conn-sheet-v317";
+const CACHE_NAME = "conn-sheet-v341";
 
 const APP_SHELL = [
   "./",
