@@ -390,26 +390,6 @@ function extractEventNumber(text) {
   return matches[matches.length - 1];
 }
 
-function extractPagerDate(text, eventNumber) {
-  const fullText = String(text || "");
-
-  const matches = [...fullText.matchAll(/\b(\d{2})-(\d{2})-(\d{4})\b/g)];
-  if (!matches.length) return "";
-
-  for (const match of matches) {
-    const dd = match[1];
-    const mm = match[2];
-    const yyyy = match[3];
-    const date = `${yyyy}-${mm}-${dd}`;
-
-    if (validateEventNumberAgainstDate(eventNumber, date)) {
-      return date;
-    }
-  }
-
-  return "";
-}
-
 function extractEmergencyHeaderLine(text) {
   const lines = String(text || "")
     .split("\n")
