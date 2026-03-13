@@ -1010,3 +1010,41 @@ body.dark-mode #pagerUpload {
   background: #222a33 !important;
   color: #edf2f7 !important;
 }
+body.dark-mode .file-input,
+body.dark-mode .file-input::file-selector-button,
+body.dark-mode #pagerUpload,
+body.dark-mode #sceneUnitInput,
+body.dark-mode .scene-chip,
+body.dark-mode .scene-chip span,
+body.dark-mode .scene-chip button,
+body.dark-mode .orange-btn,
+body.dark-mode .add-agency-btn {
+  color: #edf2f7 !important;
+}
+
+body.dark-mode .file-input::file-selector-button {
+  background: #2a3440 !important;
+  border: 1px solid #45515f !important;
+}
+
+body.dark-mode .scene-chip.from-pager {
+  background: #1d2b22 !important;
+  border-color: #63a978 !important;
+  color: #dff3e4 !important;
+}
+
+body.dark-mode .scene-chip.manual-unit {
+  background: #3a2a16 !important;
+  border-color: #f0a44b !important;
+  color: #ffe7c2 !important;
+}
+
+body.dark-mode .orange-btn {
+  background: #a96b1f !important;
+  color: #fff4df !important;
+}
+
+body.dark-mode #pagerUpload {
+  background: #222a33 !important;
+  color: #edf2f7 !important;
+}
