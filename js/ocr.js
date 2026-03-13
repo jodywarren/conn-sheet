@@ -410,15 +410,6 @@ function extractPagerDate(text, eventNumber) {
   return "";
 }
 
-function extractPagerTime(text) {
-  const fullText = String(text || "");
-
-  const match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
-  if (!match) return "";
-
-  return `${match[1]}:${match[2]}`;
-}
-
 function extractEmergencyHeaderLine(text) {
   const lines = String(text || "")
     .split("\n")
@@ -426,25 +417,43 @@ function extractEmergencyHeaderLine(text) {
     .filter(Boolean);
 
   for (const line of lines) {
-    const hasEmergency = /EMERGENCY|EMERGENCV/.test(line);
-    const hasTime = /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(line);
-    const hasDate = /\b\d{2}-\d{2}-\d{4}\b/.test(line);
+    const upper = line.toUpperCase();
 
-    if (hasEmergency && hasTime && hasDate) {
-      return line;
+    const hasEmergencyWord = upper.includes("EMERGENCY") || upper.includes("EMERGENCV");
+    const hasTime = /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(upper);
+    const hasDate = /\b\d{2}-\d{2}-\d{4}\b/.test(upper);
+
+    if (hasEmergencyWord && hasTime && hasDate) {
+      return upper;
     }
   }
 
   return "";
 }
 
-function validateEventNumberAgainstDate(eventNumber, pagerDate) {
-  if (!eventNumber || !pagerDate) return false;
+function extractPagerDate(text, eventNumber) {
+  const header = extractEmergencyHeaderLine(text);
+  if (!header) return "";
 
-  const year = pagerDate.slice(2, 4);
-  const month = pagerDate.slice(5, 7);
+  const match = header.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
+  if (!match) return "";
 
-  return eventNumber.slice(1, 3) === year && eventNumber.slice(3, 5) === month;
+  const dd = match[1];
+  const mm = match[2];
+  const yyyy = match[3];
+  const date = `${yyyy}-${mm}-${dd}`;
+
+  return validateEventNumberAgainstDate(eventNumber, date) ? date : "";
+}
+
+function extractPagerTime(text) {
+  const header = extractEmergencyHeaderLine(text);
+  if (!header) return "";
+
+  const match = header.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (!match) return "";
+
+  return `${match[1]}:${match[2]}`;
 }
 
 function extractAlertAreaCode(text) {
