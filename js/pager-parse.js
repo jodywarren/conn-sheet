@@ -310,14 +310,16 @@ function lineLooksLikeAddress(line) {
   if (!cleaned) return false;
   if (/^\b(RE: EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED)\b/.test(cleaned)) return false;
 
+  // Reject obvious non-address logo/junk fragments.
+  if (/^(E\d{1,3}|CFA|ATTENDING|EMERGENCY)$/i.test(cleaned)) return false;
+
   const hasCnr = /\bCNR\b/.test(cleaned) && /\//.test(cleaned);
   const hasStreetNumber = /\b\d+[A-Z]?\b/.test(cleaned);
-  const hasRoadType = looksLikeRoadWord(cleaned);
+  const hasRoadType = /\b(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/.test(cleaned);
   const hasSuburbWord = [...SUBURB_WORDS].some((word) => cleaned.includes(word));
 
-  if (hasCnr && hasRoadType) return true;
-  if (hasStreetNumber && hasRoadType) return true;
-  if (hasRoadType && hasSuburbWord) return true;
+  if (hasCnr && hasRoadType && hasSuburbWord) return true;
+  if (hasStreetNumber && hasRoadType && hasSuburbWord) return true;
 
   return false;
 }
