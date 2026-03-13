@@ -218,17 +218,30 @@ function splitPagerBlocks(text) {
   const blocks = [];
   let currentBlock = [];
 
-  for (const line of lines) {
+  const isStrongHeaderLine = (line) => {
     const upper = line.toUpperCase();
-    const isHeader =
-      upper.includes("EMERGENCY") ||
-      upper.includes("EMERGENCV") ||
-      upper.startsWith("ALERT ") ||
-      upper.includes("NON EMERGENCY") ||
-      upper.includes("ADMIN");
 
-    if (isHeader && currentBlock.length) {
-      blocks.push(currentBlock.join("\n"));
+    return (
+      (upper.includes("EMERGENCY") || upper.includes("EMERGENCV")) &&
+      /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(upper)
+    );
+  };
+
+  const isFallbackHeaderLine = (line) => {
+    const upper = line.toUpperCase();
+
+    return (
+      upper.includes("NON EMERGENCY") ||
+      upper.includes("ADMIN") ||
+      upper.startsWith("ALERT ")
+    );
+  };
+
+  for (const line of lines) {
+    if (isStrongHeaderLine(line) || isFallbackHeaderLine(line)) {
+      if (currentBlock.length) {
+        blocks.push(currentBlock.join("\n"));
+      }
       currentBlock = [line];
     } else {
       currentBlock.push(line);
