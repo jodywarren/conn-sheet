@@ -382,7 +382,6 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     ? lines.findIndex((line) => line.includes(eventNumber))
     : -1;
 
-  // Search mostly between incident code and event number where the real pager body usually sits.
   const start = incidentLineIndex >= 0 ? incidentLineIndex : 0;
   const end = eventLineIndex >= 0 ? eventLineIndex : lines.length - 1;
 
@@ -390,9 +389,14 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     const line = lines[i];
     if (!lineLooksLikeAddress(line)) continue;
 
+    const cleaned = cleanAddressCandidate(line);
+
+    // Reject known footer or junk.
+    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|CFA)$/i.test(cleaned)) continue;
+
     candidates.push({
       line,
-      cleaned: cleanAddressCandidate(line),
+      cleaned,
       score: scoreAddressCandidate(line),
       lineIndex: i
     });
