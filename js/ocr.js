@@ -376,27 +376,43 @@ function extractEventNumber(text) {
 }
 
 function extractPagerDate(text, eventNumber) {
-  const fullText = String(text || "");
+  const header = extractEmergencyHeaderLine(text);
+  if (!header) return "";
 
-  const match = fullText.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+(\d{2})-(\d{2})-(\d{4})\b/);
+  const match = header.match(/(\d{2})-(\d{2})-(\d{4})\b/);
   if (!match) return "";
 
-  const dd = match[4];
-  const mm = match[5];
-  const yyyy = match[6];
+  const dd = match[1];
+  const mm = match[2];
+  const yyyy = match[3];
   const date = `${yyyy}-${mm}-${dd}`;
 
   return validateEventNumberAgainstDate(eventNumber, date) ? date : "";
 }
 
 function extractPagerTime(text) {
-  const fullText = String(text || "");
-  const lines = fullText.split("\n").map((line) => line.trim()).filter(Boolean);
+  const header = extractEmergencyHeaderLine(text);
+  if (!header) return "";
+
+  const match = header.match(/\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/);
+  if (!match) return "";
+
+  return `${match[1]}:${match[2]}`;
+}
+
+function extractEmergencyHeaderLine(text) {
+  const lines = String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   for (const line of lines) {
-    const match = line.match(/\b(?:EMERGENCY|EMERGENCV)?\s*([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+\d{2}-\d{2}-\d{4}\b/);
-    if (match) {
-      return `${match[1]}:${match[2]}`;
+    if (
+      /EMERGENCY|EMERGENCV/.test(line) &&
+      /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(line) &&
+      /\b\d{2}-\d{2}-\d{4}\b/.test(line)
+    ) {
+      return line;
     }
   }
 
