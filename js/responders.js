@@ -24,8 +24,12 @@ async function loadMembers() {
     state.responders.members = {
       conn: Array.isArray(connData) ? connData : [],
       grov: Array.isArray(grovData) ? grovData : [],
-      fres: Array.isArray(fresData) ? fresData : []
+      fres: Array.isArray(fresData) ? fresRes : Array.isArray(fresData) ? fresData : []
     };
+
+    if (!Array.isArray(state.responders.members.fres)) {
+      state.responders.members.fres = Array.isArray(fresData) ? fresData : [];
+    }
   } catch (error) {
     console.error("Failed to load members:", error);
     state.responders.members = {
@@ -439,7 +443,6 @@ function addMemberToAppliance(applianceKey) {
   if (!selectedName) return;
 
   const availableMembers = getMembersForAppliance(applianceKey);
-
   const memberData = availableMembers.find(
     (m) => String(m.name || "").trim().toUpperCase() === selectedName
   );
@@ -455,7 +458,6 @@ function addMemberToAppliance(applianceKey) {
   }
 
   const appliance = state.responders.appliances[applianceKey];
-
   appliance.crew.push({
     id: uid(),
     name: memberData.name,
@@ -487,7 +489,6 @@ function addStationResponder() {
   const number = String(numberInput?.value || "").trim();
 
   if (!name) return;
-
   if (isMemberAlreadyAssignedAnywhere(name.toUpperCase())) {
     window.alert("Member already assigned elsewhere.");
     return;
@@ -515,7 +516,6 @@ function addDirectResponder() {
   const number = String(numberInput?.value || "").trim();
 
   if (!name) return;
-
   if (isMemberAlreadyAssignedAnywhere(name.toUpperCase())) {
     window.alert("Member already assigned elsewhere.");
     return;
@@ -543,7 +543,6 @@ function getMembersForAppliance(applianceKey) {
   if (applianceKey === "mtdpt") {
     return getAllMembers();
   }
-
   return state.responders.members.conn || [];
 }
 
@@ -630,26 +629,27 @@ function syncOicFromAllResponse() {
 
 function getApplianceStatusClass(appliance) {
   if (!appliance.crew.length) return "appliance-empty";
-
   const hasDriver = appliance.crew.some((member) => member.isDriver);
   if (!hasDriver) return "appliance-warning";
-
   return "appliance-ready";
 }
 
 function buildMemberSubline(phone, sourceBrigade) {
   const parts = [];
-
-  if (phone) {
-    parts.push(escapeHtml(phone));
-  }
+  if (phone) parts.push(escapeHtml(phone));
 
   const brigadeLabel = getDisplayBrigadeLabel(sourceBrigade);
-  if (brigadeLabel) {
-    parts.push(escapeHtml(brigadeLabel));
-  }
+  if (brigadeLabel) parts.push(escapeHtml(brigadeLabel));
 
   return parts.join(" • ");
+}
+
+function getDisplayBrigadeLabel(sourceBrigade) {
+  const code = String(sourceBrigade || "").trim().toUpperCase();
+  if (code === "GROV") return "Grovedale";
+  if (code === "FRES") return "Freshwater Creek";
+  if (code === "CONN") return "Connewarre";
+  return "";
 }
 
 function escapeHtml(value) {
@@ -659,14 +659,4 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function getDisplayBrigadeLabel(sourceBrigade) {
-  const code = String(sourceBrigade || "").trim().toUpperCase();
-
-  if (code === "GROV") return "Grovedale";
-  if (code === "FRES") return "Freshwater Creek";
-  if (code === "CONN") return "Connewarre";
-
-  return "";
 }
