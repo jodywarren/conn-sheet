@@ -91,8 +91,8 @@ const result = await window.Tesseract.recognize(
           "scan-working"
         );
       }
+       }
     }
-  }
 );
 
 const rawText = result?.data?.text || "";
