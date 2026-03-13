@@ -380,7 +380,7 @@ function extractPagerDate(text, eventNumber) {
   const header = extractEmergencyHeaderLine(text);
   if (!header) return "";
 
-  const match = header.match(/(\d{2})-(\d{2})-(\d{4})\b/);
+  const match = header.match(/\b(\d{2})-(\d{2})-(\d{4})\b/);
   if (!match) return "";
 
   const dd = match[1];
@@ -408,11 +408,11 @@ function extractEmergencyHeaderLine(text) {
     .filter(Boolean);
 
   for (const line of lines) {
-    if (
-      /EMERGENCY|EMERGENCV/.test(line) &&
-      /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(line) &&
-      /\b\d{2}-\d{2}-\d{4}\b/.test(line)
-    ) {
+    const hasEmergency = /EMERGENCY|EMERGENCV/.test(line);
+    const hasTime = /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(line);
+    const hasDate = /\b\d{2}-\d{2}-\d{4}\b/.test(line);
+
+    if (hasEmergency && hasTime && hasDate) {
       return line;
     }
   }
