@@ -1,23 +1,24 @@
 // ocr.js
-// OCR orchestration only.
+// OCR orchestration and DOM binding for the Incident page only.
+// Keeps existing layout/workflow intact.
+//
 // Handles:
-// - file input orchestration
+// - screenshot file input
+// - preview image
 // - image preprocessing
 // - OCR read
 // - pager candidate scoring
-// - safe incident-state patch creation
-// - optional UI/status callbacks
+// - strict writeback into existing incident inputs
 //
-// Does NOT:
-// - redesign UI
-// - parse pager rules directly
-// - call Tesseract directly
-// - change app layout/state model by itself
+// Does NOT redesign UI or change page layout.
 
-import { prepareOcrImage, getBestPreviewCanvas } from './ocr-image.js';
+import { prepareOcrImage, getBestPreviewCanvas, variantToDataUrl } from './ocr-image.js';
 import { readPreparedOcr } from './ocr-read.js';
 import { scorePagerCandidates } from './pager-score.js';
 import { shouldAutoCopyActualAddress } from './pager-parse.js';
+
+let actualAddressManuallyEdited = false;
+let ocrBusy = false;
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -40,6 +41,69 @@ function uniqueStrings(values) {
   }
 
   return out;
+}
+
+function qs(id) {
+  return document.getElementById(id);
+}
+
+function setScanStatus(message, className = 'scan-idle') {
+  const el = qs('scanStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = `scan-status ${className}`.trim();
+}
+
+function setPreviewFromFile(file) {
+  const img = qs('pagerPreview');
+  if (!img || !file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    img.src = reader.result;
+    img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setPreviewFromCanvas(canvas) {
+  const img = qs('pagerPreview');
+  if (!img || !canvas) return;
+
+  img.src = variantToDataUrl(canvas);
+  img.classList.remove('hidden');
+}
+
+function getInputValue(id) {
+  const el = qs(id);
+  return el ? el.value : '';
+}
+
+function setInputValue(id, value) {
+  const el = qs(id);
+  if (!el) return false;
+
+  const nextValue = value ?? '';
+  el.value = nextValue;
+
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+function getIncidentStateFromDom() {
+  return {
+    eventNumber: getInputValue('eventNumber'),
+    pagerDate: getInputValue('pagerDate'),
+    pagerTime: getInputValue('pagerTime'),
+    alertAreaCode: getInputValue('alertAreaCode'),
+    brigadeRole: getInputValue('brigadeRole'),
+    incidentType: getInputValue('incidentType'),
+    responseCode: getInputValue('responseCode'),
+    pagerDetails: getInputValue('pagerDetails'),
+    scannedAddress: getInputValue('scannedAddress'),
+    actualAddress: getInputValue('actualAddress')
+  };
 }
 
 function countFilledMergedFields(merged) {
@@ -91,7 +155,6 @@ function buildTextCandidates(ocrReadResult) {
     }
   }
 
-  // De-duplicate identical text blocks.
   const seen = new Set();
   return candidates.filter((candidate) => {
     const key = candidate.rawText.trim();
@@ -103,9 +166,7 @@ function buildTextCandidates(ocrReadResult) {
 }
 
 function chooseBestScoredResult(scoredCandidates) {
-  if (!scoredCandidates.length) {
-    return null;
-  }
+  if (!scoredCandidates.length) return null;
 
   return [...scoredCandidates].sort((a, b) => {
     const aSuccess = a.result?.success ? 1 : 0;
@@ -124,23 +185,25 @@ function chooseBestScoredResult(scoredCandidates) {
   })[0];
 }
 
+function convertPagerDateToInputDate(value) {
+  // OCR parser returns DD-MM-YYYY
+  if (!value || !/^\d{2}-\d{2}-\d{4}$/.test(value)) return '';
+  const [dd, mm, yyyy] = value.split('-');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function normaliseSceneUnits(sceneUnits) {
   return uniqueStrings(sceneUnits || []);
 }
 
 function buildIncidentPatchFromScoredResult(scoredResult, currentIncident = {}, options = {}) {
   const merged = scoredResult?.merged || {};
-  const actualAddressManuallyEdited = !!options.actualAddressManuallyEdited;
-
   const currentActualAddress = cleanString(currentIncident.actualAddress || '');
   const scannedAddress = cleanString(merged.scannedAddress || '');
-  const shouldCopyActualAddress = scannedAddress
-    ? shouldAutoCopyActualAddress(currentActualAddress, actualAddressManuallyEdited)
-    : false;
 
   const patch = {
     eventNumber: cleanString(merged.eventNumber || ''),
-    pagerDate: cleanString(merged.pagerDate || ''),
+    pagerDate: convertPagerDateToInputDate(cleanString(merged.pagerDate || '')),
     pagerTime: cleanString(merged.pagerTime || ''),
     alertAreaCode: cleanString(merged.alertAreaCode || ''),
     brigadeRole: cleanString(merged.brigadeRole || ''),
@@ -151,7 +214,11 @@ function buildIncidentPatchFromScoredResult(scoredResult, currentIncident = {}, 
     sceneUnits: normaliseSceneUnits(merged.sceneUnits || [])
   };
 
-  if (shouldCopyActualAddress) {
+  const shouldCopy = scannedAddress
+    ? shouldAutoCopyActualAddress(currentActualAddress, !!options.actualAddressManuallyEdited)
+    : false;
+
+  if (shouldCopy) {
     patch.actualAddress = scannedAddress;
   }
 
@@ -173,6 +240,56 @@ function buildNonEmptyPatch(patch) {
   }
 
   return out;
+}
+
+function existingSceneUnitTexts() {
+  const wrap = qs('sceneUnitChips');
+  if (!wrap) return [];
+
+  return Array.from(wrap.querySelectorAll('.chip, .chip-btn, .unit-chip, button, span'))
+    .map((el) => cleanString(el.textContent || ''))
+    .filter(Boolean);
+}
+
+function addSceneUnitThroughUi(unit) {
+  const input = qs('sceneUnitInput');
+  const btn = qs('addSceneUnitBtn');
+  if (!input || !btn || !unit) return false;
+
+  input.value = unit;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  btn.click();
+  return true;
+}
+
+function applySceneUnitsToUi(units) {
+  const desired = normaliseSceneUnits(units);
+  if (!desired.length) return;
+
+  const existing = new Set(existingSceneUnitTexts().map((t) => t.toUpperCase()));
+
+  for (const unit of desired) {
+    const key = unit.toUpperCase();
+    if (existing.has(key)) continue;
+    addSceneUnitThroughUi(unit);
+    existing.add(key);
+  }
+}
+
+function applyIncidentPatchToDom(patch) {
+  if (patch.eventNumber) setInputValue('eventNumber', patch.eventNumber);
+  if (patch.pagerDate) setInputValue('pagerDate', patch.pagerDate);
+  if (patch.pagerTime) setInputValue('pagerTime', patch.pagerTime);
+  if (patch.alertAreaCode) setInputValue('alertAreaCode', patch.alertAreaCode);
+  if (patch.brigadeRole) setInputValue('brigadeRole', patch.brigadeRole);
+  if (patch.incidentType) setInputValue('incidentType', patch.incidentType);
+  if (patch.responseCode) setInputValue('responseCode', patch.responseCode);
+  if (patch.pagerDetails) setInputValue('pagerDetails', patch.pagerDetails);
+  if (patch.scannedAddress) setInputValue('scannedAddress', patch.scannedAddress);
+  if (patch.actualAddress) setInputValue('actualAddress', patch.actualAddress);
+  if (Array.isArray(patch.sceneUnits) && patch.sceneUnits.length) {
+    applySceneUnitsToUi(patch.sceneUnits);
+  }
 }
 
 function buildDebugSummary(chosenCandidate, allScoredCandidates) {
@@ -203,7 +320,6 @@ function makeProgressNotifier(callback) {
     try {
       callback(payload);
     } catch (error) {
-      // Never let UI/status callback failures break OCR flow.
       console.error('OCR progress callback failed:', error);
     }
   };
@@ -218,19 +334,20 @@ export async function extractPagerDataFromFile(file, options = {}) {
 
   notify({ stage: 'prepare-start', message: 'Preparing image for OCR' });
   const preparedImage = await prepareOcrImage(file);
+
+  const previewCanvas = getBestPreviewCanvas(preparedImage);
   notify({
     stage: 'prepare-complete',
     message: 'Image prepared for OCR',
     crop: preparedImage.crop,
-    previewCanvas: getBestPreviewCanvas(preparedImage)
+    previewCanvas
   });
 
   notify({ stage: 'ocr-start', message: 'Running OCR' });
   const ocrReadResult = await readPreparedOcr(preparedImage, {
-    onProgress: (payload) => {
-      notify(payload);
-    }
+    onProgress: (payload) => notify(payload)
   });
+
   notify({
     stage: 'ocr-complete',
     message: 'OCR complete',
@@ -278,80 +395,69 @@ export async function extractPagerDataFromFile(file, options = {}) {
 
 export async function runPagerOcrIntoIncident(file, integration = {}) {
   const {
-    getIncidentState,
-    applyIncidentPatch,
-    setOcrStatus,
-    setOcrBusy,
     onOcrProgress,
-    actualAddressManuallyEdited = false,
     onOcrComplete,
-    onOcrError
+    onOcrError,
+    previewPreparedCrop = true
   } = integration;
 
   const notifyProgress = makeProgressNotifier(onOcrProgress);
-  const safeSetStatus = typeof setOcrStatus === 'function' ? setOcrStatus : null;
-  const safeSetBusy = typeof setOcrBusy === 'function' ? setOcrBusy : null;
 
   try {
-    if (safeSetBusy) safeSetBusy(true);
-    if (safeSetStatus) safeSetStatus('Scanning screenshot...');
+    ocrBusy = true;
+    setScanStatus('Preparing image...', 'scan-working');
 
     const extraction = await extractPagerDataFromFile(file, {
       onProgress: (payload) => {
         notifyProgress(payload);
 
-        if (safeSetStatus) {
-          switch (payload.stage) {
-            case 'prepare-start':
-              safeSetStatus('Preparing image...');
-              break;
-            case 'prepare-complete':
-              safeSetStatus('Image prepared');
-              break;
-            case 'ocr-start':
-              safeSetStatus('Reading pager text...');
-              break;
-            case 'ocr-variant-start':
-              safeSetStatus(`Reading OCR variant ${payload.index + 1} of ${payload.total}...`);
-              break;
-            case 'ocr-complete':
-              safeSetStatus('OCR finished');
-              break;
-            case 'score-start':
-              safeSetStatus('Scoring pager blocks...');
-              break;
-            case 'score-complete':
-              safeSetStatus(payload.message || 'Scoring complete');
-              break;
-            default:
-              break;
-          }
+        switch (payload.stage) {
+          case 'prepare-start':
+            setScanStatus('Preparing image...', 'scan-working');
+            break;
+          case 'prepare-complete':
+            setScanStatus('Image prepared', 'scan-working');
+            if (previewPreparedCrop && payload.previewCanvas) {
+              setPreviewFromCanvas(payload.previewCanvas);
+            }
+            break;
+          case 'ocr-start':
+            setScanStatus('Reading pager text...', 'scan-working');
+            break;
+          case 'ocr-variant-start':
+            setScanStatus(`Reading OCR variant ${payload.index + 1} of ${payload.total}...`, 'scan-working');
+            break;
+          case 'ocr-complete':
+            setScanStatus('OCR finished', 'scan-working');
+            break;
+          case 'score-start':
+            setScanStatus('Scoring pager blocks...', 'scan-working');
+            break;
+          case 'score-complete':
+            setScanStatus(
+              payload.message || 'Scoring complete',
+              extraction?.success ? 'scan-success' : 'scan-working'
+            );
+            break;
+          default:
+            break;
         }
       }
     });
 
-    const currentIncident = typeof getIncidentState === 'function'
-      ? (getIncidentState() || {})
-      : {};
-
+    const currentIncident = getIncidentStateFromDom();
     const rawPatch = buildIncidentPatchFromScoredResult(
       extraction.chosenResult,
       currentIncident,
       { actualAddressManuallyEdited }
     );
-
     const patch = buildNonEmptyPatch(rawPatch);
 
-    if (extraction.success && typeof applyIncidentPatch === 'function') {
-      applyIncidentPatch(patch, extraction);
-    }
-
-    if (safeSetStatus) {
-      safeSetStatus(
-        extraction.success
-          ? 'OCR complete. Check the populated fields.'
-          : 'OCR could not safely extract a valid emergency page. Please correct fields manually.'
-      );
+    if (extraction.success) {
+      applyIncidentPatchToDom(patch);
+      setScanStatus('OCR complete. Check the populated fields.', 'scan-success');
+    } else {
+      setScanStatus('OCR could not safely extract a valid emergency page. Please correct fields manually.', 'scan-error');
     }
 
     const result = {
@@ -368,10 +474,7 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
     return result;
   } catch (error) {
     console.error('OCR pipeline failed:', error);
-
-    if (safeSetStatus) {
-      safeSetStatus('OCR failed. Upload again or correct fields manually.');
-    }
+    setScanStatus('OCR failed. Upload again or correct fields manually.', 'scan-error');
 
     const failure = {
       success: false,
@@ -385,7 +488,7 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
 
     return failure;
   } finally {
-    if (safeSetBusy) safeSetBusy(false);
+    ocrBusy = false;
   }
 }
 
@@ -405,4 +508,44 @@ export function buildIncidentPatchForPreview(extractionResult, currentIncident =
   );
 
   return buildNonEmptyPatch(patch);
+}
+
+export function bindOcrEvents() {
+  const pagerUpload = qs('pagerUpload');
+  const scanPagerBtn = qs('scanPagerBtn');
+  const actualAddressInput = qs('actualAddress');
+
+  if (!pagerUpload || !scanPagerBtn) {
+    console.warn('OCR controls not found in DOM');
+    return;
+  }
+
+  if (actualAddressInput) {
+    actualAddressInput.addEventListener('input', () => {
+      actualAddressManuallyEdited = true;
+    });
+  }
+
+  pagerUpload.addEventListener('change', () => {
+    const file = pagerUpload.files && pagerUpload.files[0];
+    if (!file) {
+      setScanStatus('Waiting for screenshot', 'scan-idle');
+      return;
+    }
+
+    setPreviewFromFile(file);
+    setScanStatus('Screenshot loaded. Ready to scan.', 'scan-idle');
+  });
+
+  scanPagerBtn.addEventListener('click', async () => {
+    if (ocrBusy) return;
+
+    const file = pagerUpload.files && pagerUpload.files[0];
+    if (!file) {
+      setScanStatus('Please choose a screenshot first.', 'scan-error');
+      return;
+    }
+
+    await runPagerOcrIntoIncident(file);
+  });
 }
