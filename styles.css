@@ -1126,4 +1126,28 @@ body.dark-mode .status-banner.offline {
   background: #222a33 !important;
   border: 1px solid #556274 !important;
   color: #ffffff !important;
+  
+}
+body.dark-mode #oicBanner {
+  background: #222a33 !important;
+  border: 1px solid #556274 !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode #oicBanner.complete {
+  background: #1f3a28 !important;
+  border: 1px solid #63a978 !important;
+  color: #eaffef !important;
+}
+
+body.dark-mode #oicBanner.missing {
+  background: #3a2020 !important;
+  border: 1px solid #a85b5b !important;
+  color: #ffd6d6 !important;
+}
+
+body.dark-mode #scanPagerBtn {
+  background: #222a33 !important;
+  border: 1px solid #556274 !important;
+  color: #ffffff !important;
 }
