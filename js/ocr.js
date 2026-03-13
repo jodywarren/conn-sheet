@@ -78,10 +78,11 @@ async function runOcrFromPreview() {
   try {
     setScanStatus("Reading screenshot...", "scan-working");
 
-    const result = await window.Tesseract.recognize(
-      state.incident.pagerScreenshot,
-      "eng",
-      {
+const processedImage = await preprocessPagerImage(state.incident.pagerScreenshot);
+
+const result = await window.Tesseract.recognize(
+  processedImage,
+  "eng",
         logger: (msg) => {
           if (msg.status === "recognizing text" && typeof msg.progress === "number") {
             setScanStatus(
