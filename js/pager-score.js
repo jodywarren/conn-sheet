@@ -64,8 +64,7 @@ function splitIntoCandidateBlocks(rawText) {
     return blocks;
   }
 
-  // Fallback: chunk by blank-line-like separators is not possible after OCR cleanup,
-  // so use a single block if no emergency header was clearly found.
+  // Fallback: if no emergency header was clearly found, treat the OCR as one candidate block.
   return [
     {
       kind: 'single-fallback',
