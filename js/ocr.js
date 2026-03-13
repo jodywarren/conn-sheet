@@ -445,6 +445,7 @@ export function bindOcrEvents() {
   }
 
   pagerUpload.addEventListener('change', () => {
+  pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
     if (!file) {
       setScanStatus('Waiting for screenshot', 'scan-idle');
@@ -452,8 +453,12 @@ export function bindOcrEvents() {
     }
 
     setPreviewFromFile(file);
-    setScanStatus('Screenshot loaded. Ready to scan.', 'scan-idle');
+    setScanStatus('Screenshot loaded. Scanning...', 'scan-working');
+
+    if (ocrBusy) return;
+    await runPagerOcrIntoIncident(file);
   });
+  
 
   scanPagerBtn.addEventListener('click', async () => {
     if (ocrBusy) return;
