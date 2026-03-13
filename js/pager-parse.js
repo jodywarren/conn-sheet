@@ -469,7 +469,12 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
   const eventLineIndex = lines.findIndex((line, index) => index >= headerLineIndex && line.includes(eventNumber));
   if (eventLineIndex < 0) return '';
 
-  return lines.slice(headerLineIndex, eventLineIndex + 1).join('\n');
+  const cleanedLines = lines
+    .slice(headerLineIndex, eventLineIndex + 1)
+    .map((line) => line.replace(/\bE\d{1,3}\b/g, '').replace(/\bCFA\b/g, '').trim())
+    .filter(Boolean);
+
+  return cleanedLines.join('\n');
 }
 
 function detectBlockType(lines) {
