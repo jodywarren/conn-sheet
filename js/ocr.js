@@ -262,6 +262,7 @@ function getBlockType(blockText) {
 
 function parseCandidateBlock(blockText) {
   const text = String(blockText || "");
+  console.log("HEADER LINE FOUND:", extractEmergencyHeaderLine(text));
   const type = getBlockType(text);
   const isReEvent = /RE:\s*EVENT/.test(text);
   const isCancel = /CANCEL RESPONSE NOT REQUIRED/.test(text);
