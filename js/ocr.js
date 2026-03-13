@@ -78,25 +78,24 @@ async function runOcrFromPreview() {
   try {
     setScanStatus("Reading screenshot...", "scan-working");
 
-const processedImage = await preprocessPagerImage(state.incident.pagerScreenshot);
+    const processedImage = await preprocessPagerImage(state.incident.pagerScreenshot);
 
-const result = await window.Tesseract.recognize(
-  processedImage,
-  "eng",
-  {
-    logger: (msg) => {
-      if (msg.status === "recognizing text" && typeof msg.progress === "number") {
-        setScanStatus(
-          `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
-          "scan-working"
-        );
+    const result = await window.Tesseract.recognize(
+      processedImage,
+      "eng",
+      {
+        logger: (msg) => {
+          if (msg.status === "recognizing text" && typeof msg.progress === "number") {
+            setScanStatus(
+              `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
+              "scan-working"
+            );
+          }
+        }
       }
-       }
-    }
-);
+    );
 
-const rawText = result?.data?.text || "";
-
+    const rawText = result?.data?.text || "";
     const cleanedText = normalizeOcrText(rawText);
     const blocks = splitPagerBlocks(cleanedText);
     const parsedCandidates = blocks.map(parseCandidateBlock);
@@ -179,6 +178,56 @@ function fileToDataUrl(file) {
   });
 }
 
+async function preprocessPagerImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = dataUrl;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const cropTop = Math.floor(img.height * 0.12);
+      const cropBottom = Math.floor(img.height * 0.03);
+      const cropHeight = img.height - cropTop - cropBottom;
+
+      canvas.width = img.width;
+      canvas.height = cropHeight;
+
+      ctx.drawImage(
+        img,
+        0, cropTop, img.width, cropHeight,
+        0, 0, img.width, cropHeight
+      );
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        const brightness = (r + g + b) / 3;
+        const isRedHeader = r > 140 && g < 110 && b < 110;
+
+        if (isRedHeader || brightness > 150) {
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+        } else {
+          data[i] = 0;
+          data[i + 1] = 0;
+          data[i + 2] = 0;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL());
+    };
+  });
+}
+
 function normalizeOcrText(text) {
   return String(text || "")
     .replace(/\r/g, "")
@@ -200,27 +249,18 @@ function normalizeOcrText(text) {
     .replace(/INCIC3I/g, "INCIC3")
     .replace(/INCII3/g, "INCIC3")
     .replace(/\bINCI3\b/g, "INCIC3")
-
-    /* remove obvious phone UI junk */
     .replace(/HOME CHAT SETTINGS/g, "")
     .replace(/PLEASE UPDATE YOUR AVAILABILITY/g, "")
     .replace(/REFRESH FILTER SORT/g, "")
     .replace(/ALERTING SERVICE/g, "")
     .replace(/SUPPLEMENTARY/g, "")
     .replace(/AT ATTENDING/g, "")
-
-    /* force EMERGENCY header onto its own line */
     .replace(
       /\b(EMERGENCY|EMERGENCV)\s+([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\s+(\d{2})-(\d{2})-(\d{4})\b/g,
       "\n$1 $2:$3:$4 $5-$6-$7\n"
     )
-
-    /* force NON EMERGENCY header onto its own line */
     .replace(/\bNON EMERGENCY\b/g, "\nNON EMERGENCY\n")
-
-    /* force ALERT area line onto its own line */
     .replace(/\b(ALERT\s+[A-Z0-9]{4}[0-9ZO]{1,2}\s+[A-Z&]{4,6}C[13])\b/g, "\n$1")
-
     .replace(/[^\S\n]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .toUpperCase()
@@ -236,19 +276,10 @@ function splitPagerBlocks(text) {
   const blocks = [];
   let currentBlock = [];
 
-  const isStrongHeaderLine = (line) => {
+  const isHeaderLine = (line) => {
     const upper = line.toUpperCase();
-
     return (
-      (upper.includes("EMERGENCY") || upper.includes("EMERGENCV")) &&
-      /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(upper)
-    );
-  };
-
-  const isFallbackHeaderLine = (line) => {
-    const upper = line.toUpperCase();
-
-    return (
+      upper.includes("EMERGENCY") ||
       upper.includes("NON EMERGENCY") ||
       upper.includes("ADMIN") ||
       upper.startsWith("ALERT ")
@@ -256,7 +287,7 @@ function splitPagerBlocks(text) {
   };
 
   for (const line of lines) {
-    if (isStrongHeaderLine(line) || isFallbackHeaderLine(line)) {
+    if (isHeaderLine(line)) {
       if (currentBlock.length) {
         blocks.push(currentBlock.join("\n"));
       }
@@ -280,7 +311,6 @@ function getBlockType(blockText) {
 
   if (
     text.includes("EMERGENCY") ||
-    text.includes("EMERGENCV") ||
     text.includes("ALERT ")
   ) {
     return "EMERGENCY";
@@ -295,13 +325,14 @@ function parseCandidateBlock(blockText) {
   const text = String(blockText || "");
   console.log("BLOCK START:", text.split("\n").slice(0, 3));
   console.log("HEADER LINE FOUND:", extractEmergencyHeaderLine(text));
+
   const type = getBlockType(text);
   const isReEvent = /RE:\s*EVENT/.test(text);
   const isCancel = /CANCEL RESPONSE NOT REQUIRED/.test(text);
 
   const eventNumber = extractEventNumber(text);
-const pagerDate = extractPagerDate(text, eventNumber);
-const pagerTime = extractPagerTime(text);
+  const pagerDate = extractPagerDate(text, eventNumber);
+  const pagerTime = extractPagerTime(text);
   const eventMatchesDate = validateEventNumberAgainstDate(eventNumber, pagerDate);
 
   const alertAreaCode = extractAlertAreaCode(text);
@@ -416,8 +447,7 @@ function extractEmergencyHeaderLine(text) {
 
   for (const line of lines) {
     const upper = line.toUpperCase();
-
-    const hasEmergencyWord = upper.includes("EMERGENCY") || upper.includes("EMERGENCV");
+    const hasEmergencyWord = upper.includes("EMERGENCY");
     const hasTime = /\b([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\b/.test(upper);
     const hasDate = /\b\d{2}-\d{2}-\d{4}\b/.test(upper);
 
@@ -560,7 +590,7 @@ function extractPagerDetails(text, eventNumber) {
     .map((line) => line.replace(/\s+$/g, ""))
     .filter((line) => line.trim().length > 0);
 
-  const startIndex = lines.findIndex((line) => /EMERGENCY|EMERGENCV|ALERT\s/.test(line));
+  const startIndex = lines.findIndex((line) => /EMERGENCY|ALERT\s/.test(line));
   const safeStart = startIndex > -1 ? startIndex : 0;
 
   let endIndex = lines.findIndex((line) => eventNumber && line.includes(eventNumber));
@@ -582,7 +612,6 @@ function findAddressInBody(body) {
   const numberedRegex = /\b\d+\s+[A-Z0-9' -]+?(?:RD|ROAD|ST|STREET|DR|DRIVE|AVE|AV|AVENUE|HWY|HIGHWAY|CRT|COURT|CT|CRES|CRESCENT|PL|PLACE|WAY|LN|LANE)\b(?:\s+[A-Z][A-Z' -]+){0,4}/g;
 
   const candidates = [];
-
   let match;
 
   while ((match = intersectionRegex.exec(text)) !== null) {
@@ -635,14 +664,14 @@ function extractSceneUnits(text) {
     if (cleaned.startsWith("C") && cleaned.length > 1) {
       const stripped = cleaned.slice(1);
       const unit = normalizeSceneUnit(stripped);
-      if ((KNOWN_BRIGADE_CODES.includes(unit) || KNOWN_OTHER_UNITS.includes(unit) || unit === "Police") && !units.includes(unit)) {
+      if ((KNOWN_BRIGADE_CODES.includes(unit) || KNOWN_OTHER_UNITS.includes(unit) || unit === "POLICE") && !units.includes(unit)) {
         units.push(unit);
       }
       return;
     }
 
     cleaned = normalizeSceneUnit(cleaned);
-    if ((KNOWN_BRIGADE_CODES.includes(cleaned) || KNOWN_OTHER_UNITS.includes(cleaned) || cleaned === "Police") && !units.includes(cleaned)) {
+    if ((KNOWN_BRIGADE_CODES.includes(cleaned) || KNOWN_OTHER_UNITS.includes(cleaned) || cleaned === "POLICE") && !units.includes(cleaned)) {
       units.push(cleaned);
     }
   });
@@ -653,7 +682,7 @@ function extractSceneUnits(text) {
 function normalizeSceneUnit(code) {
   const clean = String(code || "").trim().toUpperCase();
 
-  if (clean === "AFP" || clean === "AFPR" || clean === "FP" || clean === "POLICE") return "Police";
+  if (clean === "AFP" || clean === "AFPR" || clean === "FP" || clean === "POLICE") return "POLICE";
   if (clean === "GRV" || clean === "GROV" || clean === "GR0V") return "GROV";
   if (clean === "CONN" || clean === "C0NN") return "CONN";
   if (clean === "FRES") return "FRES";
