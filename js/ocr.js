@@ -544,12 +544,13 @@ function findAddressInBody(body) {
   const text = String(body || "").trim();
   if (!text) return null;
 
-  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\/\s*[A-Z0-9' -]+?(?:\s+[A-Z][A-Z' -]+){0,4}/g;
+  const intersectionRegex = /\bCNR\s+[A-Z0-9' -]+?\s*\/\s*[A-Z0-9' -]+?(?=\s+M\s*\d{3}\s*[A-Z]\d{1,2}\s*\(\d+\)|\s+ARMSTRONG CREEK|\s+MOUNT DUNEED|\s+CHARLEMONT|\s+CONNEWARRE|\s*$)/g;
   const numberedRegex = /\b\d+\s+[A-Z0-9' -]+?(?:RD|ROAD|ST|STREET|DR|DRIVE|AVE|AV|AVENUE|HWY|HIGHWAY|CRT|COURT|CT|CRES|CRESCENT|PL|PLACE|WAY|LN|LANE)\b(?:\s+[A-Z][A-Z' -]+){0,4}/g;
 
   const candidates = [];
 
   let match;
+
   while ((match = intersectionRegex.exec(text)) !== null) {
     candidates.push({
       text: cleanAddress(match[0]),
