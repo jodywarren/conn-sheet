@@ -1,283 +1,113 @@
-function createDefaultState() {
-  return {
-    ui: {
-      currentPage: "incidentPage"
-    },
-
-    profile: {
-      name: "",
-      brigade: "Connewarre",
-      memberNumber: "",
-      contactNumber: "",
-      email: ""
-    },
-
-    incident: {
-      eventNumber: "",
-      pagerDate: "",
-      pagerTime: "",
-
-      alertAreaCode: "",
-      primaryBrigade: "",
-      brigadeRole: "",
-
-      incidentCodeRaw: "",
-      incidentType: "",
-      responseCode: "",
-
-      pagerDetails: "",
-
-      scannedAddress: "",
-      actualAddress: "",
-      actualAddressEdited: false,
-
-      controlName: "",
-      firsCode: "",
-      pagerScreenshot: "",
-
-      sceneUnits: [],
-      pagedSceneUnits: [],
-
-      firstAgency: "",
-      firstAgencyOther: "",
-
-      weather1: "",
-      weather2: "",
-
-      distanceToScene: "",
-
-      otherAgencies: [],
-
-      stopMessageReceived: false,
-
-      hoses: {
-        hose64Qty: "0",
-        hose38Qty: "0",
-        hose25Qty: "0",
-        hoseOtherType: ""
-      },
-
-      comments: "",
-      injuryNotes: "",
-
-      flags: {
-        membersBefore: false,
-        aar: false,
-        hotDebrief: false
-      }
-    },
-
-    responders: {
-      members: {
-        conn: [],
-        grov: [],
-        fres: []
-      },
-
-      appliances: {
-        conn1: {
-          label: "CONN 1",
-          code: "",
-          crew: []
-        },
-
-        conn2: {
-          label: "CONN 2",
-          code: "",
-          crew: []
-        },
-
-        mtdpt: {
-          label: "MTD P/T",
-          code: "",
-          crew: []
-        }
-      },
-
-      stationResponders: [],
-      directResponders: [],
-
-      oicName: "",
-      oicPhone: ""
-    }
-  };
+.field-complete {
+  border-color: #3ca35c !important;
+  background: #edf8ef !important;
 }
 
-export const state = createDefaultState();
-
-const STORAGE_KEY = "conn_turnout_state_v7";
-
-export function initState() {
-  loadState();
-  renderOicBanner();
-
-  const versionTarget = document.getElementById("appVersionText");
-  if (versionTarget) {
-    versionTarget.textContent = "3.3.0";
-  }
+.oic-banner.complete {
+  background: #edf8ef;
+  border: 1px solid #3ca35c;
+  color: #1c6b3a;
 }
 
-export function setCurrentPage(pageId) {
-  state.ui.currentPage = pageId;
-  saveState();
+.scene-chip.from-pager {
+  background: #dff3e4;
+  border: 1px solid #63a978;
 }
 
-export function saveProfileFromInputs() {
-  state.profile.name = document.getElementById("profileName")?.value.trim() || "";
-  state.profile.memberNumber = document.getElementById("profileMemberNumber")?.value.trim() || "";
-  state.profile.contactNumber = document.getElementById("profileContactNumber")?.value.trim() || "";
-  state.profile.email = document.getElementById("profileEmail")?.value.trim() || "";
-  state.profile.brigade = document.getElementById("profileBrigade")?.value.trim() || "Connewarre";
-  saveState();
+.scene-chip.manual-unit {
+  background: #fff3e0;
+  border: 1px solid #f0a44b;
 }
 
-export function fillProfileInputs() {
-  const nameEl = document.getElementById("profileName");
-  const memberEl = document.getElementById("profileMemberNumber");
-  const contactEl = document.getElementById("profileContactNumber");
-  const emailEl = document.getElementById("profileEmail");
-  const brigadeEl = document.getElementById("profileBrigade");
-
-  if (nameEl) nameEl.value = state.profile.name || "";
-  if (memberEl) memberEl.value = state.profile.memberNumber || "";
-  if (contactEl) contactEl.value = state.profile.contactNumber || "";
-  if (emailEl) emailEl.value = state.profile.email || "";
-  if (brigadeEl) brigadeEl.value = state.profile.brigade || "Connewarre";
+.orange-btn {
+  background: #f0a44b !important;
+  color: #111 !important;
 }
 
-export function renderOicBanner() {
-  const banner = document.getElementById("oicBanner");
-  if (!banner) return;
-
-  const name = String(state.responders.oicName || "").trim();
-  const phone = String(state.responders.oicPhone || "").trim();
-
-  banner.classList.remove("missing", "complete");
-
-  if (!name) {
-    banner.textContent = "APPOINT OIC";
-    banner.classList.add("missing");
-    return;
-  }
-
-  if (!phone) {
-    banner.textContent = `OIC: ${name} • Number missing`;
-    banner.classList.add("missing");
-    return;
-  }
-
-  banner.textContent = `OIC: ${name} • ${phone}`;
-  banner.classList.add("complete");
+.add-agency-btn {
+  background: #f7d7d7;
+  border: 1px solid #d47474;
+  color: #8a1717;
 }
 
-export function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-    const meta = document.getElementById("draftMeta");
-    if (meta) {
-      meta.textContent = `Autosaved ${new Date().toLocaleTimeString("en-AU", {
-        hour: "2-digit",
-        minute: "2-digit"
-      })}`;
-    }
-  } catch (err) {
-    console.warn("State save failed", err);
-  }
+.add-agency-btn.has-complete {
+  background: #edf8ef;
+  border: 1px solid #63a978;
+  color: #1c6b3a;
 }
 
-export function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+.add-agency-btn.needs-attention {
+  background: #f7d7d7;
+  border: 1px solid #d47474;
+  color: #8a1717;
+}
 
-    const saved = JSON.parse(raw);
-    const fresh = createDefaultState();
+.agency-card {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid #d7dbe2;
+  background: #fff;
+}
 
-    if (saved.ui) Object.assign(fresh.ui, saved.ui);
-    if (saved.profile) Object.assign(fresh.profile, saved.profile);
+.agency-card.complete {
+  background: #edf8ef;
+  border-color: #63a978;
+}
 
-    if (saved.incident) {
-      Object.assign(fresh.incident, saved.incident);
+.agency-card.pending {
+  background: #fff6f6;
+  border-color: #d47474;
+}
 
-      if (saved.incident.hoses) {
-        Object.assign(fresh.incident.hoses, saved.incident.hoses);
-      }
+.agency-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
 
-      if (saved.incident.flags) {
-        Object.assign(fresh.incident.flags, saved.incident.flags);
-      }
+.agency-card-title {
+  font-weight: 700;
+}
 
-      if (!Array.isArray(fresh.incident.sceneUnits)) {
-        const legacy = [];
-        if (Array.isArray(saved.incident.brigadesOnScene)) legacy.push(...saved.incident.brigadesOnScene);
-        if (Array.isArray(saved.incident.otherUnitsOnScene)) legacy.push(...saved.incident.otherUnitsOnScene);
-        fresh.incident.sceneUnits = [...new Set(legacy)];
-      }
+.agency-list {
+  margin-top: 0.5rem;
+}
 
-      if (!Array.isArray(fresh.incident.pagedSceneUnits)) {
-        fresh.incident.pagedSceneUnits = [...fresh.incident.sceneUnits];
-      }
+.section-title-inline {
+  font-weight: 700;
+}
 
-      if (!Array.isArray(fresh.incident.otherAgencies)) {
-        fresh.incident.otherAgencies = [];
-      }
+.other-responding-section {
+  margin-top: 1rem;
+}
 
-      if (!fresh.incident.actualAddress && saved.incident.actualLocation) {
-        fresh.incident.actualAddress = saved.incident.actualLocation;
-      }
+.subhead {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
 
-      if (!fresh.incident.scannedAddress && saved.incident.actualLocation) {
-        fresh.incident.scannedAddress = saved.incident.actualLocation;
-      }
+.wide-logo-frame {
+  width: 100%;
+  min-height: 74px;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-      if (!fresh.incident.alertAreaCode && saved.incident.brigadeCode) {
-        fresh.incident.alertAreaCode = saved.incident.brigadeCode;
-      }
+.wide-logo {
+  width: 100%;
+  height: 54px;
+  object-fit: contain;
+  display: block;
+}
 
-      if (!fresh.incident.primaryBrigade && fresh.incident.alertAreaCode) {
-        fresh.incident.primaryBrigade = String(fresh.incident.alertAreaCode).replace(/\d+/g, "");
-      }
+.full-banner {
+  width: 100%;
+}
 
-      if (!fresh.incident.brigadeRole && fresh.incident.primaryBrigade) {
-        fresh.incident.brigadeRole =
-          fresh.incident.primaryBrigade === "CONN"
-            ? "Primary"
-            : `Support to ${fresh.incident.primaryBrigade}`;
-      }
-    }
-
-    if (saved.responders) {
-      if (saved.responders.members) {
-        fresh.responders.members = saved.responders.members;
-      }
-
-      if (saved.responders.appliances) {
-        Object.assign(fresh.responders.appliances, saved.responders.appliances);
-      }
-
-      if (Array.isArray(saved.responders.stationResponders)) {
-        fresh.responders.stationResponders = saved.responders.stationResponders;
-      }
-
-      if (Array.isArray(saved.responders.directResponders)) {
-        fresh.responders.directResponders = saved.responders.directResponders;
-      }
-
-      if (typeof saved.responders.oicName === "string") {
-        fresh.responders.oicName = saved.responders.oicName;
-      }
-
-      if (typeof saved.responders.oicPhone === "string") {
-        fresh.responders.oicPhone = saved.responders.oicPhone;
-      }
-    }
-
-    Object.assign(state.ui, fresh.ui);
-    Object.assign(state.profile, fresh.profile);
-    Object.assign(state.incident, fresh.incident);
-    Object.assign(state.responders, fresh.responders);
-  } catch (err) {
-    console.warn("State load failed", err);
-  }
+.hidden {
+  display: none !important;
 }
