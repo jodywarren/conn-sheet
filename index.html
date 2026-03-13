@@ -13,18 +13,18 @@
 </head>
 <body>
   <div class="app-shell">
-  <header class="app-header">
-  <div class="brand-wrap full-banner">
-    <div class="logo-frame wide-logo-frame">
-      <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo wide-logo" />
-    </div>
-  </div>
+    <header class="app-header compact-header">
+      <div class="brand-wrap left-brand">
+        <div class="logo-frame header-logo-frame">
+          <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo header-logo" />
+        </div>
+      </div>
 
-  <div class="header-actions">
-    <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
-    <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
-  </div>
-</header> 
+      <div class="header-actions right-oic">
+        <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
+        <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
+      </div>
+    </header>
 
     <nav class="top-nav">
       <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
@@ -44,7 +44,7 @@
           <div class="section-head">
             <div>
               <h1>TURN OUT SHEET</h1>
-              <p class="subtle">Version <span id="appVersionText">3.1.0</span></p>
+              <p class="subtle">Version <span id="appVersionText">3.4.0</span></p>
             </div>
             <button class="secondary-btn" type="button">Save Draft</button>
           </div>
@@ -70,37 +70,37 @@
             <div class="grid">
               <label>
                 Event Number
-                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="FYYMM#####">
+                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="FYYMM#####" />
               </label>
 
               <label>
                 Pager Date
-                <input id="pagerDate" class="field-input editable-field" type="date">
+                <input id="pagerDate" class="field-input editable-field" type="date" />
               </label>
 
               <label>
                 Pager Time
-                <input id="pagerTime" class="field-input editable-field" type="time">
+                <input id="pagerTime" class="field-input editable-field" type="time" />
               </label>
 
               <label>
                 Alert Area Code
-                <input id="alertAreaCode" class="field-input" type="text" placeholder="CONN1" readonly>
+                <input id="alertAreaCode" class="field-input editable-field" type="text" />
               </label>
 
               <label>
                 Brigade Role
-                <input id="brigadeRole" class="field-input" type="text" placeholder="Primary / Support to GROV" readonly>
+                <input id="brigadeRole" class="field-input editable-field" type="text" />
               </label>
 
               <label>
                 Incident Type
-                <input id="incidentType" class="field-input" type="text" placeholder="Incident / Rescue / Structure Fire / Alarm" readonly>
+                <input id="incidentType" class="field-input editable-field" type="text" />
               </label>
 
               <label>
                 Response Code
-                <input id="responseCode" class="field-input" type="text" placeholder="Code 1 / Code 3" readonly>
+                <input id="responseCode" class="field-input editable-field" type="text" />
               </label>
             </div>
           </div>
@@ -108,22 +108,22 @@
           <div class="section">
             <label>
               Pager Details
-              <textarea id="pagerDetails" class="field-input editable-field" rows="3"></textarea>
+              <textarea id="pagerDetails" class="field-input editable-field" rows="6"></textarea>
             </label>
 
             <label>
               Scanned Address
-              <input id="scannedAddress" class="field-input" type="text" readonly>
+              <input id="scannedAddress" class="field-input editable-field" type="text" />
             </label>
 
             <label>
               Actual Address
-              <input id="actualAddress" class="field-input editable-field" type="text">
+              <input id="actualAddress" class="field-input editable-field" type="text" />
             </label>
 
             <label>
               Control Name
-              <input id="controlName" class="field-input editable-field" type="text">
+              <input id="controlName" class="field-input editable-field" type="text" />
             </label>
           </div>
 
@@ -143,66 +143,106 @@
                 </select>
               </label>
 
-<label>
-  Distance to Scene
-  <select id="distanceToScene" class="field-input editable-field">
-    <option value="">Select distance</option>
-    <option>1 km</option>
-    <option>2 km</option>
-    <option>3 km</option>
-    <option>4 km</option>
-    <option>5 km</option>
-    <option>6 km</option>
-    <option>7 km</option>
-    <option>8 km</option>
-    <option>9 km</option>
-    <option>10 km</option>
-  </select>
-</label>
+              <label>
+                Distance to Scene
+                <select id="distanceToScene" class="field-input editable-field">
+                  <option value="">Select distance</option>
+                  <option>1 km</option>
+                  <option>2 km</option>
+                  <option>3 km</option>
+                  <option>4 km</option>
+                  <option>5 km</option>
+                  <option>6 km</option>
+                  <option>7 km</option>
+                  <option>8 km</option>
+                  <option>9 km</option>
+                  <option>10 km</option>
+                </select>
+              </label>
 
-<label>
-  Weather
-  <select id="weather1" class="field-input editable-field">
-    <option value="">Select weather</option>
-    <option>Cold</option>
-    <option>Mild</option>
-    <option>Warm</option>
-    <option>Hot</option>
-  </select>
-</label>
+              <label>
+                Weather
+                <select id="weather1" class="field-input editable-field">
+                  <option value="">Select weather</option>
+                  <option>Fine</option>
+                  <option>Cold</option>
+                  <option>Warm</option>
+                  <option>Hot</option>
+                  <option>Extreme</option>
+                </select>
+              </label>
 
-<label id="weather2Wrap" class="hidden">
-  Additional Weather
-  <select id="weather2" class="field-input editable-field">
-    <option value="">Select condition</option>
-    <option>Sunny</option>
-    <option>Overcast</option>
-    <option>Windy</option>
-    <option>Rain</option>
-    <option>Storm</option>
-    <option>Fog</option>
-    <option>Smoke</option>
-  </select>
-</label>
+              <label>
+                Additional Weather
+                <select id="weather2" class="field-input editable-field">
+                  <option value="">Select condition</option>
+                  <option>Sunny</option>
+                  <option>Overcast</option>
+                  <option>Windy</option>
+                  <option>Rain</option>
+                  <option>Storm</option>
+                  <option>Fog</option>
+                  <option>Smoke</option>
+                </select>
+              </label>
+            </div>
+          </div>
 
-<div class="section">
-  <div class="row wrap">
-    <input id="sceneUnitInput" class="field-input editable-field" type="text" placeholder="Add another appliance or unit">
-    <button id="addSceneUnitBtn" class="secondary-btn orange-btn" type="button">Add another appliance</button>
-  </div>
+          <div class="section">
+            <div class="row wrap">
+              <input id="sceneUnitInput" class="field-input editable-field" type="text" placeholder="Add another appliance or unit" />
+              <button id="addSceneUnitBtn" class="secondary-btn orange-btn" type="button">Add another appliance</button>
+            </div>
 
-  <div id="sceneUnitChips" class="chip-wrap"></div>
-</div>
+            <div id="sceneUnitChips" class="chip-wrap"></div>
+          </div>
 
-<div class="section">
-  <div class="row between align-center agency-strip">
-    <div class="section-title-inline">Other Agencies</div>
-    <button id="addAgencyBtn" class="secondary-btn add-agency-btn needs-attention" type="button">Add Agency</button>
-  </div>
+          <div class="section">
+            <div class="row between align-center agency-strip">
+              <button id="addAgencyBtn" class="secondary-btn orange-btn" type="button">Add Agency</button>
+            </div>
 
-  <div id="otherAgencyList" class="agency-list"></div>
-</div>
+            <div id="otherAgencyList" class="agency-list"></div>
+          </div>
 
+          <div class="section">
+            <div class="chips ops-chip-row">
+              <button id="membersBeforeChip" class="chip-btn ops-chip" type="button">Members before 1st appliance</button>
+              <button id="hotDebriefChip" class="chip-btn ops-chip" type="button">Hot debrief conducted</button>
+              <button id="aarRequiredChip" class="chip-btn ops-chip" type="button">AAR required</button>
+              <button id="injuryChip" class="chip-btn ops-chip" type="button">Injury</button>
+              <button id="signalChip" class="chip-btn ops-chip" type="button">Signal</button>
+            </div>
+
+            <div id="injuryNotesWrap" class="hidden">
+              <label>
+                Injury details
+                <textarea id="injuryNotes" class="field-input editable-field" rows="3"></textarea>
+              </label>
+            </div>
+
+            <div id="signalWrap" class="hidden">
+              <label>
+                Signal
+                <select id="signalCode" class="field-input editable-field">
+                  <option value="">Select signal</option>
+                  <option>27</option>
+                  <option>83</option>
+                  <option>56</option>
+                  <option>40</option>
+                  <option>55</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="signalNotesWrap" class="hidden">
+              <label>
+                Signal notes
+                <textarea id="signalNotes" class="field-input editable-field" rows="3"></textarea>
+              </label>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="respondersPage" class="page">
@@ -227,7 +267,7 @@
           <div class="section-head">
             <div>
               <h2>Send Report</h2>
-              <p class="subtle">Report builder will be added in a later pack.</p>
+              <p class="subtle">Report builder placeholder.</p>
             </div>
             <button class="secondary-btn" type="button">Save Draft</button>
           </div>
@@ -272,10 +312,41 @@
           Brigade
           <input id="profileBrigade" class="field-input editable-field" type="text" value="Connewarre" />
         </label>
+
+        <label class="theme-toggle-row">
+          Dark Mode
+          <input id="themeToggle" type="checkbox" />
+        </label>
       </div>
 
       <div class="actions right">
         <button id="saveProfileBtn" class="primary-btn" type="button">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="oicModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="row between">
+        <h2>Edit OIC</h2>
+        <button id="closeOicBtn" class="tiny-btn" type="button">Close</button>
+      </div>
+
+      <div class="grid">
+        <label>
+          OIC Name
+          <input id="oicSearchInput" class="field-input editable-field" list="oicMembersList" type="text" autocomplete="off" />
+          <datalist id="oicMembersList"></datalist>
+        </label>
+
+        <label>
+          OIC Phone
+          <input id="oicPhoneInput" class="field-input editable-field" type="tel" inputmode="tel" />
+        </label>
+      </div>
+
+      <div class="actions right">
+        <button id="saveOicBtn" class="primary-btn" type="button">Save OIC</button>
       </div>
     </div>
   </div>
