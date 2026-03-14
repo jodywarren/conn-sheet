@@ -78,17 +78,16 @@ function normaliseNewlines(value) {
 function cleanOcrText(rawText) {
   let text = normaliseNewlines(toUpperSafe(rawText));
 
-  // Common OCR confusions that are low-risk to normalize.
   text = text
     .replace(/[|]/g, 'I')
     .replace(/[“”"]/g, '')
     .replace(/[’']/g, "'")
     .replace(/[—–]/g, '-')
     .replace(/[，]/g, ',')
-    .replace(/[。]/g, '.');
+    .replace(/[。]/g, '.')
+    .replace(/\\T\b/g, 'MT')
+    .replace(/\bM T\b/g, 'MT');
 
-  // Keep slashes, colons, hyphens because they matter.
-  // Trim per-line noise while preserving structure.
   const lines = text
     .split('\n')
     .map((line) => collapseSpaces(line))
