@@ -274,16 +274,27 @@ function parseIncidentCode(incidentCode) {
   };
 }
 
-function stripLeadingKnownTags(line) {
-  let value = line;
+function stripLeadingDescriptionBeforeAddress(value) {
+  let text = collapseSpaces(value);
 
-  value = value.replace(/\bEMERGENCY\b\s+\d{2}:\d{2}:\d{2}\s+\d{2}-\d{2}-\d{4}\b/g, '').trim();
-  value = value.replace(/\bALERT\s+[A-Z]{4}\d\b/g, '').trim();
-
-  const knownCodes = Object.keys(INCIDENT_CODE_MAP).sort((a, b) => b.length - a.length);
-  for (const code of knownCodes) {
-    value = value.replace(new RegExp(`\\b${code}\\b`, 'g'), '').trim();
+  // For numbered addresses, remove narrative text before the first street number.
+  // Example: "SMOKE ISSUING FROM COOKING 40 VICOSA DR ARMSTRONG CREEK"
+  // becomes: "40 VICOSA DR ARMSTRONG CREEK"
+  const numberedMatch = text.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+\s+(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/);
+  if (numberedMatch && typeof numberedMatch.index === 'number') {
+    text = text.slice(numberedMatch.index).trim();
+    return text;
   }
+
+  // For CNR addresses, cut everything before CNR.
+  const cnrIndex = text.indexOf('CNR ');
+  if (cnrIndex >= 0) {
+    text = text.slice(cnrIndex).trim();
+    return text;
+  }
+
+  return text;
+}
 
   return collapseSpaces(value);
 }
