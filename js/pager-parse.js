@@ -3,9 +3,6 @@
 // No DOM writes.
 // No app state writes.
 // No OCR/Tesseract calls.
-//
-// Design goal:
-// false extraction is worse than a blank field.
 
 const INCIDENT_CODE_MAP = {
   INCIC1: { incidentType: 'Incident', responseCode: 'Code 1', responseShort: 'C1', family: 'INCI' },
@@ -134,11 +131,9 @@ function parseHeaderLine(line) {
   const fixed = normaliseHeaderTypos(line);
 
   let match = fixed.match(/\bEMERGENCY\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
-
   if (!match) {
     match = fixed.match(/\bEMERGENCY\b.*?(\d{2}:\d{2}:\d{2}).*?(\d{2}-\d{2}-\d{4})\b/);
   }
-
   if (!match) return null;
 
   const fullTime = match[1];
@@ -197,7 +192,6 @@ function validateEventNumberAgainstDate(eventNumber, pagerDate) {
 
   const eventYY = eventMatch[1];
   const eventMM = eventMatch[2];
-
   const dateMM = dateMatch[2];
   const dateYY = dateMatch[3].slice(-2);
   const fullYear = Number(dateMatch[3]);
@@ -218,28 +212,21 @@ function selectBestEventNumber(text, pagerDate) {
     if (valid.length >= 1) return valid[0].value;
   }
 
-  if (candidates.length === 1) {
-    return candidates[0].value;
-  }
+  if (candidates.length === 1) return candidates[0].value;
 
   const structurallyValid = candidates.filter((c) => {
     const mm = Number(c.mm);
     return mm >= 1 && mm <= 12;
   });
 
-  if (structurallyValid.length >= 1) {
-    return structurallyValid[0].value;
-  }
-
+  if (structurallyValid.length >= 1) return structurallyValid[0].value;
   return null;
 }
 
 function extractAlertAreaCode(lines) {
   for (const line of lines) {
     const match = line.match(/\bALERT\s+([A-Z]{4}\d{1,2})\b/);
-    if (match) {
-      return match[1];
-    }
+    if (match) return match[1];
   }
   return '';
 }
@@ -256,9 +243,7 @@ function findIncidentCode(lines) {
   for (const line of lines) {
     for (const code of knownCodes) {
       const regex = new RegExp(`\\b${code}\\b`);
-      if (regex.test(line)) {
-        return code;
-      }
+      if (regex.test(line)) return code;
     }
   }
 
@@ -325,6 +310,26 @@ function normaliseAddressPunctuation(address) {
   );
 }
 
+function looksLikeBannerLine(line) {
+  const cleaned = collapseSpaces(
+    line
+      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\/\\?T|\[|\])\s*/g, '')
+      .replace(/^MT\s+/g, 'MT ')
+  );
+
+  return /\b(ALL)\b$/.test(cleaned) &&
+    /\b(BRIGADE|CREEK|CONNEWARRE|DUNEED|FRESHWATER|GROVEDALE|HEADS|TORQUAY|MODEWARRE)\b/.test(cleaned);
+}
+
+function cleanBannerLine(line) {
+  return collapseSpaces(
+    line
+      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\/\\?T|\[|\])\s*/g, '')
+      .replace(/^MT\s+/g, 'MT ')
+      .replace(/^MOUNT DUNEED ALL$/g, 'MT DUNEED ALL')
+  );
+}
+
 function lineLooksLikeAddress(line) {
   if (!line) return false;
 
@@ -332,7 +337,7 @@ function lineLooksLikeAddress(line) {
 
   if (!cleaned) return false;
   if (/^\b(RE: EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED)\b/.test(cleaned)) return false;
-  if (/^(E\d{1,3}|288|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|MOUNT DUNEED ALL|MT|\/?\\?T|\/?\\?T DUNEED ALL)$/i.test(cleaned)) return false;
+  if (/^(E\d{1,3}|288|259|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|MOUNT DUNEED ALL|CONNEWARRE BRIGADE ALL|FRESHWATER CREEK ALL|\/?\\?T DUNEED ALL)$/i.test(cleaned)) return false;
 
   const hasCnr = /\bCNR\b/.test(cleaned) && /\//.test(cleaned);
   const hasStreetNumber = /\b\d+[A-Z]?\b/.test(cleaned);
@@ -349,7 +354,7 @@ function cleanAddressCandidate(line) {
   let value = stripLeadingKnownTags(line);
 
   value = value
-    .replace(/^(E\d{1,3}|288|28B|CFA)\s+/i, '')
+    .replace(/^(E\d{1,3}|288|259|28B|CFA)\s+/i, '')
     .trim();
 
   value = stripNonAddressLeadIn(value);
@@ -361,7 +366,7 @@ function cleanAddressCandidate(line) {
 
   if (/\bCNR\b/.test(value)) {
     const cnrRegex = new RegExp(
-      `\\bCNR\\s+[A-Z0-9'/-]+\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+)?\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join('|')})\\b`
+      `\\bCNR\\s+[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+)?\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+)?\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join('|')})\\b`
     );
     const cnrMatch = value.match(cnrRegex);
 
@@ -390,7 +395,7 @@ function scoreAddressCandidate(line) {
   const cleaned = cleanAddressCandidate(line);
   let score = 0;
 
-  if (/^(E\d{1,3}|288|28B|CFA)\b/.test(cleaned)) score -= 10;
+  if (/^(E\d{1,3}|288|259|28B|CFA)\b/.test(cleaned)) score -= 10;
   if (/\bCNR\b/.test(cleaned) && /\//.test(cleaned)) score += 8;
   if (/\b\d+[A-Z]?\b/.test(cleaned)) score += 6;
   if (new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned)) score += 4;
@@ -420,7 +425,7 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     if (!lineLooksLikeAddress(line)) continue;
 
     const cleaned = cleanAddressCandidate(line);
-    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|288|28B|CFA)$/i.test(cleaned)) continue;
+    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|288|259|28B|CFA)$/i.test(cleaned)) continue;
 
     candidates.push({
       line,
@@ -464,9 +469,7 @@ function normaliseSceneUnitToken(token) {
 
   if (/^C[A-Z]{4}$/.test(value)) {
     const stripped = value.slice(1);
-    if (KNOWN_BRIGADE_CODES.has(stripped)) {
-      value = stripped;
-    }
+    if (KNOWN_BRIGADE_CODES.has(stripped)) value = stripped;
   }
 
   if (value === 'TQRY') value = 'TRQY';
@@ -507,18 +510,23 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
   const eventLineIndex = lines.findIndex((line, index) => index >= headerLineIndex && line.includes(eventNumber));
   if (eventLineIndex < 0) return '';
 
-  const cleanedLines = lines
-    .slice(headerLineIndex, eventLineIndex + 1)
-    .map((line) => line
-      .replace(/\b(E\d{1,3}|288|28B|CFA)\b/g, '')
+  const slice = lines.slice(headerLineIndex, eventLineIndex + 1);
+  const cleanedLines = [];
+
+  for (let i = 0; i < slice.length; i += 1) {
+    let line = slice[i];
+
+    line = line
+      .replace(/\b(E\d{1,3}|288|259|28B|CFA)\b/g, '')
       .replace(/^\/?\\?T\b/g, 'MT')
-      .trim()
-    )
-    .filter((line) => {
-      if (!line) return false;
-      if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|\/?\\?T DUNEED ALL|MT|ATTENDING)$/i.test(line)) return false;
-      return true;
-    });
+      .trim();
+
+    if (!line) continue;
+    if (i === 1 && looksLikeBannerLine(line)) continue;
+    if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|CONNEWARRE BRIGADE ALL|FRESHWATER CREEK ALL|\/?\\?T DUNEED ALL|ATTENDING)$/i.test(line)) continue;
+
+    cleanedLines.push(line);
+  }
 
   return cleanedLines.join('\n');
 }
@@ -526,16 +534,11 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
 function detectBlockType(lines) {
   const text = lines.join('\n');
 
-  const hasEmergency = lines.some((line) => /\bEMERGENCY\b/.test(normaliseHeaderTypos(line)));
-  const hasReEvent = /\bRE:\s*EVENT\b/.test(text);
-  const hasCancel = /\bCANCEL RESPONSE NOT REQUIRED\b/.test(text);
-  const hasNonEmergency = /\bNON[- ]?EMERGENCY\b/.test(text);
-
   return {
-    hasEmergency,
-    hasReEvent,
-    hasCancel,
-    hasNonEmergency
+    hasEmergency: lines.some((line) => /\bEMERGENCY\b/.test(normaliseHeaderTypos(line))),
+    hasReEvent: /\bRE:\s*EVENT\b/.test(text),
+    hasCancel: /\bCANCEL RESPONSE NOT REQUIRED\b/.test(text),
+    hasNonEmergency: /\bNON[- ]?EMERGENCY\b/.test(text)
   };
 }
 
@@ -568,8 +571,6 @@ export function parsePagerBlock(rawBlockText) {
   const warnings = [];
 
   if (!header) warnings.push('Missing valid emergency header line');
-  if (header && !pagerDate) warnings.push('Header present but pager date missing');
-  if (header && !pagerTime) warnings.push('Header present but pager time missing');
   if (!eventNumber) warnings.push('Missing valid event number');
   if (pagerDate && eventNumber && !eventDateValid) warnings.push('Pager date conflicts with event number');
   if (!alertAreaCode) warnings.push('Missing alert area code');
@@ -589,26 +590,20 @@ export function parsePagerBlock(rawBlockText) {
     rawText: rawBlockText,
     cleanedText,
     lines,
-
     blockFlags,
-
     eventNumber,
     pagerDate,
     pagerTime,
-
     alertAreaCode,
     brigadeRole,
-
     incidentCode: incidentParsed.incidentCode,
     incidentFamily: incidentParsed.family,
     incidentType: incidentParsed.incidentType,
     responseCode: incidentParsed.responseCode,
     responseCodeShort: incidentParsed.responseShort,
-
     pagerDetails,
     scannedAddress,
     sceneUnits,
-
     headerLineIndex: header?.lineIndex ?? -1,
     eventDateValid,
     isStrictlyValidPrimaryBlock,
