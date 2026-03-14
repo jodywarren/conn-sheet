@@ -24,7 +24,7 @@ async function loadMembers() {
     state.responders.members = {
       conn: Array.isArray(connData) ? connData : [],
       grov: Array.isArray(grovData) ? grovData : [],
-      fres: Array.isArray(fresData) ? fresRes : Array.isArray(fresData) ? fresData : []
+      fres: Array.isArray(fresData) ? fresData : []
     };
 
     if (!Array.isArray(state.responders.members.fres)) {
@@ -125,38 +125,6 @@ function renderOtherResponding(panelId) {
     </div>
 
     <div class="other-responding-section">
-      <div class="subhead">Station</div>
-      <div class="responder-add-row">
-        <input
-          class="field-input editable-field"
-          id="stationResponderNameInput"
-          list="stationResponderNameList"
-          type="text"
-          placeholder="Type member name"
-          autocomplete="off"
-        />
-        <datalist id="stationResponderNameList">
-          ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
-        </datalist>
-
-        <input
-          class="field-input editable-field"
-          id="stationResponderNumberInput"
-          type="tel"
-          inputmode="tel"
-          placeholder="Number"
-          autocomplete="off"
-        />
-
-        <button class="secondary-btn" id="addStationResponderBtn" type="button">Add</button>
-      </div>
-
-      <div class="crew-list">
-        ${state.responders.stationResponders.map((member) => renderStationResponderCard(member)).join("")}
-      </div>
-    </div>
-
-    <div class="other-responding-section">
       <div class="subhead">Direct</div>
       <div class="responder-add-row">
         <input
@@ -185,6 +153,38 @@ function renderOtherResponding(panelId) {
 
       <div class="crew-list">
         ${state.responders.directResponders.map((member) => renderDirectResponderCard(member)).join("")}
+      </div>
+    </div>
+
+    <div class="other-responding-section">
+      <div class="subhead">Station</div>
+      <div class="responder-add-row">
+        <input
+          class="field-input editable-field"
+          id="stationResponderNameInput"
+          list="stationResponderNameList"
+          type="text"
+          placeholder="Type member name"
+          autocomplete="off"
+        />
+        <datalist id="stationResponderNameList">
+          ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
+        </datalist>
+
+        <input
+          class="field-input editable-field"
+          id="stationResponderNumberInput"
+          type="tel"
+          inputmode="tel"
+          placeholder="Number"
+          autocomplete="off"
+        />
+
+        <button class="secondary-btn" id="addStationResponderBtn" type="button">Add</button>
+      </div>
+
+      <div class="crew-list">
+        ${state.responders.stationResponders.map((member) => renderStationResponderCard(member)).join("")}
       </div>
     </div>
   `;
