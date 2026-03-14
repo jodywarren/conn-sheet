@@ -135,7 +135,7 @@ function thresholdCanvas(sourceCanvas, threshold = 165) {
     data[i + 2] = value;
   }
 
-  ctx.putImageData(imageData, imageData.width ? 0 : 0, 0);
+  ctx.putImageData(imageData, 0, 0);
   return out;
 }
 
@@ -184,101 +184,29 @@ function despeckleCanvas(sourceCanvas) {
   return out;
 }
 
-function scanHorizontalInkDensity(grayCanvas, startY, endY) {
-  const ctx = get2dContext(grayCanvas, { willReadFrequently: true });
-  const { width, height } = grayCanvas;
-  const y0 = clamp(Math.floor(startY), 0, height - 1);
-  const y1 = clamp(Math.floor(endY), y0 + 1, height);
-  const imageData = ctx.getImageData(0, y0, width, y1 - y0);
-  const data = imageData.data;
-
-  const rows = [];
-  for (let row = 0; row < y1 - y0; row += 1) {
-    let darkCount = 0;
-    let strongDarkTransitions = 0;
-    let prevDark = false;
-
-    for (let x = 0; x < width; x += 1) {
-      const idx = (row * width + x) * 4;
-      const gray = data[idx];
-      const isDark = gray < 150;
-      if (isDark) darkCount += 1;
-      if (x > 0 && isDark !== prevDark) strongDarkTransitions += 1;
-      prevDark = isDark;
-    }
-
-    rows.push({
-      y: y0 + row,
-      darkRatio: darkCount / width,
-      transitions: strongDarkTransitions
-    });
-  }
-
-  return rows;
-}
-
 function buildBaseCrops(sourceCanvas) {
   const width = sourceCanvas.width;
   const height = sourceCanvas.height;
 
   return {
     fullTrim: {
-      x: Math.floor(width * 0.03),
+      x: 0,
       y: Math.floor(height * 0.08),
-      width: Math.floor(width * 0.94),
-      height: Math.floor(height * 0.82)
+      width,
+      height: Math.floor(height * 0.84)
     },
-    centralCard: {
-      x: Math.floor(width * 0.05),
-      y: Math.floor(height * 0.14),
-      width: Math.floor(width * 0.90),
-      height: Math.floor(height * 0.62)
+    centralTrim: {
+      x: 0,
+      y: Math.floor(height * 0.12),
+      width,
+      height: Math.floor(height * 0.72)
+    },
+    emergencyTrim: {
+      x: 0,
+      y: Math.floor(height * 0.16),
+      width,
+      height: Math.floor(height * 0.56)
     }
-  };
-}
-
-function estimateAlertCardCrop(sourceCanvas) {
-  const { fullTrim } = buildBaseCrops(sourceCanvas);
-  const baseCanvas = cropCanvas(sourceCanvas, fullTrim);
-  const gray = grayscaleCanvas(baseCanvas);
-  const rows = scanHorizontalInkDensity(gray, 0, gray.height);
-
-  const searchLimit = Math.max(20, Math.floor(rows.length * 0.55));
-  let bestRowIndex = 0;
-  let bestScore = -Infinity;
-
-  for (let i = 0; i < searchLimit; i += 1) {
-    const row = rows[i];
-    const score = (row.darkRatio * 100) + (row.transitions * 0.12);
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestRowIndex = i;
-    }
-  }
-
-  const cropStartY = clamp(bestRowIndex - Math.floor(gray.height * 0.03), 0, gray.height - 1);
-
-  let cropEndY = Math.floor(gray.height * 0.78);
-  const lowerRows = rows.slice(Math.floor(rows.length * 0.50));
-
-  for (let i = 0; i < lowerRows.length; i += 1) {
-    const rowIndex = Math.floor(rows.length * 0.50) + i;
-    const row = rows[rowIndex];
-
-    if (row.darkRatio > 0.20 && row.transitions < 12) {
-      cropEndY = rowIndex - Math.floor(gray.height * 0.02);
-      break;
-    }
-  }
-
-  cropEndY = clamp(cropEndY, cropStartY + 120, gray.height);
-
-  return {
-    x: fullTrim.x + Math.floor(baseCanvas.width * 0.02),
-    y: fullTrim.y + cropStartY,
-    width: Math.floor(baseCanvas.width * 0.96),
-    height: cropEndY - cropStartY
   };
 }
 
@@ -332,25 +260,24 @@ export async function prepareOcrImage(file) {
 
   const baseCrops = buildBaseCrops(originalCanvas);
   const fullTrimCanvas = cropCanvas(originalCanvas, baseCrops.fullTrim);
-  const centralCardCanvas = cropCanvas(originalCanvas, baseCrops.centralCard);
-  const estimatedCrop = estimateAlertCardCrop(originalCanvas);
-  const estimatedCanvas = cropCanvas(originalCanvas, estimatedCrop);
+  const centralTrimCanvas = cropCanvas(originalCanvas, baseCrops.centralTrim);
+  const emergencyTrimCanvas = cropCanvas(originalCanvas, baseCrops.emergencyTrim);
 
   const variants = [];
   addRegionVariants(variants, 'fulltrim', 'Full trimmed', fullTrimCanvas);
-  addRegionVariants(variants, 'central', 'Central card', centralCardCanvas);
-  addRegionVariants(variants, 'estimated', 'Estimated alert card', estimatedCanvas);
+  addRegionVariants(variants, 'centraltrim', 'Central trimmed', centralTrimCanvas);
+  addRegionVariants(variants, 'emergencytrim', 'Emergency trimmed', emergencyTrimCanvas);
 
   return {
     source: {
       width: originalCanvas.width,
       height: originalCanvas.height
     },
-    crop: estimatedCrop,
+    crop: baseCrops.emergencyTrim,
     originalCanvas,
     fullTrimCanvas,
-    centralCardCanvas,
-    croppedCanvas: estimatedCanvas,
+    centralCardCanvas: centralTrimCanvas,
+    croppedCanvas: emergencyTrimCanvas,
     variants
   };
 }
@@ -360,8 +287,8 @@ export function variantToDataUrl(variantCanvas) {
 }
 
 export function getBestPreviewCanvas(prepared) {
-  if (prepared?.centralCardCanvas) return prepared.centralCardCanvas;
   if (prepared?.croppedCanvas) return prepared.croppedCanvas;
+  if (prepared?.centralCardCanvas) return prepared.centralCardCanvas;
   if (prepared?.fullTrimCanvas) return prepared.fullTrimCanvas;
   if (prepared?.originalCanvas) return prepared.originalCanvas;
   return null;
