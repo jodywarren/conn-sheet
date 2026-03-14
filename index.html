@@ -255,23 +255,70 @@
         </div>
       </section>
 
-      <section id="sendPage" class="page">
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h2>Send Report</h2>
-              <p class="subtle">Report builder placeholder.</p>
-            </div>
-            <button class="secondary-btn" type="button">Save Draft</button>
-          </div>
+  <div class="section-head">
+  <div>
+    <h2>Send Report</h2>
+    <p class="subtle">Preview, SMS, Email and saved reports.</p>
+  </div>
+  <button class="secondary-btn" type="button">Save Draft</button>
+</div>
 
-<div class="placeholder-panel">
-  <div class="report-preview">
-    <pre id="reportPreview"></pre>
+<div id="reportWarnings" class="chips ops-chip-row hidden"></div>
+
+<div class="chips ops-chip-row">
+  <button id="reportTabPreview" class="chip-btn ops-chip active" type="button">Preview</button>
+  <button id="reportTabSms" class="chip-btn ops-chip" type="button">SMS</button>
+  <button id="reportTabEmail" class="chip-btn ops-chip" type="button">Email</button>
+  <button id="reportTabSave" class="chip-btn ops-chip" type="button">Save</button>
+</div>
+
+<div id="reportActionStatus" class="subtle"></div>
+
+<div id="reportPanelPreview">
+  <div class="placeholder-panel">
+    <div class="report-preview">
+      <pre id="reportPreview"></pre>
+    </div>
   </div>
 </div>
-</section>
-</main>
+
+<div id="reportPanelSms" class="hidden">
+  <div class="placeholder-panel">
+    <div class="row wrap">
+      <button id="copySmsBtn" class="primary-btn" type="button">Copy Report</button>
+      <button id="openSmsBtn" class="secondary-btn" type="button">Open SMS</button>
+    </div>
+    <label>
+      SMS body
+      <textarea id="reportSmsText" class="field-input editable-field" rows="14" readonly></textarea>
+    </label>
+  </div>
+</div>
+
+<div id="reportPanelEmail" class="hidden">
+  <div class="placeholder-panel">
+    <div class="row wrap">
+      <button id="openEmailBtn" class="primary-btn" type="button">Open Email</button>
+    </div>
+    <label>
+      Email subject
+      <input id="reportEmailSubject" class="field-input editable-field" type="text" readonly />
+    </label>
+    <label>
+      Email body
+      <textarea id="reportEmailBody" class="field-input editable-field" rows="14" readonly></textarea>
+    </label>
+  </div>
+</div>
+
+<div id="reportPanelSave" class="hidden">
+  <div class="placeholder-panel">
+    <div class="row wrap">
+      <button id="saveReportBtn" class="primary-btn" type="button">Save Report Locally</button>
+    </div>
+  </div>
+
+  <div id="savedReportsList"></div>
 </div>
 
   <div id="settingsModal" class="modal hidden">
