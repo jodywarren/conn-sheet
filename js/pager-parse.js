@@ -48,6 +48,7 @@ const KNOWN_OTHER_UNITS = new Set([
 
 const SUBURB_WORDS = new Set([
   'ARMSTRONG', 'CREEK',
+  'MT', 'DUNEED',
   'MOUNT', 'DUNEED',
   'CONNEWARRE',
   'GROVEDALE',
@@ -62,6 +63,25 @@ const SUBURB_WORDS = new Set([
   'WAURN', 'PONDS',
   'MOUNTDUNEED'
 ]);
+
+const SUBURB_PHRASES = [
+  'ARMSTRONG CREEK',
+  'MT DUNEED',
+  'MOUNT DUNEED',
+  'CONNEWARRE',
+  'GROVEDALE',
+  'FRESHWATER CREEK',
+  'BARWON HEADS',
+  'TORQUAY',
+  'MODEWARRE',
+  'GEELONG',
+  'MARSHALL',
+  'LEOPOLD',
+  'BELMONT',
+  'WAURN PONDS'
+];
+
+const ROAD_TYPE_PATTERN = '(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)';
 
 function toUpperSafe(value) {
   return (value || '').toString().toUpperCase();
@@ -85,8 +105,11 @@ function cleanOcrText(rawText) {
     .replace(/[—–]/g, '-')
     .replace(/[，]/g, ',')
     .replace(/[。]/g, '.')
+    .replace(/\/\\T\b/g, 'MT')
     .replace(/\\T\b/g, 'MT')
-    .replace(/\bM T\b/g, 'MT');
+    .replace(/\/\^T\b/g, 'MT')
+    .replace(/\bM T\b/g, 'MT')
+    .replace(/\s*\/\s*/g, ' / ');
 
   const lines = text
     .split('\n')
@@ -104,17 +127,14 @@ function getLines(text) {
 }
 
 function normaliseHeaderTypos(line) {
-  // EMERGENCV is common OCR error.
   return line.replace(/\bEMERGENCV\b/g, 'EMERGENCY');
 }
 
 function parseHeaderLine(line) {
   const fixed = normaliseHeaderTypos(line);
 
-  // Strict primary pattern.
   let match = fixed.match(/\bEMERGENCY\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
 
-  // Fallback: allow minor OCR junk between time and date, but still require proper time/date shapes.
   if (!match) {
     match = fixed.match(/\bEMERGENCY\b.*?(\d{2}:\d{2}:\d{2}).*?(\d{2}-\d{2}-\d{4})\b/);
   }
@@ -125,7 +145,6 @@ function parseHeaderLine(line) {
   const pagerDate = match[2];
   const pagerTime = fullTime.slice(0, 5);
 
-  // Reject obviously bad year ranges rather than silently accepting garbage.
   const [, , yyyy] = pagerDate.split('-');
   const yearNum = Number(yyyy);
   if (!Number.isInteger(yearNum) || yearNum < 2020 || yearNum > 2035) {
@@ -194,28 +213,21 @@ function selectBestEventNumber(text, pagerDate) {
   const candidates = extractEventNumberCandidates(text);
   if (!candidates.length) return null;
 
-  // First preference: date-matched candidate when the header date is trustworthy.
   if (pagerDate) {
     const valid = candidates.filter((c) => validateEventNumberAgainstDate(c.value, pagerDate));
     if (valid.length >= 1) return valid[0].value;
   }
 
-  // Fallback: if exactly one candidate exists, use it even if date failed.
   if (candidates.length === 1) {
     return candidates[0].value;
   }
 
-  // Fallback: prefer the first candidate that looks structurally sane.
   const structurallyValid = candidates.filter((c) => {
     const mm = Number(c.mm);
     return mm >= 1 && mm <= 12;
   });
 
-  if (structurallyValid.length === 1) {
-    return structurallyValid[0].value;
-  }
-
-  if (structurallyValid.length > 1) {
+  if (structurallyValid.length >= 1) {
     return structurallyValid[0].value;
   }
 
@@ -224,7 +236,7 @@ function selectBestEventNumber(text, pagerDate) {
 
 function extractAlertAreaCode(lines) {
   for (const line of lines) {
-    const match = line.match(/\bALERT\s+([A-Z]{4}\d)\b/);
+    const match = line.match(/\bALERT\s+([A-Z]{4}\d{1,2})\b/);
     if (match) {
       return match[1];
     }
@@ -274,29 +286,34 @@ function parseIncidentCode(incidentCode) {
   };
 }
 
-function stripLeadingDescriptionBeforeAddress(value) {
-  let text = collapseSpaces(value);
+function stripLeadingKnownTags(line) {
+  let value = line;
 
-  // For numbered addresses, remove narrative text before the first street number.
-  // Example: "SMOKE ISSUING FROM COOKING 40 VICOSA DR ARMSTRONG CREEK"
-  // becomes: "40 VICOSA DR ARMSTRONG CREEK"
-  const numberedMatch = text.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+\s+(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/);
-  if (numberedMatch && typeof numberedMatch.index === 'number') {
-    text = text.slice(numberedMatch.index).trim();
-    return text;
+  value = value.replace(/\bEMERGENCY\b\s+\d{2}:\d{2}:\d{2}\s+\d{2}-\d{2}-\d{4}\b/g, '').trim();
+  value = value.replace(/\bALERT\s+[A-Z]{4}\d{1,2}\b/g, '').trim();
+
+  const knownCodes = Object.keys(INCIDENT_CODE_MAP).sort((a, b) => b.length - a.length);
+  for (const code of knownCodes) {
+    value = value.replace(new RegExp(`\\b${code}\\b`, 'g'), '').trim();
   }
 
-  // For CNR addresses, cut everything before CNR.
+  return collapseSpaces(value);
+}
+
+function stripNonAddressLeadIn(value) {
+  let text = collapseSpaces(value);
+
   const cnrIndex = text.indexOf('CNR ');
   if (cnrIndex >= 0) {
-    text = text.slice(cnrIndex).trim();
-    return text;
+    return text.slice(cnrIndex).trim();
+  }
+
+  const numberedMatch = text.match(new RegExp(`\\b\\d+[A-Z]?\\s+[A-Z0-9'/-]+\\s+${ROAD_TYPE_PATTERN}\\b`));
+  if (numberedMatch && typeof numberedMatch.index === 'number') {
+    return text.slice(numberedMatch.index).trim();
   }
 
   return text;
-}
-
-  return collapseSpaces(value);
 }
 
 function normaliseAddressPunctuation(address) {
@@ -308,10 +325,6 @@ function normaliseAddressPunctuation(address) {
   );
 }
 
-function looksLikeRoadWord(token) {
-  return /\b(RD|ROAD|ST|STREET|AVE|AVENUE|DR|DRIVE|CT|COURT|LN|LANE|HWY|HIGHWAY|PL|PLACE|WAY|CRES|CRESCENT|BLVD|BOULEVARD|PDE|PARADE|CL|CLOSE|TCE|TERRACE)\b/.test(token);
-}
-
 function lineLooksLikeAddress(line) {
   if (!line) return false;
 
@@ -319,11 +332,11 @@ function lineLooksLikeAddress(line) {
 
   if (!cleaned) return false;
   if (/^\b(RE: EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED)\b/.test(cleaned)) return false;
-  if (/^(E\d{1,3}|288|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|\\T)$/i.test(cleaned)) return false;
+  if (/^(E\d{1,3}|288|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|MOUNT DUNEED ALL|MT|\/?\\?T|\/?\\?T DUNEED ALL)$/i.test(cleaned)) return false;
 
   const hasCnr = /\bCNR\b/.test(cleaned) && /\//.test(cleaned);
   const hasStreetNumber = /\b\d+[A-Z]?\b/.test(cleaned);
-  const hasRoadType = /\b(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/.test(cleaned);
+  const hasRoadType = new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned);
   const hasSuburbWord = [...SUBURB_WORDS].some((word) => cleaned.includes(word));
 
   if (hasCnr && hasRoadType && hasSuburbWord) return true;
@@ -335,45 +348,52 @@ function lineLooksLikeAddress(line) {
 function cleanAddressCandidate(line) {
   let value = stripLeadingKnownTags(line);
 
-  // Remove obvious logo/header junk at start only.
-  value = value.replace(/^(E\d{1,3}|CFA|288|28B)\s+/i, '').trim();
+  value = value
+    .replace(/^(E\d{1,3}|288|28B|CFA)\s+/i, '')
+    .trim();
 
-  // Strip leading narrative text before the actual address.
-  value = stripLeadingDescriptionBeforeAddress(value);
+  value = stripNonAddressLeadIn(value);
 
-  // Normalize pager road abbreviations exactly as pager uses them.
   value = value
     .replace(/\bSTREET\b/g, 'ST')
     .replace(/\bROAD\b/g, 'RD')
     .replace(/\bAVENUE\b/g, 'AV');
 
-  // Keep CNR addresses intact with both roads and suburb.
   if (/\bCNR\b/.test(value)) {
-    return normaliseAddressPunctuation(value);
+    const cnrRegex = new RegExp(
+      `\\bCNR\\s+[A-Z0-9'/-]+\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+)?\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join('|')})\\b`
+    );
+    const cnrMatch = value.match(cnrRegex);
+
+    if (cnrMatch) {
+      return normaliseAddressPunctuation(cnrMatch[0].replace(/\bMOUNT DUNEED\b/g, 'MT DUNEED'));
+    }
+
+    return normaliseAddressPunctuation(value.replace(/\bMOUNT DUNEED\b/g, 'MT DUNEED'));
   }
 
-  // For numbered addresses, trim slash-road extras only if present.
-  if (/\b\d+[A-Z]?\b/.test(value) && /\//.test(value) && !/\bCNR\b/.test(value)) {
-    const suburbMatch = value.match(/\b(ARMSTRONG CREEK|MOUNT DUNEED|CONNEWARRE|GROVEDALE|FRESHWATER CREEK|BARWON HEADS|TORQUAY|WAURN PONDS)\b/);
-    if (suburbMatch) {
-      const suburbEnd = value.indexOf(suburbMatch[0]) + suburbMatch[0].length;
-      value = value.slice(0, suburbEnd).trim();
-    } else {
-      value = value.split('/')[0].trim();
+  if (/\b\d+[A-Z]?\b/.test(value)) {
+    const numberedRegex = new RegExp(
+      `\\b\\d+[A-Z]?\\s+[A-Z0-9'/-]+\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join('|')})\\b`
+    );
+    const numberedMatch = value.match(numberedRegex);
+
+    if (numberedMatch) {
+      return normaliseAddressPunctuation(numberedMatch[0].replace(/\bMOUNT DUNEED\b/g, 'MT DUNEED'));
     }
   }
 
-  return normaliseAddressPunctuation(value);
+  return normaliseAddressPunctuation(value.replace(/\bMOUNT DUNEED\b/g, 'MT DUNEED'));
 }
 
 function scoreAddressCandidate(line) {
   const cleaned = cleanAddressCandidate(line);
   let score = 0;
 
-  if (/^(E\d{1,3}|CFA)\b/.test(cleaned)) score -= 10;
+  if (/^(E\d{1,3}|288|28B|CFA)\b/.test(cleaned)) score -= 10;
   if (/\bCNR\b/.test(cleaned) && /\//.test(cleaned)) score += 8;
   if (/\b\d+[A-Z]?\b/.test(cleaned)) score += 6;
-  if (/\b(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)\b/.test(cleaned)) score += 4;
+  if (new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned)) score += 4;
   if ([...SUBURB_WORDS].some((word) => cleaned.includes(word))) score += 4;
   if (cleaned.length >= 12) score += 1;
 
@@ -400,15 +420,25 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     if (!lineLooksLikeAddress(line)) continue;
 
     const cleaned = cleanAddressCandidate(line);
-
-    // Reject known footer or junk.
-    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|CFA)$/i.test(cleaned)) continue;
+    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|288|28B|CFA)$/i.test(cleaned)) continue;
 
     candidates.push({
       line,
       cleaned,
       score: scoreAddressCandidate(line),
       lineIndex: i
+    });
+  }
+
+  const joinedBody = lines.slice(start, end + 1).join(' ');
+  const cleanedJoined = cleanAddressCandidate(joinedBody);
+
+  if (cleanedJoined && (/\bCNR\b/.test(cleanedJoined) || /\b\d+[A-Z]?\b/.test(cleanedJoined))) {
+    candidates.push({
+      line: joinedBody,
+      cleaned: cleanedJoined,
+      score: scoreAddressCandidate(cleanedJoined) + 3,
+      lineIndex: start
     });
   }
 
@@ -432,7 +462,6 @@ function tokeniseUnits(text) {
 function normaliseSceneUnitToken(token) {
   let value = token;
 
-  // Strip leading C from brigade codes like CCONN, CGROV, CFRES.
   if (/^C[A-Z]{4}$/.test(value)) {
     const stripped = value.slice(1);
     if (KNOWN_BRIGADE_CODES.has(stripped)) {
@@ -442,7 +471,6 @@ function normaliseSceneUnitToken(token) {
 
   if (value === 'TQRY') value = 'TRQY';
   if (value === 'AFP' || value === 'AFPR' || value === 'FP') value = 'Police';
-
   if (value === 'POLICE') value = 'Police';
 
   return value;
@@ -483,13 +511,12 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
     .slice(headerLineIndex, eventLineIndex + 1)
     .map((line) => line
       .replace(/\b(E\d{1,3}|288|28B|CFA)\b/g, '')
-      .replace(/^\\T\b/g, '')
-      .replace(/^\bMT DUNEED ALL\b$/g, '')
+      .replace(/^\/?\\?T\b/g, 'MT')
       .trim()
     )
     .filter((line) => {
       if (!line) return false;
-      if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|\\T|MT)$/i.test(line)) return false;
+      if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|\/?\\?T DUNEED ALL|MT|ATTENDING)$/i.test(line)) return false;
       return true;
     });
 
@@ -555,7 +582,6 @@ export function parsePagerBlock(rawBlockText) {
     !!pagerDate &&
     !!pagerTime &&
     !!eventNumber &&
-    !!eventDateValid &&
     !!alertAreaCode &&
     !!incidentCode;
 
