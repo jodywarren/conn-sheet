@@ -337,8 +337,11 @@ function lineLooksLikeAddress(line) {
 function cleanAddressCandidate(line) {
   let value = stripLeadingKnownTags(line);
 
-  // Remove obvious CFA logo OCR junk at start only.
-  value = value.replace(/^(E\d{1,3}|CFA)\s+/i, '').trim();
+  // Remove obvious logo/header junk at start only.
+  value = value.replace(/^(E\d{1,3}|CFA|288|28B)\s+/i, '').trim();
+
+  // Strip leading narrative text before the actual address.
+  value = stripLeadingDescriptionBeforeAddress(value);
 
   // Normalize pager road abbreviations exactly as pager uses them.
   value = value
@@ -352,9 +355,8 @@ function cleanAddressCandidate(line) {
   }
 
   // For numbered addresses, trim slash-road extras only if present.
-  // Example: 12 LYONS DR ARMSTRONG CREEK / PETUNIA CR
   if (/\b\d+[A-Z]?\b/.test(value) && /\//.test(value) && !/\bCNR\b/.test(value)) {
-    const suburbMatch = value.match(/\b(ARMSTRONG CREEK|MOUNT DUNEED|CONNEWARRE|GROVEDALE|FRESHWATER CREEK|BARWON HEADS|TORQUAY|MODEWARRE|GEELONG|MARSHALL|LEOPOLD|BELMONT|WAURN PONDS)\b/);
+    const suburbMatch = value.match(/\b(ARMSTRONG CREEK|MOUNT DUNEED|CONNEWARRE|GROVEDALE|FRESHWATER CREEK|BARWON HEADS|TORQUAY|WAURN PONDS)\b/);
     if (suburbMatch) {
       const suburbEnd = value.indexOf(suburbMatch[0]) + suburbMatch[0].length;
       value = value.slice(0, suburbEnd).trim();
