@@ -483,8 +483,17 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
 
   const cleanedLines = lines
     .slice(headerLineIndex, eventLineIndex + 1)
-    .map((line) => line.replace(/\bE\d{1,3}\b/g, '').replace(/\bCFA\b/g, '').trim())
-    .filter(Boolean);
+    .map((line) => line
+      .replace(/\b(E\d{1,3}|288|28B|CFA)\b/g, '')
+      .replace(/^\\T\b/g, '')
+      .replace(/^\bMT DUNEED ALL\b$/g, '')
+      .trim()
+    )
+    .filter((line) => {
+      if (!line) return false;
+      if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|\\T|MT)$/i.test(line)) return false;
+      return true;
+    });
 
   return cleanedLines.join('\n');
 }
