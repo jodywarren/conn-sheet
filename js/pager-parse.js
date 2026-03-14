@@ -319,9 +319,7 @@ function lineLooksLikeAddress(line) {
 
   if (!cleaned) return false;
   if (/^\b(RE: EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED)\b/.test(cleaned)) return false;
-
-  // Reject obvious non-address logo/junk fragments.
-  if (/^(E\d{1,3}|CFA|ATTENDING|EMERGENCY)$/i.test(cleaned)) return false;
+  if (/^(E\d{1,3}|288|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|\\T)$/i.test(cleaned)) return false;
 
   const hasCnr = /\bCNR\b/.test(cleaned) && /\//.test(cleaned);
   const hasStreetNumber = /\b\d+[A-Z]?\b/.test(cleaned);
