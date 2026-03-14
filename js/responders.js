@@ -117,6 +117,9 @@ function renderOtherResponding(panelId) {
   if (!panel) return;
 
   const allMembers = getAllMembers();
+  const injuryWarning = hasInjuredResponderWithoutNotes()
+    ? `<div class="status-banner missing">Warning: A responder is marked injured but no injury notes have been entered.</div>`
+    : "";
 
   panel.className = "appliance-panel";
   panel.innerHTML = `
@@ -186,6 +189,19 @@ function renderOtherResponding(panelId) {
       <div class="crew-list">
         ${state.responders.stationResponders.map((member) => renderStationResponderCard(member)).join("")}
       </div>
+    </div>
+
+    <div class="other-responding-section">
+      <div class="subhead">Responder injury notes</div>
+      ${injuryWarning}
+      <label>
+        <textarea
+          id="respondersInjuryNotes"
+          class="field-input editable-field"
+          rows="3"
+          placeholder="Enter responder injury details here if any member is marked injured"
+        >${escapeHtml(state.responders.injuryNotes || "")}</textarea>
+      </label>
     </div>
   `;
 
@@ -372,6 +388,14 @@ function bindOtherRespondingEvents(panel) {
 
   if (addDirectBtn) {
     addDirectBtn.addEventListener("click", addDirectResponder);
+  }
+
+  const injuryNotes = document.getElementById("respondersInjuryNotes");
+  if (injuryNotes) {
+    injuryNotes.addEventListener("input", () => {
+      state.responders.injuryNotes = injuryNotes.value.trim();
+      saveState();
+    });
   }
 
   panel.querySelectorAll("[data-action='remove-station']").forEach((btn) => {
@@ -625,6 +649,17 @@ function syncOicFromAllResponse() {
     state.responders.oicName = "";
     state.responders.oicPhone = "";
   }
+}
+
+function hasInjuredResponderWithoutNotes() {
+  const applianceInjury = Object.values(state.responders.appliances || {}).some((appliance) =>
+    (appliance.crew || []).some((member) => member.isInjured)
+  );
+
+  const directInjury = (state.responders.directResponders || []).some((member) => member.isInjured);
+  const anyInjury = applianceInjury || directInjury;
+
+  return anyInjury && !String(state.responders.injuryNotes || "").trim();
 }
 
 function getApplianceStatusClass(appliance) {
