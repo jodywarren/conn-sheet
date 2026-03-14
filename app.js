@@ -3,7 +3,7 @@ import { bindShellEvents } from "./js/render.js";
 import { bindIncidentInputs, loadIncidentIntoInputs } from "./js/incident.js";
 import { initResponders } from "./js/responders.js";
 import { bindOcrEvents } from "./js/ocr.js";
-import { renderReportPreview } from "./js/report.js";
+import { bindReportEvents, renderReportPreview } from "./js/report.js";
 
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -16,6 +16,7 @@ async function initApp() {
   await initResponders();
 
   renderReportPreview();
+  bindReportEvents();
   bindReportPreviewRefresh();
 }
 
@@ -63,10 +64,10 @@ function bindReportPreviewRefresh() {
     });
   });
 
-  const saveDraftButtons = document.querySelectorAll(".secondary-btn");
-  saveDraftButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+  const reportPage = document.getElementById("sendPage");
+  if (reportPage) {
+    reportPage.addEventListener("click", () => {
       renderReportPreview();
     });
-  });
+  }
 }
