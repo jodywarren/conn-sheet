@@ -4,16 +4,18 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const SIGNAL_OPTIONS = ["27", "55", "83", "40", "56"];
+
 export function bindIncidentInputs() {
   bindTextInputs();
   bindSelect("firstAgency");
   bindSelect("distanceToScene");
   bindSelect("weather1");
   bindSelect("weather2");
-  bindSelect("signalCode");
   bindSceneUnits();
   bindOtherAgencyControls();
   bindOperationalChips();
+  bindSignalChips();
 }
 
 function bindTextInputs() {
@@ -54,14 +56,30 @@ function bindSelect(id) {
 
   el.addEventListener("change", () => {
     state.incident[id] = el.value;
+    applyWeatherRules(id);
     saveState();
-
-    if (id === "signalCode") {
-      toggleSignalNotes();
-    }
-
     applyFieldCompletionStates();
+    loadIncidentIntoInputs();
   });
+}
+
+function applyWeatherRules(changedId) {
+  const w1 = state.incident.weather1;
+  const w2 = state.incident.weather2;
+
+  const incompatibleWithFine = new Set(["Overcast", "Windy", "Rain", "Storm", "Fog", "Smoke"]);
+
+  if (changedId === "weather1" && w1 === "Fine" && incompatibleWithFine.has(w2)) {
+    state.incident.weather2 = "";
+  }
+
+  if (changedId === "weather2" && incompatibleWithFine.has(w2) && w1 === "Fine") {
+    state.incident.weather1 = "";
+  }
+
+  if (changedId === "weather2" && w2 === "Sunny" && !w1) {
+    state.incident.weather1 = "Fine";
+  }
 }
 
 function bindSceneUnits() {
@@ -396,14 +414,61 @@ function bindOperationalChips() {
   if (signalChip) {
     signalChip.addEventListener("click", () => {
       const active = signalChip.classList.toggle("active");
+
       if (!active) {
         state.incident.signalCode = "";
         state.incident.signalNotes = "";
       }
+
       toggleSignalNotes();
+      renderSignalChips();
       saveState();
+      applyFieldCompletionStates();
     });
   }
+}
+
+function bindSignalChips() {
+  renderSignalChips();
+}
+
+function renderSignalChips() {
+  const wrap = document.getElementById("signalWrap");
+  if (!wrap) return;
+
+  const chip = document.getElementById("signalChip");
+  const active = chip?.classList.contains("active");
+
+  wrap.innerHTML = "";
+
+  if (!active) {
+    wrap.classList.add("hidden");
+    return;
+  }
+
+  wrap.classList.remove("hidden");
+
+  const row = document.createElement("div");
+  row.className = "chips ops-chip-row";
+
+  SIGNAL_OPTIONS.forEach((code) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `chip-btn ops-chip ${state.incident.signalCode === code ? "active" : ""}`;
+    btn.textContent = code;
+
+    btn.addEventListener("click", () => {
+      state.incident.signalCode = state.incident.signalCode === code ? "" : code;
+      saveState();
+      renderSignalChips();
+      toggleSignalNotes();
+      applyFieldCompletionStates();
+    });
+
+    row.appendChild(btn);
+  });
+
+  wrap.appendChild(row);
 }
 
 function bindFlagChip(chipId, flagKey) {
@@ -458,7 +523,6 @@ export function loadIncidentIntoInputs() {
     weather1: state.incident.weather1,
     weather2: state.incident.weather2,
     injuryNotes: state.incident.injuryNotes,
-    signalCode: state.incident.signalCode,
     signalNotes: state.incident.signalNotes
   };
 
@@ -470,6 +534,7 @@ export function loadIncidentIntoInputs() {
 
   renderSceneUnitChips();
   renderOtherAgencies();
+  renderSignalChips();
   applyOperationalChipStates();
   toggleInjuryNotes();
   toggleSignalNotes();
@@ -514,7 +579,7 @@ export function applyFieldCompletionStates() {
     el.classList.toggle("field-complete", value.length > 0);
   });
 
-  const optionalIds = ["weather2", "controlName", "injuryNotes", "signalNotes", "signalCode"];
+  const optionalIds = ["weather2", "controlName", "injuryNotes", "signalNotes"];
   optionalIds.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
