@@ -88,6 +88,8 @@ function createDefaultState() {
       stationResponders: [],
       directResponders: [],
 
+      injuryNotes: "",
+
       oicName: "",
       oicPhone: ""
     }
@@ -228,6 +230,9 @@ export function loadState() {
       }
       if (Array.isArray(saved.responders.directResponders)) {
         fresh.responders.directResponders = saved.responders.directResponders;
+      }
+      if (typeof saved.responders.injuryNotes === "string") {
+        fresh.responders.injuryNotes = saved.responders.injuryNotes;
       }
       if (typeof saved.responders.oicName === "string") {
         fresh.responders.oicName = saved.responders.oicName;
