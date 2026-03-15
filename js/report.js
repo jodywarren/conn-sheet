@@ -104,6 +104,17 @@ function formatDateForSubject(dateValue) {
 function getMissingWarnings() {
   const warnings = [];
 
+if (!String(state.profile.name || "").trim() ||
+    !String(state.profile.memberNumber || "").trim() ||
+    !String(state.profile.contactNumber || "").trim()) {
+  warnings.push({
+    key: "profileMissing",
+    label: "Profile details missing",
+    page: "incidentPage",
+    targetId: null
+  });
+}
+  
   if (!state.incident.actualAddress) {
     warnings.push({
       key: "actualAddress",
