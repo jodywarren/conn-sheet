@@ -104,17 +104,6 @@ function formatDateForSubject(dateValue) {
 function getMissingWarnings() {
   const warnings = [];
 
-if (!String(state.profile.name || "").trim() ||
-    !String(state.profile.memberNumber || "").trim() ||
-    !String(state.profile.contactNumber || "").trim()) {
-  warnings.push({
-    key: "profileMissing",
-    label: "Profile details missing",
-    page: "incidentPage",
-    targetId: null
-  });
-}
-  
   if (!state.incident.actualAddress) {
     warnings.push({
       key: "actualAddress",
@@ -156,6 +145,19 @@ if (!String(state.profile.name || "").trim() ||
       key: "oicName",
       label: "OIC missing",
       page: "respondersPage",
+      targetId: null
+    });
+  }
+
+  if (
+    !String(state.profile.name || "").trim() ||
+    !String(state.profile.memberNumber || "").trim() ||
+    !String(state.profile.contactNumber || "").trim()
+  ) {
+    warnings.push({
+      key: "profileMissing",
+      label: "Profile details missing",
+      page: "incidentPage",
       targetId: null
     });
   }
@@ -210,10 +212,7 @@ function getReportLines() {
   }
 
   if (incident.otherAgencies?.length) {
-    const selectedAgencyTypes = incident.otherAgencies
-      .map((a) => a.type)
-      .filter(Boolean);
-
+    const selectedAgencyTypes = incident.otherAgencies.map((a) => a.type).filter(Boolean);
     if (selectedAgencyTypes.length) {
       lines.push(`Other agencies on scene: ${selectedAgencyTypes.join(", ")}`);
     }
@@ -246,7 +245,7 @@ function getReportLines() {
 
     const applianceLabel = formatApplianceLabel(appliance.label);
     const code = appliance.code ? appliance.code.toUpperCase().replace(/^C/, "CODE ") : "";
-    lines.push(`${applianceLabel.padEnd(28)} ${code}`.trimEnd());
+    lines.push(`${applianceLabel.padEnd(30)} ${code}`.trimEnd());
 
     appliance.crew.forEach((member) => {
       lines.push(buildCrewLine(member));
@@ -257,21 +256,17 @@ function getReportLines() {
 
   if (responders.directResponders?.length) {
     lines.push("DIRECT");
-
     responders.directResponders.forEach((member) => {
       lines.push(buildCrewLine(member));
     });
-
     lines.push("");
   }
 
   if (responders.stationResponders?.length) {
     lines.push("STATION");
-
     responders.stationResponders.forEach((member) => {
       lines.push(member.name || "");
     });
-
     lines.push("");
   }
 
@@ -325,26 +320,26 @@ function getReportLines() {
     lines.push(signalLine);
   }
 
-lines.push("");
-lines.push("REPORT CREATED BY:");
+  lines.push("");
+  lines.push("REPORT CREATED BY:");
 
-const profileName = String(state.profile.name || "").trim();
-const profileBrigade = String(state.profile.brigade || "Connewarre").trim();
-const profileMemberNumber = String(state.profile.memberNumber || "").trim();
-const profileContactNumber = String(state.profile.contactNumber || "").trim();
+  const profileName = String(state.profile.name || "").trim();
+  const profileBrigade = String(state.profile.brigade || "Connewarre").trim();
+  const profileMemberNumber = String(state.profile.memberNumber || "").trim();
+  const profileContactNumber = String(state.profile.contactNumber || "").trim();
 
-const createdByParts = [
-  profileName,
-  profileBrigade,
-  profileMemberNumber,
-  profileContactNumber
-].filter(Boolean);
+  const createdByParts = [
+    profileName,
+    profileBrigade,
+    profileMemberNumber,
+    profileContactNumber
+  ].filter(Boolean);
 
-if (profileName && profileMemberNumber && profileContactNumber) {
-  lines.push(createdByParts.join(", "));
-} else {
-  lines.push("PROFILE DETAILS MISSING");
-}
+  if (profileName && profileMemberNumber && profileContactNumber) {
+    lines.push(createdByParts.join(", "));
+  } else {
+    lines.push("PROFILE DETAILS MISSING");
+  }
 
   return lines;
 }
@@ -357,7 +352,6 @@ function getEmailSubject() {
   const date = formatDateForSubject(state.incident.pagerDate);
   const jobCode = getJobCodeForSubject();
   const actualAddress = state.incident.actualAddress || "";
-
   return [date, jobCode, actualAddress].filter(Boolean).join(" | ");
 }
 
@@ -549,11 +543,6 @@ function renderPanelText() {
     preview.textContent = getReportText();
   }
 
-  const smsText = document.getElementById("reportSmsText");
-  if (smsText) {
-    smsText.value = getReportText();
-  }
-
   const emailSubject = document.getElementById("reportEmailSubject");
   if (emailSubject) {
     emailSubject.value = getEmailSubject();
@@ -576,12 +565,10 @@ export function renderReportTools() {
 }
 
 export function bindReportEvents() {
-  const previewBtn = document.getElementById("reportTabPreview");
   const smsBtn = document.getElementById("reportTabSms");
   const emailBtn = document.getElementById("reportTabEmail");
   const saveBtn = document.getElementById("reportTabSave");
 
-  previewBtn?.addEventListener("click", () => setActiveReportTab("preview"));
   smsBtn?.addEventListener("click", () => setActiveReportTab("sms"));
   emailBtn?.addEventListener("click", () => setActiveReportTab("email"));
   saveBtn?.addEventListener("click", () => setActiveReportTab("save"));
