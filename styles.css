@@ -1170,3 +1170,7 @@ body.dark-mode #oicBanner.missing {
   border-color: #a85b5b !important;
   color: #ffd6d6 !important;
 }
+.report-preview pre {
+  font-family: monospace;
+  line-height: 1.45;
+}
