@@ -68,4 +68,3 @@ document.querySelectorAll('[data-page="sendPage"]').forEach(btn => {
       renderReportPreview();
     });
   }
-}
