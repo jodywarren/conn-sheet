@@ -567,7 +567,7 @@ export function bindReportEvents() {
     if (status) status.textContent = "Report saved locally.";
   });
 
-  setActiveReportTab("preview");
+  setActiveReportTab("sms");
   renderReportTools();
 }
 
