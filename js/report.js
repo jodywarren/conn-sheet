@@ -441,7 +441,7 @@ function renderWarnings() {
 }
 
 function setActiveReportTab(tabName) {
-  const tabs = ["preview", "sms", "email", "save"];
+  const tabs = ["sms", "email", "save"];
   tabs.forEach((tab) => {
     const btn = document.getElementById(`reportTab${tab[0].toUpperCase()}${tab.slice(1)}`);
     const panel = document.getElementById(`reportPanel${tab[0].toUpperCase()}${tab.slice(1)}`);
