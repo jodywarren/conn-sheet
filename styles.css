@@ -1177,4 +1177,12 @@ body.dark-mode #oicBanner.missing {
 .report-preview pre {
   font-family: monospace;
   line-height: 1.45;
+  
+}
+.oic-banner {
+  white-space: normal;
+  line-height: 1.2;
+  text-align: right;
+  max-width: 220px;
+  word-break: break-word;
 }
