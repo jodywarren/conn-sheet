@@ -20,15 +20,13 @@ async function initApp() {
   bindReportPreviewRefresh();
 }
 
-function bindReportPreviewRefresh() {
-  const reportTabBtn = document.querySelector('[data-page="sendPage"]');
-  if (reportTabBtn) {
-    reportTabBtn.addEventListener("click", () => {
-      setTimeout(() => {
-        renderReportPreview();
-      }, 0);
-    });
-  }
+document.querySelectorAll('[data-page="sendPage"]').forEach(btn => {
+  btn.addEventListener("click", () => {
+    setTimeout(() => {
+      renderReportPreview();
+    }, 0);
+  });
+});
 
   const refreshIds = [
     "eventNumber",
