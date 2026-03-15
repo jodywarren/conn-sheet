@@ -314,9 +314,26 @@ function getReportLines() {
     lines.push(signalLine);
   }
 
-  lines.push("");
-  lines.push("REPORT CREATED BY:");
-  lines.push("Jodie Tuuta, Connewarre, 6404115, 0439517783");
+lines.push("");
+lines.push("REPORT CREATED BY:");
+
+const profileName = String(state.profile.name || "").trim();
+const profileBrigade = String(state.profile.brigade || "Connewarre").trim();
+const profileMemberNumber = String(state.profile.memberNumber || "").trim();
+const profileContactNumber = String(state.profile.contactNumber || "").trim();
+
+const createdByParts = [
+  profileName,
+  profileBrigade,
+  profileMemberNumber,
+  profileContactNumber
+].filter(Boolean);
+
+if (profileName && profileMemberNumber && profileContactNumber) {
+  lines.push(createdByParts.join(", "));
+} else {
+  lines.push("PROFILE DETAILS MISSING");
+}
 
   return lines;
 }
