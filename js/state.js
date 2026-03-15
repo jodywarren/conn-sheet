@@ -146,8 +146,9 @@ export function renderOicBanner() {
   const banner = document.getElementById("oicBanner");
   if (!banner) return;
 
-  const name = String(state.responders.oicName || "").trim();
+  const name = String(state.responders.oicName || "").trim().toUpperCase();
   const phone = String(state.responders.oicPhone || "").trim();
+  const memberNumber = String(state.profile.memberNumber || "").trim();
 
   banner.classList.remove("missing", "complete");
 
@@ -157,13 +158,14 @@ export function renderOicBanner() {
     return;
   }
 
-  if (!phone) {
-    banner.textContent = `OIC: ${name} • Number missing`;
-    banner.classList.add("missing");
-    return;
-  }
+  const line1 = `OIC: ${name}, CONNEWARRE`;
+  const line2Parts = [memberNumber, phone].filter(Boolean);
+  const line2 = line2Parts.join(", ");
 
-  banner.textContent = `OIC: ${name} • ${phone}`;
+  banner.innerHTML = line2
+    ? `${line1}<br>${line2}`
+    : line1;
+
   banner.classList.add("complete");
 }
 
