@@ -539,6 +539,8 @@ export function loadIncidentIntoInputs() {
   toggleInjuryNotes();
   toggleSignalNotes();
   applyFieldCompletionStates();
+
+  document.dispatchEvent(new Event("incident:loaded"));
 }
 
 function applyOperationalChipStates() {
