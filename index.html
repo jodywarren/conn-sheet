@@ -20,11 +20,29 @@
         </div>
       </div>
 
-      <div class="header-actions right-oic">
-        <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
-        <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
-      </div>
-    </header>
+<div class="header-actions right-oic">
+  <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
+
+  <div id="supportOicWrap" class="support-oic-wrap hidden">
+    <input
+      id="supportOicName"
+      class="field-input editable-field"
+      type="text"
+      placeholder="Support job OIC name"
+      autocomplete="off"
+    />
+    <input
+      id="supportOicPhone"
+      class="field-input editable-field"
+      type="tel"
+      inputmode="tel"
+      placeholder="Support job OIC phone"
+      autocomplete="off"
+    />
+  </div>
+
+  <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
+</div>
 
     <nav class="top-nav">
       <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
