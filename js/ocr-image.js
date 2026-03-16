@@ -1,22 +1,20 @@
 // ocr-image.js
-// Image loading, internal cropping, and OCR preprocessing only.
-// No Tesseract calls.
-// No pager parsing.
-// No DOM/state writes.
+// Faster OCR image preparation for pager screenshots.
+// Keeps full width, trims top/bottom only, and uses fewer variants.
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
 function createCanvas(width, height) {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(width));
   canvas.height = Math.max(1, Math.round(height));
   return canvas;
 }
 
 function get2dContext(canvas, options = {}) {
-  return canvas.getContext('2d', {
+  return canvas.getContext("2d", {
     alpha: false,
     willReadFrequently: !!options.willReadFrequently
   });
@@ -25,17 +23,17 @@ function get2dContext(canvas, options = {}) {
 function fileToImage(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
-      reject(new Error('No image file provided'));
+      reject(new Error("No image file provided"));
       return;
     }
 
     const reader = new FileReader();
 
-    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onerror = () => reject(new Error("Failed to read image file"));
     reader.onload = () => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Failed to decode image'));
+      img.onerror = () => reject(new Error("Failed to decode image"));
       img.src = reader.result;
     };
 
@@ -63,14 +61,12 @@ function cropCanvas(sourceCanvas, crop) {
 }
 
 function scaleCanvas(sourceCanvas, scale) {
-  const safeScale = Math.max(0.5, Math.min(scale, 4));
+  const safeScale = Math.max(0.75, Math.min(scale, 2));
   const out = createCanvas(sourceCanvas.width * safeScale, sourceCanvas.height * safeScale);
   const ctx = get2dContext(out);
-
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(sourceCanvas, 0, 0, out.width, out.height);
-
   return out;
 }
 
@@ -118,69 +114,22 @@ function contrastCanvas(sourceCanvas, contrast = 35, brightness = 0) {
   return out;
 }
 
-function thresholdCanvas(sourceCanvas, threshold = 165) {
+function thresholdCanvas(sourceCanvas, threshold = 168) {
   const out = createCanvas(sourceCanvas.width, sourceCanvas.height);
   const ctx = get2dContext(out, { willReadFrequently: true });
 
   ctx.drawImage(sourceCanvas, 0, 0);
   const imageData = ctx.getImageData(0, 0, out.width, out.height);
   const data = imageData.data;
-  const t = clamp(threshold, 0, 255);
 
   for (let i = 0; i < data.length; i += 4) {
-    const gray = data[i];
-    const value = gray >= t ? 255 : 0;
+    const value = data[i] >= threshold ? 255 : 0;
     data[i] = value;
     data[i + 1] = value;
     data[i + 2] = value;
   }
 
   ctx.putImageData(imageData, 0, 0);
-  return out;
-}
-
-function despeckleCanvas(sourceCanvas) {
-  const out = createCanvas(sourceCanvas.width, sourceCanvas.height);
-  const srcCtx = get2dContext(sourceCanvas, { willReadFrequently: true });
-  const outCtx = get2dContext(out, { willReadFrequently: true });
-
-  const src = srcCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-  const dst = outCtx.createImageData(sourceCanvas.width, sourceCanvas.height);
-
-  const { width, height } = sourceCanvas;
-  const s = src.data;
-  const d = dst.data;
-
-  function getGray(x, y) {
-    const idx = (y * width + x) * 4;
-    return s[idx];
-  }
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      let sum = 0;
-      let count = 0;
-
-      for (let oy = -1; oy <= 1; oy += 1) {
-        for (let ox = -1; ox <= 1; ox += 1) {
-          const nx = x + ox;
-          const ny = y + oy;
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-          sum += getGray(nx, ny);
-          count += 1;
-        }
-      }
-
-      const avg = Math.round(sum / Math.max(1, count));
-      const idx = (y * width + x) * 4;
-      d[idx] = avg;
-      d[idx + 1] = avg;
-      d[idx + 2] = avg;
-      d[idx + 3] = 255;
-    }
-  }
-
-  outCtx.putImageData(dst, 0, 0);
   return out;
 }
 
@@ -195,62 +144,32 @@ function buildBaseCrops(sourceCanvas) {
       width,
       height: Math.floor(height * 0.84)
     },
-    centralTrim: {
-      x: 0,
-      y: Math.floor(height * 0.12),
-      width,
-      height: Math.floor(height * 0.72)
-    },
     emergencyTrim: {
       x: 0,
-      y: Math.floor(height * 0.16),
+      y: Math.floor(height * 0.15),
       width,
-      height: Math.floor(height * 0.56)
+      height: Math.floor(height * 0.58)
     }
   };
 }
 
-function addRegionVariants(targetList, regionKey, regionLabel, regionCanvas) {
-  const scaled = scaleCanvas(regionCanvas, 1.8);
-  targetList.push({
-    key: `${regionKey}-color`,
-    label: `${regionLabel} color`,
-    canvas: scaled
-  });
+function addFastVariants(targetList, regionKey, regionLabel, regionCanvas) {
+  const scaled = scaleCanvas(regionCanvas, 1.45);
 
   const gray = grayscaleCanvas(scaled);
-  targetList.push({
-    key: `${regionKey}-gray`,
-    label: `${regionLabel} grayscale`,
-    canvas: gray
-  });
+  const contrast = contrastCanvas(gray, 40, 6);
+  const binary = thresholdCanvas(contrast, 168);
 
-  const grayContrast = contrastCanvas(gray, 42, 6);
   targetList.push({
     key: `${regionKey}-contrast`,
     label: `${regionLabel} contrast`,
-    canvas: grayContrast
+    canvas: contrast
   });
 
-  const denoised = despeckleCanvas(grayContrast);
   targetList.push({
-    key: `${regionKey}-denoised`,
-    label: `${regionLabel} denoised`,
-    canvas: denoised
-  });
-
-  const binary1 = thresholdCanvas(denoised, 160);
-  targetList.push({
-    key: `${regionKey}-binary160`,
-    label: `${regionLabel} binary 160`,
-    canvas: binary1
-  });
-
-  const binary2 = thresholdCanvas(denoised, 175);
-  targetList.push({
-    key: `${regionKey}-binary175`,
-    label: `${regionLabel} binary 175`,
-    canvas: binary2
+    key: `${regionKey}-binary`,
+    label: `${regionLabel} binary`,
+    canvas: binary
   });
 }
 
@@ -260,13 +179,11 @@ export async function prepareOcrImage(file) {
 
   const baseCrops = buildBaseCrops(originalCanvas);
   const fullTrimCanvas = cropCanvas(originalCanvas, baseCrops.fullTrim);
-  const centralTrimCanvas = cropCanvas(originalCanvas, baseCrops.centralTrim);
   const emergencyTrimCanvas = cropCanvas(originalCanvas, baseCrops.emergencyTrim);
 
   const variants = [];
-  addRegionVariants(variants, 'fulltrim', 'Full trimmed', fullTrimCanvas);
-  addRegionVariants(variants, 'centraltrim', 'Central trimmed', centralTrimCanvas);
-  addRegionVariants(variants, 'emergencytrim', 'Emergency trimmed', emergencyTrimCanvas);
+  addFastVariants(variants, "fulltrim", "Full trimmed", fullTrimCanvas);
+  addFastVariants(variants, "emergencytrim", "Emergency trimmed", emergencyTrimCanvas);
 
   return {
     source: {
@@ -276,19 +193,18 @@ export async function prepareOcrImage(file) {
     crop: baseCrops.emergencyTrim,
     originalCanvas,
     fullTrimCanvas,
-    centralCardCanvas: centralTrimCanvas,
+    centralCardCanvas: fullTrimCanvas,
     croppedCanvas: emergencyTrimCanvas,
     variants
   };
 }
 
 export function variantToDataUrl(variantCanvas) {
-  return variantCanvas.toDataURL('image/png', 0.92);
+  return variantCanvas.toDataURL("image/png", 0.92);
 }
 
 export function getBestPreviewCanvas(prepared) {
   if (prepared?.croppedCanvas) return prepared.croppedCanvas;
-  if (prepared?.centralCardCanvas) return prepared.centralCardCanvas;
   if (prepared?.fullTrimCanvas) return prepared.fullTrimCanvas;
   if (prepared?.originalCanvas) return prepared.originalCanvas;
   return null;
