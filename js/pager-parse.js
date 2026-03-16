@@ -223,12 +223,61 @@ function selectBestEventNumber(text, pagerDate) {
   return null;
 }
 
+function normaliseAlertAreaCandidate(value) {
+  let code = String(value || "").trim().toUpperCase();
+
+  // Common OCR swaps
+  code = code
+    .replace(/0/g, "O")
+    .replace(/(?<=^[A-Z]{4})I/g, "1")
+    .replace(/(?<=^[A-Z]{4})L/g, "1")
+    .replace(/(?<=^[A-Z]{4})O/g, "0");
+
+  // Fix brigade letter OCR where possible
+  if (code.startsWith("GR0V")) code = code.replace(/^GR0V/, "GROV");
+  if (code.startsWith("C0NN")) code = code.replace(/^C0NN/, "CONN");
+  if (code.startsWith("MT0U")) code = code.replace(/^MT0U/, "MTDU");
+
+  return code;
+}
+
 function extractAlertAreaCode(lines) {
+  const joined = lines.join(" ");
+
+  // First pass: strict line-by-line
   for (const line of lines) {
-    const match = line.match(/\bALERT\s+([A-Z]{4}\d{1,2})\b/);
-    if (match) return match[1];
+    const match = line.match(/\bALERT\s+([A-Z0-9]{4,6})\b/);
+    if (!match) continue;
+
+    const candidate = normaliseAlertAreaCandidate(match[1]);
+
+    if (/^[A-Z]{4}\d{1,2}$/.test(candidate)) {
+      return candidate;
+    }
   }
-  return '';
+
+  // Second pass: joined text, useful when OCR wraps badly
+  const joinedMatch = joined.match(/\bALERT\s+([A-Z0-9]{4,6})\b/);
+  if (joinedMatch) {
+    const candidate = normaliseAlertAreaCandidate(joinedMatch[1]);
+    if (/^[A-Z]{4}\d{1,2}$/.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function deriveBrigadeRole(alertAreaCode) {
+  if (!alertAreaCode) return "";
+
+  const primaryBrigade = alertAreaCode.slice(0, 4);
+
+  if (primaryBrigade === "CONN") {
+    return "Primary";
+  }
+
+  return `Support to ${primaryBrigade}`;
 }
 
 function deriveBrigadeRole(alertAreaCode) {
