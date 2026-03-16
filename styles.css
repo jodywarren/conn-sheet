@@ -1269,4 +1269,27 @@ body.dark-mode #oicBanner.missing {
   background: #181b20;
   color: #f3f4f6;
   border-color: #444b57;
+  
+}
+.right-oic {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.support-oic-wrap {
+  display: grid;
+  gap: 6px;
+  width: 220px;
+}
+
+.support-oic-wrap input {
+  width: 100%;
+}
+
+.oic-banner {
+  text-align: right;
+  white-space: normal;
+  line-height: 1.2;
 }
