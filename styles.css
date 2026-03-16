@@ -1224,4 +1224,49 @@ body.dark-mode #oicBanner.missing {
 
 .primary-btn:hover {
   background: #a80014;
+  
+}
+.support-oic-wrap {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.support-oic-wrap .field-input {
+  width: 100%;
+}
+
+.oic-banner {
+  white-space: normal;
+  line-height: 1.2;
+  text-align: right;
+  max-width: 260px;
+  word-break: break-word;
+}
+
+.header-logo-frame {
+  width: 96px;
+  height: 96px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.header-logo {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+  display: block;
+}
+
+.dark-mode .placeholder-panel,
+.dark-mode .report-preview,
+.dark-mode #reportEmailBody,
+.dark-mode #reportEmailSubject {
+  background: #181b20;
+  color: #f3f4f6;
+  border-color: #444b57;
 }
