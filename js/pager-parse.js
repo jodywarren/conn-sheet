@@ -354,24 +354,53 @@ function normaliseAddressPunctuation(address) {
   );
 }
 
-function looksLikeBannerLine(line) {
-  const cleaned = collapseSpaces(
-    line
-      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\/\\?T|\[|\])\s*/g, '')
-      .replace(/^MT\s+/g, 'MT ')
-  );
+function extractBrigadeBannerLine(lines, headerLineIndex = -1, eventLineIndex = -1) {
+  const start = headerLineIndex >= 0 ? headerLineIndex : 0;
+  const end = eventLineIndex >= 0 ? eventLineIndex : Math.min(lines.length - 1, start + 6);
 
-  return /\b(ALL)\b$/.test(cleaned) &&
-    /\b(BRIGADE|CREEK|CONNEWARRE|DUNEED|FRESHWATER|GROVEDALE|HEADS|TORQUAY|MODEWARRE)\b/.test(cleaned);
+  for (let i = start; i <= end; i += 1) {
+    const raw = String(lines[i] || "").trim().toUpperCase();
+    if (!raw) continue;
+
+    const cleaned = raw
+      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[|\/\\?T|\/\^T)\s*/g, "")
+      .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Hard rule: pager brigade banner always contains BRIGADE ... ALL
+    if (/\bBRIGADE\b.*\bALL\b$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    // Fallback for district/group style area banners that may omit the word BRIGADE
+    if (/^(MT DUNEED ALL|FRESHWATER CREEK ALL|CONNEWARRE ALL|GROVEDALE ALL|BARWON HEADS ALL|TORQUAY ALL|MODEWARRE ALL)$/i.test(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  return "";
 }
 
-function cleanBannerLine(line) {
-  return collapseSpaces(
-    line
-      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\/\\?T|\[|\])\s*/g, '')
-      .replace(/^MT\s+/g, 'MT ')
-      .replace(/^MOUNT DUNEED ALL$/g, 'MT DUNEED ALL')
-  );
+function looksLikeBannerLine(line) {
+  const cleaned = String(line || "")
+    .toUpperCase()
+    .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[|\/\\?T|\/\^T)\s*/g, "")
+    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return false;
+
+  if (/\bBRIGADE\b.*\bALL\b$/.test(cleaned)) {
+    return true;
+  }
+
+  if (/^(MT DUNEED ALL|FRESHWATER CREEK ALL|CONNEWARRE ALL|GROVEDALE ALL|BARWON HEADS ALL|TORQUAY ALL|MODEWARRE ALL)$/i.test(cleaned)) {
+    return true;
+  }
+
+  return false;
 }
 
 function lineLooksLikeAddress(line) {
