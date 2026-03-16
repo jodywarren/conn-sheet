@@ -578,11 +578,15 @@ function extractSceneUnits(lines) {
 }
 
 function extractPagerDetails(lines, headerLineIndex, eventNumber) {
-  if (headerLineIndex < 0 || !eventNumber) return '';
+  if (headerLineIndex < 0 || !eventNumber) return "";
 
-  const eventLineIndex = lines.findIndex((line, index) => index >= headerLineIndex && line.includes(eventNumber));
-  if (eventLineIndex < 0) return '';
+  const eventLineIndex = lines.findIndex(
+    (line, index) => index >= headerLineIndex && line.includes(eventNumber)
+  );
 
+  if (eventLineIndex < 0) return "";
+
+  const brigadeBanner = extractBrigadeBannerLine(lines, headerLineIndex, eventLineIndex);
   const slice = lines.slice(headerLineIndex, eventLineIndex + 1);
   const cleanedLines = [];
 
@@ -590,18 +594,21 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
     let line = slice[i];
 
     line = line
-      .replace(/\b(E\d{1,3}|288|259|28B|CFA)\b/g, '')
-      .replace(/^\/?\\?T\b/g, 'MT')
+      .replace(/\b(E\d{1,3}|288|259|28B|CFA)\b/g, "")
+      .replace(/^\/?\\?T\b/g, "MT")
+      .replace(/\/\^T\b/g, "MT")
+      .replace(/\s+/g, " ")
       .trim();
 
     if (!line) continue;
-    if (i === 1 && looksLikeBannerLine(line)) continue;
-    if (/^(MT DUNEED ALL|MOUNT DUNEED ALL|CONNEWARRE BRIGADE ALL|FRESHWATER CREEK ALL|\/?\\?T DUNEED ALL|ATTENDING)$/i.test(line)) continue;
+
+    if (brigadeBanner && line === brigadeBanner) continue;
+    if (looksLikeBannerLine(line)) continue;
 
     cleanedLines.push(line);
   }
 
-  return cleanedLines.join('\n');
+  return cleanedLines.join("\n");
 }
 
 function detectBlockType(lines) {
