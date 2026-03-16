@@ -280,11 +280,6 @@ function deriveBrigadeRole(alertAreaCode) {
   return `Support to ${primaryBrigade}`;
 }
 
-function deriveBrigadeRole(alertAreaCode) {
-  if (!alertAreaCode) return '';
-  const primaryBrigade = alertAreaCode.slice(0, 4);
-  return primaryBrigade === 'CONN' ? 'Primary' : `Support to ${primaryBrigade}`;
-}
 
 function findIncidentCode(lines) {
   const knownCodes = Object.keys(INCIDENT_CODE_MAP).sort((a, b) => b.length - a.length);
