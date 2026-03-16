@@ -13,8 +13,6 @@ function getWorkerSource() {
 function buildPasses(preparedImage) {
   const variants = Array.isArray(preparedImage?.variants) ? preparedImage.variants : [];
 
-  // Hard cap: 6 OCR passes total
-  // Prefer the strongest contrast/binary variants first
   const preferred = [];
 
   const pushIfFound = (keyPart, psm) => {
@@ -29,14 +27,18 @@ function buildPasses(preparedImage) {
     }
   };
 
+  // 8 passes total
   pushIfFound("emergencytrim-contrast", 6);
   pushIfFound("emergencytrim-binary", 6);
   pushIfFound("fulltrim-contrast", 6);
   pushIfFound("fulltrim-binary", 6);
-  pushIfFound("emergencytrim-contrast", 11);
-  pushIfFound("fulltrim-contrast", 11);
 
-  return preferred.slice(0, 6);
+  pushIfFound("emergencytrim-contrast", 11);
+  pushIfFound("emergencytrim-binary", 11);
+  pushIfFound("fulltrim-contrast", 11);
+  pushIfFound("fulltrim-binary", 11);
+
+  return preferred.slice(0, 8);
 }
 
 function normaliseRawText(text) {
