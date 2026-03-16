@@ -57,7 +57,8 @@ function createDefaultState() {
       signalCode: "",
       signalNotes: "",
 
-      comments: ""
+      comments: "",
+      hosesUsed: ""
     },
 
     responders: {
@@ -100,54 +101,37 @@ export const state = createDefaultState();
 const STORAGE_KEY = "conn_turnout_state_v8";
 
 export function initState() {
+  loadState();
+  renderOicBanner();
+  applyTheme();
 
-  const saved = localStorage.getItem("conn_turnout_state");
-
-  if (saved) {
-    try {
-      Object.assign(state, JSON.parse(saved));
-    } catch (err) {
-      console.warn("State restore failed", err);
-    }
+  const versionTarget = document.getElementById("appVersionText");
+  if (versionTarget) {
+    versionTarget.textContent = "3.4.0";
   }
-
 }
 
 export function resetState() {
+  const fresh = createDefaultState();
 
-  state.incident = {
-    eventNumber: "",
-    pagerDate: "",
-    pagerTime: "",
-    alertAreaCode: "",
-    brigadeRole: "",
-    incidentType: "",
-    responseCode: "",
-    pagerDetails: "",
-    scannedAddress: "",
-    actualAddress: "",
-    controlName: "",
-    firstAgency: "",
-    distanceToScene: "",
-    weather1: "",
-    weather2: "",
-    hosesUsed: "",
-    comments: "",
-    sceneUnits: [],
-    otherAgencies: [],
-    flags: {}
-  };
+  state.ui.currentPage = "incidentPage";
 
+  // Keep theme and profile. Clear current job only.
+  state.incident = fresh.incident;
+
+  // Preserve loaded member lists, reset response content only.
   state.responders = {
-    appliances: {},
-    directResponders: [],
+    members: state.responders.members || fresh.responders.members,
+    appliances: createDefaultState().responders.appliances,
     stationResponders: [],
+    directResponders: [],
+    injuryNotes: "",
     oicName: "",
-    oicPhone: "",
-    injuryNotes: ""
+    oicPhone: ""
   };
 
   saveState();
+  renderOicBanner();
 }
 
 export function setCurrentPage(pageId) {
@@ -188,7 +172,6 @@ export function renderOicBanner() {
 
   const name = String(state.responders.oicName || "").trim().toUpperCase();
   const phone = String(state.responders.oicPhone || "").trim();
-  const memberNumber = String(state.profile.memberNumber || "").trim();
 
   banner.classList.remove("missing", "complete");
 
@@ -199,8 +182,7 @@ export function renderOicBanner() {
   }
 
   const line1 = `OIC: ${name}, CONNEWARRE`;
-  const line2Parts = [memberNumber, phone].filter(Boolean);
-  const line2 = line2Parts.join(", ");
+  const line2 = phone || "";
 
   banner.innerHTML = line2
     ? `${line1}<br>${line2}`
