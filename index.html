@@ -20,37 +20,32 @@
         </div>
       </div>
 
-<div class="header-actions right-oic">
+      <div class="header-actions right-oic">
+        <div id="oicBanner" class="oic-banner missing">APPOINT OIC</div>
 
-  <div id="oicBanner" class="oic-banner missing">
-    APPOINT OIC
-  </div>
+        <div id="supportOicWrap" class="support-oic-wrap hidden">
+          <input
+            id="supportOicName"
+            class="field-input editable-field"
+            type="text"
+            placeholder="Support job OIC name"
+            autocomplete="off"
+          />
+          <input
+            id="supportOicPhone"
+            class="field-input editable-field"
+            type="tel"
+            inputmode="tel"
+            placeholder="Support job OIC phone"
+            autocomplete="off"
+          />
+        </div>
 
-  <button id="editOicBtn" class="tiny-btn" type="button">
-    Edit OIC
-  </button>
+        <button id="editOicBtn" class="tiny-btn" type="button">Edit OIC</button>
+      </div>
+    </header>
 
-  <div id="supportOicWrap" class="support-oic-wrap hidden">
-    <input
-      id="supportOicName"
-      class="field-input editable-field"
-      type="text"
-      placeholder="Support job OIC name"
-      autocomplete="off"
-    />
-    <input
-      id="supportOicPhone"
-      class="field-input editable-field"
-      type="tel"
-      inputmode="tel"
-      placeholder="Support job OIC phone"
-      autocomplete="off"
-    />
-  </div>
-
-</div>
-
-    <nav class="top-nav">
+    <nav class="top-nav centered-top-nav">
       <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
       <button class="tab-btn" data-page="respondersPage" type="button">Responders</button>
       <button class="tab-btn" data-page="sendPage" type="button">Send Report</button>
@@ -70,15 +65,13 @@
               <h1>TURN OUT SHEET</h1>
               <p class="subtle">Version <span id="appVersionText">3.4.0</span></p>
             </div>
-            <button class="secondary-btn" type="button">Save Draft</button>
           </div>
 
           <div class="section">
             <h2 class="section-title">Pager Screenshot</h2>
 
-            <div class="row wrap">
+            <div class="row wrap pager-upload-row">
               <input id="pagerUpload" class="field-input editable-field file-input" type="file" accept="image/*" />
-              <button id="scanPagerBtn" class="primary-btn" type="button">Scan Screenshot</button>
             </div>
 
             <div id="scanStatus" class="scan-status scan-idle">Waiting for screenshot</div>
@@ -104,7 +97,7 @@
 
               <label>
                 Pager Time
-               <input id="pagerTime" class="field-input editable-field" type="text" inputmode="numeric" placeholder="HH:MM" />
+                <input id="pagerTime" class="field-input editable-field" type="time" />
               </label>
 
               <label>
@@ -167,27 +160,27 @@
                 </select>
               </label>
 
-<label>
-  Distance to Scene
-  <select id="distanceToScene" class="field-input editable-field">
-    <option value="">Select distance</option>
-    <option>1km</option>
-    <option>2km</option>
-    <option>3km</option>
-    <option>4km</option>
-    <option>5km</option>
-    <option>6km</option>
-    <option>7km</option>
-    <option>8km</option>
-    <option>9km</option>
-    <option>10km</option>
-    <option>11km</option>
-    <option>12km</option>
-    <option>13km</option>
-    <option>14km</option>
-    <option>15km</option>
-  </select>
-</label>
+              <label>
+                Distance to Scene
+                <select id="distanceToScene" class="field-input editable-field">
+                  <option value="">Select distance</option>
+                  <option>1km</option>
+                  <option>2km</option>
+                  <option>3km</option>
+                  <option>4km</option>
+                  <option>5km</option>
+                  <option>6km</option>
+                  <option>7km</option>
+                  <option>8km</option>
+                  <option>9km</option>
+                  <option>10km</option>
+                  <option>11km</option>
+                  <option>12km</option>
+                  <option>13km</option>
+                  <option>14km</option>
+                  <option>15km</option>
+                </select>
+              </label>
 
               <label>
                 Weather
@@ -250,7 +243,7 @@
               </label>
             </div>
 
-                       <div id="signalWrap" class="hidden"></div>
+            <div id="signalWrap" class="hidden"></div>
 
             <div id="signalNotesWrap" class="hidden">
               <label>
@@ -258,9 +251,9 @@
                 <textarea id="signalNotes" class="field-input editable-field" rows="3"></textarea>
               </label>
             </div>
-            </div>
           </div>
-             </section>
+        </div>
+      </section>
 
       <section id="respondersPage" class="page">
         <div class="card">
@@ -269,7 +262,6 @@
               <h2>Responders</h2>
               <p class="subtle">Assign appliance codes and crew roles.</p>
             </div>
-            <button class="secondary-btn" type="button">Save Draft</button>
           </div>
 
           <div id="conn1Panel" class="appliance-panel"></div>
@@ -279,66 +271,69 @@
         </div>
       </section>
 
-  <div class="section-head">
-  <div>
-    <h2>Send Report</h2>
-    <p class="subtle">Preview, SMS, Email and saved reports.</p>
+      <section id="sendPage" class="page">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <h2>Send Report</h2>
+              <p class="subtle">SMS, Email and saved reports.</p>
+            </div>
+          </div>
+
+          <div class="placeholder-panel">
+            <div class="report-preview">
+              <pre id="reportPreview"></pre>
+            </div>
+          </div>
+
+          <div id="reportWarnings" class="chips ops-chip-row hidden"></div>
+
+          <div class="chips ops-chip-row">
+            <button id="reportTabSms" class="chip-btn ops-chip active" type="button">SMS</button>
+            <button id="reportTabEmail" class="chip-btn ops-chip" type="button">Email</button>
+            <button id="reportTabSave" class="chip-btn ops-chip" type="button">Save</button>
+          </div>
+
+          <div id="reportActionStatus" class="subtle"></div>
+
+          <div id="reportPanelSms">
+            <div class="placeholder-panel">
+              <div class="row wrap">
+                <button id="copySmsBtn" class="primary-btn" type="button">Copy Report</button>
+                <button id="openSmsBtn" class="secondary-btn" type="button">Open SMS</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="reportPanelEmail" class="hidden">
+            <div class="placeholder-panel">
+              <div class="row wrap">
+                <button id="openEmailBtn" class="primary-btn" type="button">Open Email</button>
+              </div>
+              <label>
+                Email subject
+                <input id="reportEmailSubject" class="field-input editable-field" type="text" readonly />
+              </label>
+              <label>
+                Email body
+                <textarea id="reportEmailBody" class="field-input editable-field" rows="14" readonly></textarea>
+              </label>
+            </div>
+          </div>
+
+          <div id="reportPanelSave" class="hidden">
+            <div class="placeholder-panel">
+              <div class="row wrap">
+                <button id="saveReportBtn" class="primary-btn" type="button">Save Report Locally</button>
+              </div>
+            </div>
+
+            <div id="savedReportsList"></div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-  <button class="secondary-btn" type="button">Save Draft</button>
-</div>
-
-<div id="reportWarnings" class="chips ops-chip-row hidden"></div>
-
-<div class="chips ops-chip-row">
-  <button id="reportTabSms" class="chip-btn ops-chip" type="button">SMS</button>
-  <button id="reportTabEmail" class="chip-btn ops-chip" type="button">Email</button>
-  <button id="reportTabSave" class="chip-btn ops-chip" type="button">Save</button>
-</div>
-
-<div id="reportActionStatus" class="subtle"></div>
-
-<div id="reportPanelPreview">
-  <div class="placeholder-panel">
-    <div class="report-preview">
-      <pre id="reportPreview"></pre>
-    </div>
-  </div>
-</div>
-
-<div id="reportPanelSms" class="hidden">
-  <div class="placeholder-panel">
-    <div class="row wrap">
-      <button id="copySmsBtn" class="primary-btn" type="button">Copy Report</button>
-      <button id="openSmsBtn" class="secondary-btn" type="button">Open SMS</button>
-    </div>
-  </div>
-</div>
-
-<div id="reportPanelEmail" class="hidden">
-  <div class="placeholder-panel">
-    <div class="row wrap">
-      <button id="openEmailBtn" class="primary-btn" type="button">Open Email</button>
-    </div>
-    <label>
-      Email subject
-      <input id="reportEmailSubject" class="field-input editable-field" type="text" readonly />
-    </label>
-    <label>
-      Email body
-      <textarea id="reportEmailBody" class="field-input editable-field" rows="14" readonly></textarea>
-    </label>
-  </div>
-</div>
-
-<div id="reportPanelSave" class="hidden">
-  <div class="placeholder-panel">
-    <div class="row wrap">
-      <button id="saveReportBtn" class="primary-btn" type="button">Save Report Locally</button>
-    </div>
-  </div>
-
-  <div id="savedReportsList"></div>
-</div>
 
   <div id="settingsModal" class="modal hidden">
     <div class="modal-card">
