@@ -100,14 +100,54 @@ export const state = createDefaultState();
 const STORAGE_KEY = "conn_turnout_state_v8";
 
 export function initState() {
-  loadState();
-  renderOicBanner();
-  applyTheme();
 
-  const versionTarget = document.getElementById("appVersionText");
-  if (versionTarget) {
-    versionTarget.textContent = "3.4.0";
+  const saved = localStorage.getItem("conn_turnout_state");
+
+  if (saved) {
+    try {
+      Object.assign(state, JSON.parse(saved));
+    } catch (err) {
+      console.warn("State restore failed", err);
+    }
   }
+
+}
+
+export function resetState() {
+
+  state.incident = {
+    eventNumber: "",
+    pagerDate: "",
+    pagerTime: "",
+    alertAreaCode: "",
+    brigadeRole: "",
+    incidentType: "",
+    responseCode: "",
+    pagerDetails: "",
+    scannedAddress: "",
+    actualAddress: "",
+    controlName: "",
+    firstAgency: "",
+    distanceToScene: "",
+    weather1: "",
+    weather2: "",
+    hosesUsed: "",
+    comments: "",
+    sceneUnits: [],
+    otherAgencies: [],
+    flags: {}
+  };
+
+  state.responders = {
+    appliances: {},
+    directResponders: [],
+    stationResponders: [],
+    oicName: "",
+    oicPhone: "",
+    injuryNotes: ""
+  };
+
+  saveState();
 }
 
 export function setCurrentPage(pageId) {
