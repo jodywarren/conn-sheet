@@ -614,28 +614,6 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
   return "";
 }
 
-  const joined = lines.slice(start, end + 1).join(" ");
-  const cleanedJoined = cleanAddressCandidate(joined);
-  if (cleanedJoined) {
-    candidates.push({
-      raw: joined,
-      cleaned: cleanedJoined,
-      score: scoreAddressCandidate(joined, cleanedJoined) + 2,
-      lineIndex: start
-    });
-  }
-
-  if (!candidates.length) return "";
-
-  candidates.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.lineIndex - b.lineIndex;
-  });
-
-  const best = candidates[0].cleaned;
-  return isValidAddressShape(best) ? best : "";
-}
-
 function tokeniseUnits(text) {
   return String(text || "")
     .replace(/[^A-Z0-9/ ]+/g, " ")
