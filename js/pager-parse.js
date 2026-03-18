@@ -1,4 +1,4 @@
-// pager-parse.js
+// js/pager-parse.js
 // Strict parser for a single pager-message OCR block.
 // No DOM writes.
 // No app state writes.
@@ -69,7 +69,7 @@ const SUBURB_WORDS = new Set([
   "MT", "DUNEED",
   "CONNEWARRE",
   "GROVEDALE",
-  "FRESHWATER",
+  "FRESHWATER", "CREEK",
   "BARWON", "HEADS",
   "TORQUAY",
   "MODEWARRE",
@@ -79,7 +79,6 @@ const SUBURB_WORDS = new Set([
 
 const ROAD_TYPE_PATTERN = "(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)";
 const STREET_WORD_PATTERN = "[A-Z0-9'/-]+";
-const BANNER_NAME_PATTERN = "[A-Z]+(?: [A-Z]+){0,3}";
 
 function toUpperSafe(value) {
   return (value || "").toString().toUpperCase();
@@ -97,17 +96,6 @@ function normaliseSlashSpacing(value) {
   return String(value || "").replace(/\s*\/\s*/g, " / ");
 }
 
-function normaliseMtDuneedNoise(value) {
-  return String(value || "")
-    .replace(/\)\s*\\?IT\b/g, "MT")
-    .replace(/\b\\?IT\b/g, "MT")
-    .replace(/\bVT\b/g, "MT")
-    .replace(/^\/\\?T\b/g, "MT")
-    .replace(/^\/\^T\b/g, "MT")
-    .replace(/\bM T\b/g, "MT")
-    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED");
-}
-
 function normaliseCommonOcrNoise(value) {
   return String(value || "")
     .replace(/[|]/g, "I")
@@ -120,14 +108,19 @@ function normaliseCommonOcrNoise(value) {
     .replace(/\bNON[- ]?EMERGENCV\b/g, "NON-EMERGENCY")
     .replace(/\bG\s*&\s*S\s*C([13])\b/g, "G&SC$1")
     .replace(/\bG&5C([13])\b/g, "G&SC$1")
-    .replace(/\bG&SCI\b/g, "G&SC1")
     .replace(/\bG&SCI\b/g, "G&SC1");
+}
+
+function normaliseMtDuneedText(value) {
+  return String(value || "")
+    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    .replace(/\bM T\b/g, "MT");
 }
 
 function cleanOcrText(rawText) {
   let text = normaliseNewlines(toUpperSafe(rawText));
   text = normaliseCommonOcrNoise(text);
-  text = normaliseMtDuneedNoise(text);
+  text = normaliseMtDuneedText(text);
   text = normaliseSlashSpacing(text);
 
   return text
@@ -172,7 +165,9 @@ function parseHeaderLine(line) {
 function findHeader(lines) {
   for (let i = 0; i < lines.length; i += 1) {
     const parsed = parseHeaderLine(lines[i]);
-    if (parsed) return { ...parsed, lineIndex: i };
+    if (parsed) {
+      return { ...parsed, lineIndex: i };
+    }
   }
   return null;
 }
@@ -304,11 +299,11 @@ function parseIncidentCode(incidentCode) {
   };
 }
 
-function normaliseBannerText(value) {
+function normaliseBannerLine(line) {
   return collapseSpaces(
-    normaliseMtDuneedNoise(
+    normaliseMtDuneedText(
       normaliseCommonOcrNoise(
-        String(value || "")
+        String(line || "")
           .toUpperCase()
           .replace(/\bBRIGADF\b/g, "BRIGADE")
           .replace(/\bBRIGA0E\b/g, "BRIGADE")
@@ -320,32 +315,41 @@ function normaliseBannerText(value) {
   );
 }
 
-function extractValidBannerText(value) {
-  const cleaned = normaliseBannerText(value);
+function extractBrigadeBannerLine(lines, headerLineIndex = -1) {
+  if (headerLineIndex < 0) return "";
 
-  if (cleaned === "CONNEWARRE BRIGADE ALL") return "CONNEWARRE BRIGADE ALL";
-  if (cleaned === "FRESHWATER CREEK BRIGADE ALL") return "FRESHWATER CREEK BRIGADE ALL";
-  if (cleaned === "MT DUNEED ALL") return "MT DUNEED ALL";
+  const nextLine = lines[headerLineIndex + 1] || "";
+  const cleanedNextLine = normaliseBannerLine(nextLine);
 
-  return "";
-}
-
-function extractBrigadeBannerLine(lines) {
-  for (const line of lines) {
-    const banner = extractValidBannerText(line);
-    if (banner) return banner;
+  if (cleanedNextLine.includes("DUNEED ALL")) {
+    return "MT DUNEED ALL";
   }
+
+  if (cleanedNextLine === "CONNEWARRE BRIGADE ALL") {
+    return "CONNEWARRE BRIGADE ALL";
+  }
+
+  if (cleanedNextLine === "FRESHWATER CREEK BRIGADE ALL") {
+    return "FRESHWATER CREEK BRIGADE ALL";
+  }
+
   return "";
 }
 
 function looksLikeBannerLine(line) {
-  return Boolean(extractValidBannerText(line));
+  const cleaned = normaliseBannerLine(line);
+  return (
+    cleaned === "CONNEWARRE BRIGADE ALL" ||
+    cleaned === "FRESHWATER CREEK BRIGADE ALL" ||
+    cleaned === "MT DUNEED ALL" ||
+    cleaned.includes("DUNEED ALL")
+  );
 }
 
 function normaliseAddressText(value) {
   return collapseSpaces(
     normaliseSlashSpacing(
-      normaliseMtDuneedNoise(
+      normaliseMtDuneedText(
         String(value || "")
           .toUpperCase()
           .replace(/\bSTREET\b/g, "ST")
@@ -356,68 +360,49 @@ function normaliseAddressText(value) {
   );
 }
 
-function escapeForRegex(value) {
-  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function trimAfterSuburb(value) {
+  const text = normaliseAddressText(value);
+
+  let bestEnd = -1;
+  let bestSuburb = "";
+
+  for (const suburb of SUBURB_PHRASES) {
+    const idx = text.indexOf(suburb);
+    if (idx >= 0) {
+      const end = idx + suburb.length;
+      if (end > bestEnd) {
+        bestEnd = end;
+        bestSuburb = suburb;
+      }
+    }
+  }
+
+  if (bestEnd < 0) {
+    return {
+      text: "",
+      suburb: "",
+      endedAtSuburb: false
+    };
+  }
+
+  return {
+    text: collapseSpaces(text.slice(0, bestEnd)),
+    suburb: bestSuburb,
+    endedAtSuburb: true
+  };
 }
 
 function buildRoadNamePattern(maxWords = 4) {
   return `${STREET_WORD_PATTERN}(?:\\s+${STREET_WORD_PATTERN}){0,${maxWords - 1}}`;
 }
 
-function buildCnrRegex() {
-  const road = buildRoadNamePattern(4);
-  const suburbs = SUBURB_PHRASES.map((s) => escapeForRegex(normaliseMtDuneedNoise(s)));
-
-  return new RegExp(
-    `\\bCNR\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs.join("|")})\\b`
-  );
-}
-
 function buildNumberedRegex() {
   const road = buildRoadNamePattern(4);
-  const suburbs = SUBURB_PHRASES.map((s) => escapeForRegex(normaliseMtDuneedNoise(s)));
-
+  const suburbs = SUBURB_PHRASES.join("|");
   return new RegExp(
-    `\\b\\d+[A-Z]?\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs.join("|")})\\b`
+    `\\b\\d+[A-Z]?\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`,
+    "g"
   );
-}
-
-function findFallbackAddressLine(lines) {
-  const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
-  const normalised = normaliseAddressText(joined);
-
-  const cnrStart = normalised.indexOf("CNR ");
-  if (cnrStart >= 0) {
-    const cnrSlice = normalised.slice(cnrStart);
-    const trimmed = trimAfterSuburb(cnrSlice);
-    if (trimmed.endedAtSuburb) {
-      return trimmed.text;
-    }
-  }
-
-  const numberedMatch = normalised.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+/);
-  if (numberedMatch && typeof numberedMatch.index === "number") {
-    const numberedSlice = normalised.slice(numberedMatch.index);
-    const trimmed = trimAfterSuburb(numberedSlice);
-    if (trimmed.endedAtSuburb) {
-      return trimmed.text;
-    }
-  }
-
-  for (const rawLine of lines) {
-    const line = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(rawLine));
-    const trimmed = trimAfterSuburb(line);
-    if (trimmed.endedAtSuburb && trimmed.text) {
-      return trimmed.text;
-    }
-  }
-
-  return "";
-}
-
-function looksLikeAddressStart(line) {
-  const text = normaliseAddressText(line);
-  return /^CNR\b/.test(text) || /^\d+[A-Z]?\b/.test(text);
 }
 
 function stripLeadingNoiseBeforeAddress(text) {
@@ -446,17 +431,54 @@ function stripTrailingPagerNoise(text) {
     .trim();
 }
 
+function findFallbackAddressLine(lines) {
+  const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
+  const normalised = normaliseAddressText(joined);
+
+  const cnrStart = normalised.indexOf("CNR ");
+  if (cnrStart >= 0) {
+    const cnrSlice = normalised.slice(cnrStart);
+    const trimmed = trimAfterSuburb(cnrSlice);
+    if (trimmed.endedAtSuburb) {
+      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+    }
+  }
+
+  const numberedMatch = normalised.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+\s+/);
+  if (numberedMatch && typeof numberedMatch.index === "number") {
+    const numberedSlice = normalised.slice(numberedMatch.index);
+    const trimmed = trimAfterSuburb(numberedSlice);
+    if (trimmed.endedAtSuburb) {
+      return trimmed.text;
+    }
+  }
+
+  for (const rawLine of lines) {
+    if (looksLikeBannerLine(rawLine)) continue;
+
+    const line = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(rawLine));
+    const trimmed = trimAfterSuburb(line);
+    if (trimmed.endedAtSuburb && trimmed.text) {
+      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+    }
+  }
+
+  return "";
+}
+
 function extractScannedAddress(lines) {
-  const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
+  const filteredLines = lines.filter((line) => !looksLikeBannerLine(line));
+  const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(filteredLines.join(" ")));
   const normalised = normaliseAddressText(text);
 
+  // CNR rule
   const cnrStart = normalised.indexOf("CNR ");
   if (cnrStart >= 0) {
     const cnrSlice = normalised.slice(cnrStart);
     const trimmed = trimAfterSuburb(cnrSlice);
 
     if (trimmed.endedAtSuburb) {
-      const candidate = trimmed.text;
+      const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
 
       if (
         candidate.startsWith("CNR ") &&
@@ -468,8 +490,9 @@ function extractScannedAddress(lines) {
     }
   }
 
+  // Numbered address rule
   const numberedRegex = buildNumberedRegex();
-  const numberedMatches = [...normalised.matchAll(new RegExp(numberedRegex, "g"))]
+  const numberedMatches = [...normalised.matchAll(numberedRegex)]
     .map((m) => m[0])
     .filter(Boolean);
 
@@ -480,7 +503,8 @@ function extractScannedAddress(lines) {
     }
   }
 
-  return findFallbackAddressLine(lines);
+  // Fallback raw address-like line
+  return findFallbackAddressLine(filteredLines);
 }
 
 function tokeniseUnits(text) {
@@ -531,10 +555,8 @@ function extractSceneUnits(lines) {
 
 function stripPagerNoise(line) {
   return collapseSpaces(
-    normaliseMtDuneedNoise(
-      String(line || "")
-        .replace(/\b(E\d{1,3}|288|259|28B|588|2&8|CFA)\b/g, "")
-    )
+    String(line || "")
+      .replace(/\b(E\d{1,3}|288|259|28B|588|2&8|CFA)\b/g, "")
   );
 }
 
@@ -550,10 +572,24 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
   const slice = lines.slice(headerLineIndex, eventLineIndex + 1);
   const cleanedLines = [];
 
-  for (const rawLine of slice) {
-    const line = stripPagerNoise(rawLine);
+  for (let i = 0; i < slice.length; i += 1) {
+    let line = stripPagerNoise(slice[i]);
+    line = normaliseCommonOcrNoise(line);
+    line = normaliseMtDuneedText(line);
+    line = collapseSpaces(line);
+
     if (!line) continue;
-    if (looksLikeBannerLine(line)) continue;
+
+    if (i === 1 && line.includes("DUNEED ALL")) {
+      cleanedLines.push("MT DUNEED ALL");
+      continue;
+    }
+
+    if (looksLikeBannerLine(line)) {
+      cleanedLines.push(normaliseBannerLine(line).includes("DUNEED ALL") ? "MT DUNEED ALL" : normaliseBannerLine(line));
+      continue;
+    }
+
     cleanedLines.push(line);
   }
 
@@ -585,7 +621,7 @@ export function parsePagerBlock(rawBlockText) {
     ? validateEventNumberAgainstDate(eventNumber, pagerDate)
     : false;
 
-  const bannerText = extractBrigadeBannerLine(lines);
+  const bannerText = extractBrigadeBannerLine(lines, header?.lineIndex ?? -1);
   const alertAreaCode = extractAlertAreaCode(lines);
   const brigadeRole = deriveBrigadeRole(alertAreaCode);
 
