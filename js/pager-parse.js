@@ -7,18 +7,25 @@
 const INCIDENT_CODE_MAP = {
   INCIC1: { incidentType: "Incident", responseCode: "Code 1", responseShort: "C1", family: "INCI" },
   INCIC3: { incidentType: "Incident", responseCode: "Code 3", responseShort: "C3", family: "INCI" },
+
   RESCC1: { incidentType: "Rescue", responseCode: "Code 1", responseShort: "C1", family: "RESC" },
   RESCC3: { incidentType: "Rescue", responseCode: "Code 3", responseShort: "C3", family: "RESC" },
+
   STRUC1: { incidentType: "Structure Fire", responseCode: "Code 1", responseShort: "C1", family: "STRU" },
   STRUC3: { incidentType: "Structure Fire", responseCode: "Code 3", responseShort: "C3", family: "STRU" },
+
   ALARC1: { incidentType: "Alarm", responseCode: "Code 1", responseShort: "C1", family: "ALAR" },
   ALARC3: { incidentType: "Alarm", responseCode: "Code 3", responseShort: "C3", family: "ALAR" },
+
   NSTRC1: { incidentType: "Non-Structure", responseCode: "Code 1", responseShort: "C1", family: "NSTR" },
   NSTRC3: { incidentType: "Non-Structure", responseCode: "Code 3", responseShort: "C3", family: "NSTR" },
+
   GRASC1: { incidentType: "Grass / Scrub", responseCode: "Code 1", responseShort: "C1", family: "G&S" },
   GRASC3: { incidentType: "Grass / Scrub", responseCode: "Code 3", responseShort: "C3", family: "G&S" },
   SCRBC1: { incidentType: "Grass / Scrub", responseCode: "Code 1", responseShort: "C1", family: "G&S" },
-  SCRBC3: { incidentType: "Grass / Scrub", responseCode: "Code 3", responseShort: "C3", family: "G&S" }
+  SCRBC3: { incidentType: "Grass / Scrub", responseCode: "Code 3", responseShort: "C3", family: "G&S" },
+  "G&SC1": { incidentType: "Grass / Scrub", responseCode: "Code 1", responseShort: "C1", family: "G&S" },
+  "G&SC3": { incidentType: "Grass / Scrub", responseCode: "Code 3", responseShort: "C3", family: "G&S" }
 };
 
 const KNOWN_BRIGADE_CODES = new Set([
@@ -29,36 +36,25 @@ const KNOWN_BRIGADE_CODES = new Set([
   "TRQY",
   "TQRY",
   "MTDU",
-  "MODE"
+  "MODE",
+  "BELL",
+  "BELM",
+  "HIGH",
+  "ANGL"
 ]);
 
 const KNOWN_OTHER_UNITS = new Set([
   "P64",
   "P63B",
   "R63",
+  "R64",
   "STHB1",
   "AV",
   "AFP",
   "AFPR",
-  "FP"
-]);
-
-const SUBURB_WORDS = new Set([
-  "ARMSTRONG", "CREEK",
-  "MT", "DUNEED",
-  "MOUNT", "DUNEED",
-  "CONNEWARRE",
-  "GROVEDALE",
-  "FRESHWATER", "CREEK",
-  "BARWON", "HEADS",
-  "TORQUAY",
-  "MODEWARRE",
-  "GEELONG",
-  "MARSHALL",
-  "LEOPOLD",
-  "BELMONT",
-  "WAURN", "PONDS",
-  "MOUNTDUNEED"
+  "FP",
+  "LP63",
+  "BA"
 ]);
 
 const SUBURB_PHRASES = [
@@ -75,11 +71,31 @@ const SUBURB_PHRASES = [
   "MARSHALL",
   "LEOPOLD",
   "BELMONT",
-  "WAURN PONDS"
+  "WAURN PONDS",
+  "CHARLEMONT"
 ];
 
-const ROAD_TYPE_PATTERN = "(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)";
-const STREET_NAME_PATTERN = "[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+){0,2}";
+const SUBURB_WORDS = new Set([
+  "ARMSTRONG", "CREEK",
+  "MT", "DUNEED",
+  "MOUNT", "DUNEED",
+  "CONNEWARRE",
+  "GROVEDALE",
+  "FRESHWATER", "CREEK",
+  "BARWON", "HEADS",
+  "TORQUAY",
+  "MODEWARRE",
+  "GEELONG",
+  "MARSHALL",
+  "LEOPOLD",
+  "BELMONT",
+  "WAURN", "PONDS",
+  "CHARLEMONT",
+  "MOUNTDUNEED"
+]);
+
+const ROAD_TYPE_PATTERN = "(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE|BVD)";
+const STREET_NAME_PATTERN = "[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+){0,3}";
 const BANNER_NAME_PATTERN = "[A-Z]+(?: [A-Z]+){0,3}";
 const SUBURB_PATTERN = `(${SUBURB_PHRASES.join("|")})`;
 
@@ -88,11 +104,15 @@ function toUpperSafe(value) {
 }
 
 function collapseSpaces(value) {
-  return value.replace(/[ \t]+/g, " ").trim();
+  return String(value || "").replace(/[ \t]+/g, " ").trim();
 }
 
 function normaliseNewlines(value) {
-  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+function normaliseSlashSpacing(value) {
+  return String(value || "").replace(/\s*\/\s*/g, " / ");
 }
 
 function cleanOcrText(rawText) {
@@ -108,8 +128,16 @@ function cleanOcrText(rawText) {
     .replace(/\/\\T\b/g, "MT")
     .replace(/\\T\b/g, "MT")
     .replace(/\/\^T\b/g, "MT")
+    .replace(/\)\s*\\?IT\b/g, "MT")
+    .replace(/\b\\?IT\b/g, "MT")
     .replace(/\bM T\b/g, "MT")
-    .replace(/\s*\/\s*/g, " / ");
+    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    .replace(/\bG\s*&\s*S\s*C([13])\b/g, "G&SC$1")
+    .replace(/\bG&5C([13])\b/g, "G&SC$1")
+    .replace(/\bGASC([13])\b/g, "G&SC$1")
+    .replace(/\bG&SC([13])\b/g, "G&SC$1");
+
+  text = normaliseSlashSpacing(text);
 
   const lines = text
     .split("\n")
@@ -127,20 +155,23 @@ function getLines(text) {
 }
 
 function normaliseHeaderTypos(line) {
-  return line.replace(/\bEMERGENCV\b/g, "EMERGENCY");
+  return String(line || "")
+    .replace(/\bEMERGENCV\b/g, "EMERGENCY")
+    .replace(/\bNON[- ]?EMERGENCV\b/g, "NON-EMERGENCY");
 }
 
 function parseHeaderLine(line) {
   const fixed = normaliseHeaderTypos(line);
 
-  let match = fixed.match(/\bEMERGENCY\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
+  let match = fixed.match(/\b(EMERGENCY|NON-EMERGENCY)\b\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})\b/);
   if (!match) {
-    match = fixed.match(/\bEMERGENCY\b.*?(\d{2}:\d{2}:\d{2}).*?(\d{2}-\d{2}-\d{4})\b/);
+    match = fixed.match(/\b(EMERGENCY|NON-EMERGENCY)\b.*?(\d{2}:\d{2}:\d{2}).*?(\d{2}-\d{2}-\d{4})\b/);
   }
   if (!match) return null;
 
-  const fullTime = match[1];
-  const pagerDate = match[2];
+  const alertKind = match[1];
+  const fullTime = match[2];
+  const pagerDate = match[3];
   const pagerTime = fullTime.slice(0, 5);
 
   const [, , yyyy] = pagerDate.split("-");
@@ -152,6 +183,7 @@ function parseHeaderLine(line) {
   return {
     raw: line,
     normalised: fixed,
+    alertKind,
     fullTime,
     pagerTime,
     pagerDate
@@ -169,7 +201,7 @@ function findHeader(lines) {
 }
 
 function extractEventNumberCandidates(text) {
-  const cleaned = text
+  const cleaned = String(text || "")
     .replace(/\bO/g, "0")
     .replace(/\bS(?=\d)/g, "5")
     .replace(/(?<=\d)S(?=\d)/g, "5");
@@ -212,7 +244,7 @@ function selectBestEventNumber(text, pagerDate) {
 
   if (pagerDate) {
     const valid = candidates.filter((c) => validateEventNumberAgainstDate(c.value, pagerDate));
-    if (valid.length >= 1) return valid[0].value;
+    if (valid.length) return valid[0].value;
   }
 
   if (candidates.length === 1) return candidates[0].value;
@@ -222,7 +254,7 @@ function selectBestEventNumber(text, pagerDate) {
     return mm >= 1 && mm <= 12;
   });
 
-  if (structurallyValid.length >= 1) return structurallyValid[0].value;
+  if (structurallyValid.length) return structurallyValid[0].value;
   return null;
 }
 
@@ -260,7 +292,6 @@ function extractAlertAreaCode(lines) {
     if (!match) continue;
 
     const candidate = normaliseAlertAreaCandidate(match[1]);
-
     if (/^[A-Z]{4}\d{1,2}$/.test(candidate)) {
       return candidate;
     }
@@ -289,19 +320,6 @@ function deriveBrigadeRole(alertAreaCode) {
   return `Support to ${primaryBrigade}`;
 }
 
-function findIncidentCode(lines) {
-  const knownCodes = Object.keys(INCIDENT_CODE_MAP).sort((a, b) => b.length - a.length);
-
-  for (const line of lines) {
-    for (const code of knownCodes) {
-      const regex = new RegExp(`\\b${code}\\b`);
-      if (regex.test(line)) return code;
-    }
-  }
-
-  return "";
-}
-
 function parseIncidentCode(incidentCode) {
   if (!incidentCode || !INCIDENT_CODE_MAP[incidentCode]) {
     return {
@@ -323,110 +341,73 @@ function parseIncidentCode(incidentCode) {
   };
 }
 
-function stripLeadingKnownTags(line) {
-  let value = line;
+function findIncidentCode(lines) {
+  const text = lines.join(" ");
 
-  value = value.replace(/\bEMERGENCY\b\s+\d{2}:\d{2}:\d{2}\s+\d{2}-\d{2}-\d{4}\b/g, "").trim();
-  value = value.replace(/\bALERT\s+[A-Z]{4}\d{1,2}\b/g, "").trim();
+  const patterns = [
+    { regex: /\bG&SC([13])\b/, toCode: (m) => `G&SC${m[1]}` },
+    { regex: /\bGRASC([13])\b/, toCode: (m) => `GRASC${m[1]}` },
+    { regex: /\bSCRBC([13])\b/, toCode: (m) => `SCRBC${m[1]}` },
+    { regex: /\bRESCC([13])\b/, toCode: (m) => `RESCC${m[1]}` },
+    { regex: /\bSTRUC([13])\b/, toCode: (m) => `STRUC${m[1]}` },
+    { regex: /\bALARC([13])\b/, toCode: (m) => `ALARC${m[1]}` },
+    { regex: /\bNSTRC([13])\b/, toCode: (m) => `NSTRC${m[1]}` },
+    { regex: /\bINCIC([13])\b/, toCode: (m) => `INCIC${m[1]}` }
+  ];
 
-  const knownCodes = Object.keys(INCIDENT_CODE_MAP).sort((a, b) => b.length - a.length);
-  for (const code of knownCodes) {
-    value = value.replace(new RegExp(`\\b${code}\\b`, "g"), "").trim();
-  }
-
-  return collapseSpaces(value);
-}
-
-function stripNonAddressLeadIn(value) {
-  let text = collapseSpaces(value);
-
-  const cnrIndex = text.indexOf("CNR ");
-  if (cnrIndex >= 0) {
-    return text.slice(cnrIndex).trim();
-  }
-
-  const numberedMatch = text.match(
-    new RegExp(`\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\b`)
-  );
-
-  if (numberedMatch && typeof numberedMatch.index === "number") {
-    return text.slice(numberedMatch.index).trim();
-  }
-
-  return text;
-}
-
-function normaliseAddressPunctuation(address) {
-  return collapseSpaces(
-    address
-      .replace(/\s*\/\s*/g, " / ")
-      .replace(/\s*,\s*/g, ", ")
-      .replace(/\s+-\s+/g, " - ")
-  );
-}
-
-function truncateAddressToKnownEnd(address) {
-  let value = collapseSpaces(address);
-
-  const numberedRegex = new RegExp(
-    `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
-  );
-  const cnrRegex = new RegExp(
-    `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
-  );
-
-  const cnrMatch = value.match(cnrRegex);
-  if (cnrMatch) return normaliseAddressPunctuation(cnrMatch[0]);
-
-  const numberedMatch = value.match(numberedRegex);
-  if (numberedMatch) return normaliseAddressPunctuation(numberedMatch[0]);
-
-  let bestCut = -1;
-  for (const suburb of SUBURB_PHRASES) {
-    const idx = value.indexOf(suburb);
-    if (idx >= 0) {
-      const end = idx + suburb.length;
-      if (end > bestCut) bestCut = end;
+  for (const line of lines) {
+    for (const pattern of patterns) {
+      const match = line.match(pattern.regex);
+      if (match) return pattern.toCode(match);
     }
   }
 
-  if (bestCut > 0) {
-    value = value.slice(0, bestCut);
+  for (const pattern of patterns) {
+    const match = text.match(pattern.regex);
+    if (match) return pattern.toCode(match);
   }
 
-  return normaliseAddressPunctuation(value);
+  return "";
+}
+
+function stripLeadingKnownTags(line) {
+  let value = String(line || "");
+
+  value = value.replace(/\b(EMERGENCY|NON-EMERGENCY)\b\s+\d{2}:\d{2}:\d{2}\s+\d{2}-\d{2}-\d{4}\b/g, "").trim();
+  value = value.replace(/\bALERT\s+[A-Z]{4}\d{1,2}\b/g, "").trim();
+  value = value.replace(/\b(G&SC[13]|GRASC[13]|SCRBC[13]|RESCC[13]|STRUC[13]|ALARC[13]|NSTRC[13]|INCIC[13])\b/g, "").trim();
+
+  return collapseSpaces(value);
 }
 
 function normaliseBannerText(value) {
   return String(value || "")
     .toUpperCase()
     .replace(/[|]/g, "I")
+    .replace(/\)\s*\\?IT\b/g, "MT")
     .replace(/^\/\\?T\b/g, "MT")
     .replace(/^\/\^T\b/g, "MT")
+    .replace(/\b\\?IT\b/g, "MT")
     .replace(/\bM T\b/g, "MT")
     .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
     .replace(/\bBRIGADF\b/g, "BRIGADE")
     .replace(/\bBRIGA0E\b/g, "BRIGADE")
     .replace(/\bAII\b/g, "ALL")
     .replace(/\bALI\b/g, "ALL")
-    .replace(/^(?:E\d{1,3}|288|259|28B|CFA|\(|\[)\s*/g, "")
+    .replace(/^(?:E\d{1,3}|288|259|28B|2&8|CFA|\(|\[)\s*/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function extractValidBannerText(value) {
   const cleaned = normaliseBannerText(value);
-
   if (!cleaned) return "";
 
   if (cleaned === "MT DUNEED ALL") {
     return "MT DUNEED ALL";
   }
 
-  const brigadeMatch = cleaned.match(
-    new RegExp(`\\b(${BANNER_NAME_PATTERN}) BRIGADE ALL\\b$`)
-  );
-
+  const brigadeMatch = cleaned.match(new RegExp(`\\b(${BANNER_NAME_PATTERN}) BRIGADE ALL\\b$`));
   if (!brigadeMatch) return "";
 
   return `${brigadeMatch[1]} BRIGADE ALL`;
@@ -434,7 +415,7 @@ function extractValidBannerText(value) {
 
 function extractBrigadeBannerLine(lines, headerLineIndex = -1, eventLineIndex = -1) {
   const start = headerLineIndex >= 0 ? headerLineIndex : 0;
-  const end = eventLineIndex >= 0 ? eventLineIndex : Math.min(lines.length - 1, start + 6);
+  const end = eventLineIndex >= 0 ? eventLineIndex : Math.min(lines.length - 1, start + 8);
 
   for (let i = start; i <= end; i += 1) {
     const banner = extractValidBannerText(lines[i]);
@@ -448,17 +429,89 @@ function looksLikeBannerLine(line) {
   return Boolean(extractValidBannerText(line));
 }
 
+function normaliseAddressText(value) {
+  return collapseSpaces(
+    normaliseSlashSpacing(String(value || ""))
+      .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+      .replace(/\bSTREET\b/g, "ST")
+      .replace(/\bROAD\b/g, "RD")
+      .replace(/\bAVENUE\b/g, "AV")
+      .replace(/\bBOULEVARD\b/g, "BLVD")
+  );
+}
+
+function trimAfterSuburb(value) {
+  let text = normaliseAddressText(value);
+  let bestEnd = -1;
+  let bestSuburb = "";
+
+  for (const suburb of SUBURB_PHRASES) {
+    const idx = text.indexOf(suburb);
+    if (idx >= 0) {
+      const end = idx + suburb.length;
+      if (end > bestEnd) {
+        bestEnd = end;
+        bestSuburb = suburb;
+      }
+    }
+  }
+
+  if (bestEnd > 0) {
+    text = text.slice(0, bestEnd).trim();
+  }
+
+  return {
+    text: normaliseAddressText(text),
+    endedAtSuburb: bestEnd > 0,
+    suburb: bestSuburb
+  };
+}
+
+function stripToAddressStart(value) {
+  const text = normaliseAddressText(stripLeadingKnownTags(value));
+
+  const cnrIndex = text.indexOf("CNR ");
+  if (cnrIndex >= 0) {
+    return text.slice(cnrIndex).trim();
+  }
+
+  const numberedRegex = new RegExp(`\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\b`);
+  const numberedMatch = text.match(numberedRegex);
+  if (numberedMatch && typeof numberedMatch.index === "number") {
+    return text.slice(numberedMatch.index).trim();
+  }
+
+  return text;
+}
+
+function buildCnrRegex() {
+  return new RegExp(
+    `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
+}
+
+function buildNumberedRegex() {
+  return new RegExp(
+    `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
+}
+
 function lineLooksLikeAddress(line) {
   if (!line) return false;
 
-  const cleaned = stripLeadingKnownTags(line);
-
+  const cleaned = stripToAddressStart(line);
   if (!cleaned) return false;
-  if (/^(RE:\s*EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED)\b/.test(cleaned)) return false;
-  if (/^(E\d{1,3}|288|259|28B|CFA|ATTENDING|EMERGENCY|MT DUNEED ALL|MOUNT DUNEED ALL|CONNEWARRE BRIGADE ALL|FRESHWATER CREEK ALL|\/?\\?T DUNEED ALL)\b/i.test(cleaned)) return false;
 
-  const hasCnr = /\bCNR\b/.test(cleaned) && /\//.test(cleaned);
-  const hasStreetNumber = /\b\d+[A-Z]?\b/.test(cleaned);
+  if (/^(RE:\s*EVENT|RESPOND|SINCE ALERT|CANCEL RESPONSE NOT REQUIRED|ASSIST PATIENT)\b/.test(cleaned)) {
+    return false;
+  }
+
+  if (/^(EMERGENCY|NON-EMERGENCY|ATTENDING|MT DUNEED ALL|CONNEWARRE BRIGADE ALL|FRESHWATER CREEK BRIGADE ALL)\b/.test(cleaned)) {
+    return false;
+  }
+
+  const hasCnr = /^CNR\b/.test(cleaned);
+  const hasStreetNumber = /^\d+[A-Z]?\b/.test(cleaned);
   const hasRoadType = new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned);
   const hasSuburbWord = [...SUBURB_WORDS].some((word) => cleaned.includes(word));
 
@@ -469,75 +522,76 @@ function lineLooksLikeAddress(line) {
 }
 
 function cleanAddressCandidate(line) {
-  let value = stripLeadingKnownTags(line);
+  let value = stripToAddressStart(line);
+  value = normaliseAddressText(value);
 
-  value = value
-    .replace(/^(E\d{1,3}|288|259|28B|CFA)\s+/i, "")
-    .trim();
+  const cnrRegex = buildCnrRegex();
+  const numberedRegex = buildNumberedRegex();
 
-  value = stripNonAddressLeadIn(value);
-
-  value = value
-    .replace(/\bSTREET\b/g, "ST")
-    .replace(/\bROAD\b/g, "RD")
-    .replace(/\bAVENUE\b/g, "AV");
-
-  if (/\bCNR\b/.test(value)) {
-    const cnrRegex = new RegExp(
-      `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
-    );
-    const cnrMatch = value.match(cnrRegex);
-
-    if (cnrMatch) {
-      return truncateAddressToKnownEnd(
-        cnrMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-      );
-    }
-
-    return truncateAddressToKnownEnd(
-      value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-    );
+  const cnrMatch = value.match(cnrRegex);
+  if (cnrMatch) {
+    return trimAfterSuburb(cnrMatch[0]).text;
   }
 
-  if (/\b\d+[A-Z]?\b/.test(value)) {
-    const numberedRegex = new RegExp(
-      `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
-    );
-    const numberedMatch = value.match(numberedRegex);
-
-    if (numberedMatch) {
-      return truncateAddressToKnownEnd(
-        numberedMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-      );
-    }
+  const numberedMatch = value.match(numberedRegex);
+  if (numberedMatch) {
+    return trimAfterSuburb(numberedMatch[0]).text;
   }
 
-  return truncateAddressToKnownEnd(
-    value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-  );
+  const trimmed = trimAfterSuburb(value).text;
+
+  if (/^CNR\b/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\d+[A-Z]?\b/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return "";
 }
 
-function scoreAddressCandidate(line) {
-  const cleaned = cleanAddressCandidate(line);
-  let score = 0;
+function isValidAddressShape(address) {
+  const value = normaliseAddressText(address);
+  if (!value) return false;
 
-  if (/^(E\d{1,3}|288|259|28B|CFA)\b/.test(cleaned)) score -= 10;
-  if (/\bCNR\b/.test(cleaned) && /\//.test(cleaned)) score += 8;
-  if (/\b\d+[A-Z]?\b/.test(cleaned)) score += 6;
-  if (new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned)) score += 4;
-  if ([...SUBURB_WORDS].some((word) => cleaned.includes(word))) score += 4;
-  if (cleaned.length >= 12) score += 1;
-  if (SUBURB_PHRASES.some((suburb) => cleaned.endsWith(suburb))) score += 4;
+  const { endedAtSuburb } = trimAfterSuburb(value);
+  if (!endedAtSuburb) return false;
+
+  if (/^CNR\b/.test(value)) {
+    if (!/\//.test(value)) return false;
+    return buildCnrRegex().test(value);
+  }
+
+  if (/^\d+[A-Z]?\b/.test(value)) {
+    if (/\//.test(value)) return false;
+    return buildNumberedRegex().test(value);
+  }
+
+  return false;
+}
+
+function scoreAddressCandidate(rawLine, cleaned) {
+  let score = 0;
+  const value = cleaned || "";
+
+  if (!value) return -100;
+  if (isValidAddressShape(value)) score += 20;
+  if (/^CNR\b/.test(value)) score += 8;
+  if (/^\d+[A-Z]?\b/.test(value)) score += 8;
+  if (new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(value)) score += 4;
+  if (SUBURB_PHRASES.some((suburb) => value.endsWith(suburb.replace("MOUNT DUNEED", "MT DUNEED")))) score += 6;
+  if (/ASSIST PATIENT/.test(rawLine)) score -= 12;
+  if (!/^CNR\b/.test(value) && /\//.test(value)) score -= 25;
 
   return score;
 }
 
 function extractScannedAddress(lines, incidentCode, eventNumber) {
-  const knownCodes = Object.keys(INCIDENT_CODE_MAP);
   const candidates = [];
 
   const incidentLineIndex = incidentCode
-    ? lines.findIndex((line) => knownCodes.some((code) => new RegExp(`\\b${code}\\b`).test(line)))
+    ? lines.findIndex((line) => line.includes(incidentCode))
     : -1;
 
   const eventLineIndex = eventNumber
@@ -548,28 +602,27 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
   const end = eventLineIndex >= 0 ? eventLineIndex : lines.length - 1;
 
   for (let i = start; i <= end; i += 1) {
-    const line = lines[i];
-    if (!lineLooksLikeAddress(line)) continue;
+    const raw = lines[i];
+    if (!lineLooksLikeAddress(raw)) continue;
 
-    const cleaned = cleanAddressCandidate(line);
-    if (/^(RESPOND|SINCE ALERT|E\d{1,3}|288|259|28B|CFA)$/i.test(cleaned)) continue;
+    const cleaned = cleanAddressCandidate(raw);
+    if (!cleaned) continue;
 
     candidates.push({
-      line,
+      raw,
       cleaned,
-      score: scoreAddressCandidate(line),
+      score: scoreAddressCandidate(raw, cleaned),
       lineIndex: i
     });
   }
 
-  const joinedBody = lines.slice(start, end + 1).join(" ");
-  const cleanedJoined = cleanAddressCandidate(joinedBody);
-
-  if (cleanedJoined && (/\bCNR\b/.test(cleanedJoined) || /\b\d+[A-Z]?\b/.test(cleanedJoined))) {
+  const joined = lines.slice(start, end + 1).join(" ");
+  const cleanedJoined = cleanAddressCandidate(joined);
+  if (cleanedJoined) {
     candidates.push({
-      line: joinedBody,
+      raw: joined,
       cleaned: cleanedJoined,
-      score: scoreAddressCandidate(cleanedJoined) + 2,
+      score: scoreAddressCandidate(joined, cleanedJoined) + 2,
       lineIndex: start
     });
   }
@@ -581,11 +634,12 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     return a.lineIndex - b.lineIndex;
   });
 
-  return candidates[0].cleaned;
+  const best = candidates[0].cleaned;
+  return isValidAddressShape(best) ? best : "";
 }
 
 function tokeniseUnits(text) {
-  return text
+  return String(text || "")
     .replace(/[^A-Z0-9/ ]+/g, " ")
     .split(/\s+/)
     .filter(Boolean);
@@ -623,7 +677,7 @@ function extractSceneUnits(lines) {
       continue;
     }
 
-    if (KNOWN_OTHER_UNITS.has(rawToken) || ["P64", "P63B", "R63", "STHB1", "AV"].includes(token)) {
+    if (KNOWN_OTHER_UNITS.has(rawToken) || ["P64", "P63B", "R63", "R64", "STHB1", "AV", "LP63"].includes(token)) {
       found.add(token);
     }
   }
@@ -648,9 +702,11 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
     let line = slice[i];
 
     line = line
-      .replace(/\b(E\d{1,3}|288|259|28B|CFA)\b/g, "")
+      .replace(/\b(E\d{1,3}|288|259|28B|2&8|CFA)\b/g, "")
+      .replace(/\)\s*\\?IT\b/g, "MT")
       .replace(/^\/?\\?T\b/g, "MT")
       .replace(/\/\^T\b/g, "MT")
+      .replace(/\b\\?IT\b/g, "MT")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -673,15 +729,6 @@ function detectBlockType(lines) {
     hasCancel: /\bCANCEL RESPONSE NOT REQUIRED\b/.test(text),
     hasNonEmergency: /\bNON[- ]?EMERGENCY\b/.test(text)
   };
-}
-
-function detectMvaFromText(text) {
-  return /\b(INCI|MVA|MVC|MVI|VEHICLE|COLLISION|CRASH|ROLLOVER|TRAPPED|ROAD RESCUE|CAR INTO)\b/.test(text);
-}
-
-function detectStructureFromIncident(incidentParsed, text) {
-  if (incidentParsed.family === "STRU") return true;
-  return /\b(STRUCTURE FIRE|HOUSE FIRE|BUILDING FIRE|SHED FIRE|GARAGE FIRE)\b/.test(text);
 }
 
 export function parsePagerBlock(rawBlockText) {
@@ -709,10 +756,6 @@ export function parsePagerBlock(rawBlockText) {
   const pagerDetails = header && eventNumber
     ? extractPagerDetails(lines, header.lineIndex, eventNumber)
     : "";
-
-  const incidentSearchText = [cleanedText, incidentParsed.incidentType, pagerDetails].filter(Boolean).join("\n");
-  const isMva = detectMvaFromText(incidentSearchText);
-  const isStructureFire = detectStructureFromIncident(incidentParsed, incidentSearchText);
 
   const warnings = [];
 
@@ -750,8 +793,6 @@ export function parsePagerBlock(rawBlockText) {
     pagerDetails,
     scannedAddress,
     sceneUnits,
-    isMva,
-    isStructureFire,
     headerLineIndex: header?.lineIndex ?? -1,
     eventDateValid,
     isStrictlyValidPrimaryBlock,
