@@ -409,7 +409,7 @@ function trimAfterSuburb(value) {
   }
 
   return {
-    text: text.slice(0, bestEnd).trim(),
+    text: collapseSpaces(text.slice(0, bestEnd)),
     suburb: bestSuburb,
     endedAtSuburb: true
   };
