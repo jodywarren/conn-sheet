@@ -346,8 +346,16 @@ function normaliseAddressText(value) {
   );
 }
 
+function trimAtMapReference(text) {
+  return collapseSpaces(
+    String(text || "")
+      .replace(/\s+M\s+\d+\s+[A-Z]\d+\b.*$/, "")
+      .replace(/\s+\([^)]+\)\s*$/, "")
+  );
+}
+
 function trimAfterSuburb(value) {
-  const text = normaliseAddressText(value);
+  const text = trimAtMapReference(normaliseAddressText(value));
 
   let bestEnd = -1;
   let bestSuburb = "";
@@ -395,7 +403,8 @@ function buildCnrRegex() {
   const road = buildRoadNamePattern(4);
   const suburbs = SUBURB_PHRASES.join("|");
   return new RegExp(
-    `\\bCNR\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`
+    `\\bCNR\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`,
+    "g"
   );
 }
 
@@ -417,24 +426,26 @@ function stripLeadingNoiseBeforeAddress(text) {
 }
 
 function stripTrailingPagerNoise(text) {
-  return normaliseAddressText(text)
-    .replace(/\s+\([^)]+\).*$/, "")
-    .replace(/\s+[A-Z]\s+\d+\s+[A-Z]\d+.*$/, "")
-    .replace(/\s+F\d{9}.*$/, "")
-    .replace(/\s+(?:CCONN|CGROV|CMTDU|CFRES|CP64|CR64|CAV|CAFP|CSTHB1)\b.*$/, "")
-    .trim();
+  return trimAtMapReference(
+    normaliseAddressText(text)
+      .replace(/\s+F\d{9}.*$/, "")
+      .replace(/\s+(?:CCONN|CGROV|CMTDU|CFRES|CP64|CR64|CAV|CAFP|CSTHB1)\b.*$/, "")
+      .replace(/\s+\([^)]+\).*$/, "")
+  );
 }
 
 function findFallbackAddressLine(lines) {
   const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
   const normalised = normaliseAddressText(joined);
 
-  const cnrStart = normalised.indexOf("CNR ");
-  if (cnrStart >= 0) {
-    const cnrSlice = normalised.slice(cnrStart);
-    const trimmed = trimAfterSuburb(cnrSlice);
-    if (trimmed.endedAtSuburb) {
-      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+  if (normalised.includes("CNR ")) {
+    const cnrSection = normalised.slice(normalised.indexOf("CNR "));
+    const cnrTrimmed = trimAfterSuburb(cnrSection);
+    const candidate = cnrTrimmed.text.replace(/\s*\/\s*/g, " / ");
+
+    const roadTypeMatches = candidate.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
+    if (candidate.startsWith("CNR ") && candidate.includes(" / ") && roadTypeMatches.length >= 2) {
+      return candidate;
     }
   }
 
@@ -442,7 +453,7 @@ function findFallbackAddressLine(lines) {
   if (numberedMatch && typeof numberedMatch.index === "number") {
     const numberedSlice = normalised.slice(numberedMatch.index);
     const trimmed = trimAfterSuburb(numberedSlice);
-    if (trimmed.endedAtSuburb) {
+    if (trimmed.endedAtSuburb && trimmed.text && !trimmed.text.includes("/")) {
       return trimmed.text;
     }
   }
@@ -452,8 +463,20 @@ function findFallbackAddressLine(lines) {
 
     const line = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(rawLine));
     const trimmed = trimAfterSuburb(line);
-    if (trimmed.endedAtSuburb && trimmed.text) {
-      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+    const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
+
+    if (!trimmed.endedAtSuburb || !candidate) continue;
+
+    if (candidate.startsWith("CNR ")) {
+      const roadTypeMatches = candidate.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
+      if (candidate.includes(" / ") && roadTypeMatches.length >= 2) {
+        return candidate;
+      }
+      continue;
+    }
+
+    if (!candidate.includes("/")) {
+      return candidate;
     }
   }
 
@@ -465,12 +488,23 @@ function extractScannedAddress(lines) {
   const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(filteredLines.join(" ")));
   const normalised = normaliseAddressText(text);
 
-  const cnrRegex = buildCnrRegex();
-  const cnrMatch = normalised.match(cnrRegex);
-  if (cnrMatch) {
-    const trimmed = trimAfterSuburb(cnrMatch[0]);
-    if (trimmed.endedAtSuburb) {
-      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+  if (normalised.includes("CNR ")) {
+    const cnrRegex = buildCnrRegex();
+    const cnrMatches = [...normalised.matchAll(cnrRegex)].map((m) => m[0]).filter(Boolean);
+
+    for (const addr of cnrMatches) {
+      const trimmed = trimAfterSuburb(addr);
+      const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
+      const roadTypeMatches = candidate.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
+
+      if (
+        trimmed.endedAtSuburb &&
+        candidate.startsWith("CNR ") &&
+        candidate.includes(" / ") &&
+        roadTypeMatches.length >= 2
+      ) {
+        return candidate;
+      }
     }
   }
 
