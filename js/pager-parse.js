@@ -590,33 +590,35 @@ function scoreAddressCandidate(rawLine, cleaned) {
 }
 
 function extractScannedAddress(lines, incidentCode, eventNumber) {
-  const candidates = [];
+  const text = normaliseAddressText(lines.join(" "));
 
-  const incidentLineIndex = incidentCode
-    ? lines.findIndex((line) => line.includes(incidentCode))
-    : -1;
+  const cnrRegex = new RegExp(
+    `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
 
-  const eventLineIndex = eventNumber
-    ? lines.findIndex((line) => line.includes(eventNumber))
-    : -1;
+  const numberedRegex = new RegExp(
+    `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
 
-  const start = incidentLineIndex >= 0 ? incidentLineIndex : 0;
-  const end = eventLineIndex >= 0 ? eventLineIndex : lines.length - 1;
-
-  for (let i = start; i <= end; i += 1) {
-    const raw = lines[i];
-    if (!lineLooksLikeAddress(raw)) continue;
-
-    const cleaned = cleanAddressCandidate(raw);
-    if (!cleaned) continue;
-
-    candidates.push({
-      raw,
-      cleaned,
-      score: scoreAddressCandidate(raw, cleaned),
-      lineIndex: i
-    });
+  const cnrMatch = text.match(cnrRegex);
+  if (cnrMatch) {
+    return trimAfterSuburb(cnrMatch[0]).text;
   }
+
+  const numberedMatches = [...text.matchAll(new RegExp(numberedRegex, "g"))]
+    .map((m) => m[0])
+    .filter(Boolean);
+
+  const validNumbered = numberedMatches
+    .map((addr) => trimAfterSuburb(addr).text)
+    .filter((addr) => addr && !addr.includes("/"));
+
+  if (validNumbered.length) {
+    return validNumbered[0];
+  }
+
+  return "";
+}
 
   const joined = lines.slice(start, end + 1).join(" ");
   const cleanedJoined = cleanAddressCandidate(joined);
