@@ -354,53 +354,48 @@ function normaliseAddressPunctuation(address) {
   );
 }
 
+function normaliseBannerText(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[)\s*/g, "")
+    .replace(/^\/\\?T\b/g, "MT")
+    .replace(/^\/\^T\b/g, "MT")
+    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractValidBannerText(value) {
+  const cleaned = normaliseBannerText(value);
+
+  if (!cleaned) return "";
+
+  const brigadeMatch = cleaned.match(/\b([A-Z ]+ BRIGADE ALL)\b$/);
+  if (brigadeMatch) {
+    return brigadeMatch[1].trim();
+  }
+
+  if (/\bMT DUNEED ALL\b$/.test(cleaned)) {
+    return "MT DUNEED ALL";
+  }
+
+  return "";
+}
+
 function extractBrigadeBannerLine(lines, headerLineIndex = -1, eventLineIndex = -1) {
   const start = headerLineIndex >= 0 ? headerLineIndex : 0;
   const end = eventLineIndex >= 0 ? eventLineIndex : Math.min(lines.length - 1, start + 6);
 
   for (let i = start; i <= end; i += 1) {
-    const raw = String(lines[i] || "").trim().toUpperCase();
-    if (!raw) continue;
-
-    const cleaned = raw
-      .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[|\/\\?T|\/\^T)\s*/g, "")
-      .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    // Hard rule: pager brigade banner always contains BRIGADE ... ALL
-    if (/\bBRIGADE\b.*\bALL\b$/.test(cleaned)) {
-      return cleaned;
-    }
-
-    // Fallback for district/group style area banners that may omit the word BRIGADE
-    if (/^(MT DUNEED ALL|FRESHWATER CREEK ALL|CONNEWARRE ALL|GROVEDALE ALL|BARWON HEADS ALL|TORQUAY ALL|MODEWARRE ALL)$/i.test(cleaned)) {
-      return cleaned;
-    }
+    const banner = extractValidBannerText(lines[i]);
+    if (banner) return banner;
   }
 
   return "";
 }
 
 function looksLikeBannerLine(line) {
-  const cleaned = String(line || "")
-    .toUpperCase()
-    .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[|\/\\?T|\/\^T)\s*/g, "")
-    .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!cleaned) return false;
-
-  if (/\bBRIGADE\b.*\bALL\b$/.test(cleaned)) {
-    return true;
-  }
-
-  if (/^(MT DUNEED ALL|FRESHWATER CREEK ALL|CONNEWARRE ALL|GROVEDALE ALL|BARWON HEADS ALL|TORQUAY ALL|MODEWARRE ALL)$/i.test(cleaned)) {
-    return true;
-  }
-
-  return false;
+  return Boolean(extractValidBannerText(line));
 }
 
 function lineLooksLikeAddress(line) {
