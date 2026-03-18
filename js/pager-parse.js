@@ -367,10 +367,16 @@ function normaliseAddressPunctuation(address) {
 function normaliseBannerText(value) {
   return String(value || "")
     .toUpperCase()
-    .replace(/^(E\d{1,3}|288|259|28B|CFA|\(|\[)\s*/g, "")
+    .replace(/[|]/g, "I")
     .replace(/^\/\\?T\b/g, "MT")
     .replace(/^\/\^T\b/g, "MT")
+    .replace(/\bM T\b/g, "MT")
     .replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    .replace(/\bBRIGADF\b/g, "BRIGADE")
+    .replace(/\bBRIGA0E\b/g, "BRIGADE")
+    .replace(/\bAII\b/g, "ALL")
+    .replace(/\bALI\b/g, "ALL")
+    .replace(/^(?:E\d{1,3}|288|259|28B|CFA|\(|\[)\s*/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
