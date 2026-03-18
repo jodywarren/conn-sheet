@@ -605,7 +605,7 @@ function detectBlockType(lines) {
   };
 }
 
-export function parsePagerBlock(rawBlockText) {
+function parsePagerBlock(rawBlockText) {
   const cleanedText = cleanOcrText(rawBlockText);
   const lines = getLines(cleanedText);
   const blockFlags = detectBlockType(lines);
@@ -676,7 +676,7 @@ export function parsePagerBlock(rawBlockText) {
   };
 }
 
-export function mergeSceneUnits(baseUnits = [], extraUnits = []) {
+function mergeSceneUnits(baseUnits = [], extraUnits = []) {
   const merged = new Set();
 
   for (const unit of baseUnits) {
@@ -690,7 +690,7 @@ export function mergeSceneUnits(baseUnits = [], extraUnits = []) {
   return Array.from(merged);
 }
 
-export function shouldAutoCopyActualAddress(currentActualAddress, actualAddressManuallyEdited = false) {
+function shouldAutoCopyActualAddress(currentActualAddress, actualAddressManuallyEdited = false) {
   if (actualAddressManuallyEdited) return false;
   if (!currentActualAddress) return true;
   return false;
