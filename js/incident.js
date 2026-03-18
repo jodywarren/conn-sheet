@@ -5,6 +5,7 @@ function uid() {
 }
 
 const SIGNAL_OPTIONS = ["27", "55", "83", "40", "56"];
+const DETAIL_TABS = ["mva", "structure", "alarm"];
 
 export function bindIncidentInputs() {
   bindTextInputs();
@@ -16,6 +17,7 @@ export function bindIncidentInputs() {
   bindOtherAgencyControls();
   bindOperationalChips();
   bindSignalChips();
+  bindDetailTabs();
 }
 
 function bindTextInputs() {
@@ -43,6 +45,7 @@ function bindTextInputs() {
       if (id === "actualAddress") {
         state.incident.actualAddressEdited = true;
       }
+
       state.incident[id] = el.value.trim();
       saveState();
       applyFieldCompletionStates();
@@ -396,6 +399,7 @@ function bindRenderedOtherAgencyEvents() {
 
       if (el.dataset.field === "type") {
         renderOtherAgencies();
+        saveState();
       } else {
         el.classList.toggle("field-complete", String(el.value || "").trim().length > 0);
         saveState();
@@ -489,10 +493,45 @@ function bindFlagChip(chipId, flagKey) {
   });
 }
 
+function bindDetailTabs() {
+  document.querySelectorAll("[data-detail-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = String(btn.dataset.detailTab || "").trim().toLowerCase();
+      if (!DETAIL_TABS.includes(tab)) return;
+
+      state.incident.activeDetailTab = state.incident.activeDetailTab === tab ? "" : tab;
+      saveState();
+      applyDetailTabState();
+    });
+  });
+}
+
+function applyDetailTabState() {
+  const activeTab = String(state.incident.activeDetailTab || "").trim().toLowerCase();
+
+  document.querySelectorAll("[data-detail-tab]").forEach((btn) => {
+    const tab = String(btn.dataset.detailTab || "").trim().toLowerCase();
+    btn.classList.toggle("active", tab === activeTab);
+  });
+
+  DETAIL_TABS.forEach((tab) => {
+    const panel = document.getElementById(`detailTabPanel-${tab}`);
+    if (!panel) return;
+    panel.classList.toggle("hidden", tab !== activeTab);
+  });
+}
+
 function toggleInjuryNotes() {
   const wrap = document.getElementById("injuryNotesWrap");
   if (!wrap) return;
-  wrap.classList.toggle("hidden", !state.incident.flags.injury);
+
+  const show = Boolean(state.incident.flags?.injury);
+  wrap.classList.toggle("hidden", !show);
+
+  const input = document.getElementById("injuryNotes");
+  if (input && !show) {
+    input.value = "";
+  }
 }
 
 function toggleSignalNotes() {
@@ -538,6 +577,7 @@ export function loadIncidentIntoInputs() {
   applyOperationalChipStates();
   toggleInjuryNotes();
   toggleSignalNotes();
+  applyDetailTabState();
   applyFieldCompletionStates();
 
   document.dispatchEvent(new Event("incident:loaded"));
@@ -548,7 +588,10 @@ function applyOperationalChipStates() {
   setChipState("hotDebriefChip", state.incident.flags.hotDebrief);
   setChipState("aarRequiredChip", state.incident.flags.aarRequired);
   setChipState("injuryChip", state.incident.flags.injury);
-  setChipState("signalChip", Boolean(state.incident.signalCode) || document.getElementById("signalChip")?.classList.contains("active"));
+  setChipState(
+    "signalChip",
+    Boolean(state.incident.signalCode) || document.getElementById("signalChip")?.classList.contains("active")
+  );
 }
 
 function setChipState(id, active) {
@@ -581,13 +624,20 @@ export function applyFieldCompletionStates() {
     el.classList.toggle("field-complete", value.length > 0);
   });
 
-  const optionalIds = ["weather2", "controlName", "injuryNotes", "signalNotes"];
+  const optionalIds = ["weather2", "controlName", "signalNotes"];
   optionalIds.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     const value = String(el.value || "").trim();
     el.classList.toggle("field-complete", value.length > 0);
   });
+
+  const injuryNotes = document.getElementById("injuryNotes");
+  if (injuryNotes) {
+    const show = Boolean(state.incident.flags?.injury);
+    const value = String(injuryNotes.value || "").trim();
+    injuryNotes.classList.toggle("field-complete", show && value.length > 0);
+  }
 }
 
 function normalizeSceneUnit(raw) {
