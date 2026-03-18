@@ -1293,3 +1293,15 @@ body.dark-mode #oicBanner.missing {
   white-space: normal;
   line-height: 1.2;
 }
+
+.report-line {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.report-container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
