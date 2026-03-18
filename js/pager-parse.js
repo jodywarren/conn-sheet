@@ -696,7 +696,6 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
 
   if (eventLineIndex < 0) return "";
 
-  const brigadeBanner = extractBrigadeBannerLine(lines, headerLineIndex, eventLineIndex);
   const slice = lines.slice(headerLineIndex, eventLineIndex + 1);
   const cleanedLines = [];
 
@@ -704,16 +703,16 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
     let line = slice[i];
 
     line = line
-      .replace(/\b(E\d{1,3}|288|259|28B|2&8|CFA)\b/g, "")
+      .replace(/\b(E\d{1,3}|288|259|28B|2&8|588|CFA)\b/g, "")
       .replace(/\)\s*\\?IT\b/g, "MT")
       .replace(/^\/?\\?T\b/g, "MT")
       .replace(/\/\^T\b/g, "MT")
       .replace(/\b\\?IT\b/g, "MT")
+      .replace(/\bVT DUNEED ALL\b/g, "MT DUNEED ALL")
       .replace(/\s+/g, " ")
       .trim();
 
     if (!line) continue;
-    if (brigadeBanner && extractValidBannerText(line) === brigadeBanner) continue;
     if (looksLikeBannerLine(line)) continue;
 
     cleanedLines.push(line);
