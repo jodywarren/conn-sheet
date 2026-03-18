@@ -64,7 +64,8 @@ const SUBURB_PHRASES = [
   "CHARLEMONT"
 ];
 
-const ROAD_TYPE_PATTERN = "(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)";
+const ROAD_TYPES = ["RD", "ST", "AV", "DR", "CT", "LN", "LANE", "HWY", "PL", "WAY", "CR", "BLVD", "PDE", "CL", "TCE"];
+const ROAD_TYPE_PATTERN = `(?:${ROAD_TYPES.join("|")})`;
 const STREET_WORD_PATTERN = "[A-Z0-9'/-]+";
 
 function toUpperSafe(value) {
@@ -399,15 +400,6 @@ function buildNumberedRegex() {
   );
 }
 
-function buildCnrRegex() {
-  const road = buildRoadNamePattern(4);
-  const suburbs = SUBURB_PHRASES.join("|");
-  return new RegExp(
-    `\\bCNR\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`,
-    "g"
-  );
-}
-
 function stripLeadingNoiseBeforeAddress(text) {
   const normalised = normaliseAddressText(text);
 
@@ -434,36 +426,32 @@ function stripTrailingPagerNoise(text) {
   );
 }
 
-if (normalised.includes("CNR ")) {
-  const cnrStart = normalised.indexOf("CNR ");
-  let cnrSection = normalised.slice(cnrStart);
-
-  // HARD STOP at map reference
-  cnrSection = cnrSection.replace(/\s+M\s+\d+\s+[A-Z]\d+\b.*$/, "");
-
-  // HARD STOP at brackets
-  cnrSection = cnrSection.replace(/\s+\([^)]+\).*$/, "");
-
-  // Normalize slash spacing
-  cnrSection = cnrSection.replace(/\s*\/\s*/g, " / ").trim();
-
-  // Must contain intersection
-  if (!cnrSection.includes(" / ")) return "";
-
-  // Must contain at least 2 road types
-  const roadTypes = cnrSection.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
-  if (roadTypes.length < 2) return "";
-
-  // Must end at suburb
-  const trimmed = trimAfterSuburb(cnrSection);
-
-  if (trimmed.endedAtSuburb && trimmed.text) {
-    return trimmed.text;
-  }
-
-  // fallback: still return cleaned cnr without map junk
-  return cnrSection;
+function hasTwoRoadTypes(text) {
+  const roadTypes = text.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
+  return roadTypes.length >= 2;
 }
+
+function findFallbackAddressLine(lines) {
+  const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
+  const normalised = normaliseAddressText(joined);
+
+  if (normalised.includes("CNR ")) {
+    let cnrText = normalised.slice(normalised.indexOf("CNR "));
+    cnrText = trimAtMapReference(cnrText);
+    cnrText = cnrText.replace(/\s*\/\s*/g, " / ").trim();
+
+    const trimmed = trimAfterSuburb(cnrText);
+    const candidate = trimmed.text;
+
+    if (
+      candidate &&
+      candidate.startsWith("CNR ") &&
+      candidate.includes(" / ") &&
+      hasTwoRoadTypes(candidate)
+    ) {
+      return candidate;
+    }
+  }
 
   const numberedMatch = normalised.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+\s+/);
   if (numberedMatch && typeof numberedMatch.index === "number") {
@@ -479,13 +467,12 @@ if (normalised.includes("CNR ")) {
 
     const line = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(rawLine));
     const trimmed = trimAfterSuburb(line);
-    const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
+    const candidate = trimmed.text;
 
     if (!trimmed.endedAtSuburb || !candidate) continue;
 
     if (candidate.startsWith("CNR ")) {
-      const roadTypeMatches = candidate.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
-      if (candidate.includes(" / ") && roadTypeMatches.length >= 2) {
+      if (candidate.includes(" / ") && hasTwoRoadTypes(candidate)) {
         return candidate;
       }
       continue;
@@ -503,41 +490,22 @@ function extractScannedAddress(lines) {
   const filteredLines = (lines || []).filter((line) => !looksLikeBannerLine(line));
   const joined = normaliseAddressText(filteredLines.join(" "));
 
-  // 1. CNR / intersection rule
   if (joined.includes("CNR ")) {
     let cnrText = joined.slice(joined.indexOf("CNR "));
 
-    // Hard stop at map reference
-    cnrText = cnrText.replace(/\s+M\s+\d+\s+[A-Z]\d+\b.*$/, "");
-
-    // Hard stop at bracket reference
-    cnrText = cnrText.replace(/\s+\([^)]+\).*$/, "");
-
-    // Hard stop at event number
     cnrText = cnrText.replace(/\s+F\d{9}.*$/, "");
-
-    // Hard stop at obvious appliance / unit strings
-    cnrText = cnrText.replace(
-      /\s+(?:AFP|AFPR|FP|CCONN|CGROV|CMTDU|CFRES|CTRQY|CP64|CR63|CR64|CSTHB1|P64|P63B|R63|R64|STHB1|AV)\b.*$/,
-      ""
-    );
-
-    // Clean spacing around slash
+    cnrText = cnrText.replace(/\s+(?:AFP|AFPR|FP|CCONN|CGROV|CMTDU|CFRES|CTRQY|CP64|CR63|CR64|CSTHB1|P64|P63B|R63|R64|STHB1|AV)\b.*$/, "");
+    cnrText = trimAtMapReference(cnrText);
     cnrText = cnrText.replace(/\s*\/\s*/g, " / ").trim();
 
-    // Must be an intersection
     if (!cnrText.includes(" / ")) {
       return "";
     }
 
-    // Must contain at least two road types
-    const roadTypes =
-      cnrText.match(/\b(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)\b/g) || [];
-    if (roadTypes.length < 2) {
+    if (!hasTwoRoadTypes(cnrText)) {
       return "";
     }
 
-    // Trim to suburb
     const trimmed = trimAfterSuburb(cnrText);
 
     if (
@@ -551,19 +519,14 @@ function extractScannedAddress(lines) {
     return "";
   }
 
-  // 2. Normal numbered address
   const numberedRegex = buildNumberedRegex();
   const numberedMatches = [...joined.matchAll(numberedRegex)]
     .map((m) => m[0])
     .filter(Boolean);
 
   for (const addr of numberedMatches) {
-    let cleaned = addr;
-
-    cleaned = cleaned.replace(/\s+M\s+\d+\s+[A-Z]\d+\b.*$/, "");
-    cleaned = cleaned.replace(/\s+\([^)]+\).*$/, "");
-    cleaned = cleaned.replace(/\s+F\d{9}.*$/, "");
-    cleaned = cleaned.trim();
+    let cleaned = trimAtMapReference(addr);
+    cleaned = cleaned.replace(/\s+F\d{9}.*$/, "").trim();
 
     const trimmed = trimAfterSuburb(cleaned);
 
@@ -572,7 +535,6 @@ function extractScannedAddress(lines) {
     }
   }
 
-  // 3. Fallback raw line
   return findFallbackAddressLine(filteredLines);
 }
 
