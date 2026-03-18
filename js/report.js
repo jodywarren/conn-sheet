@@ -538,9 +538,11 @@ function openEmail() {
 }
 
 function renderPanelText() {
+  const reportText = getReportText().replace(/[ \t]+\n/g, "\n").trim();
+
   const preview = document.getElementById("reportPreview");
   if (preview) {
-    preview.textContent = getReportText();
+    preview.textContent = reportText;
   }
 
   const emailSubject = document.getElementById("reportEmailSubject");
@@ -550,7 +552,7 @@ function renderPanelText() {
 
   const emailBody = document.getElementById("reportEmailBody");
   if (emailBody) {
-    emailBody.value = getReportText();
+    emailBody.value = reportText;
   }
 }
 
