@@ -64,19 +64,6 @@ const SUBURB_PHRASES = [
   "CHARLEMONT"
 ];
 
-const SUBURB_WORDS = new Set([
-  "ARMSTRONG", "CREEK",
-  "MT", "DUNEED",
-  "CONNEWARRE",
-  "GROVEDALE",
-  "FRESHWATER", "CREEK",
-  "BARWON", "HEADS",
-  "TORQUAY",
-  "MODEWARRE",
-  "GEELONG",
-  "CHARLEMONT"
-]);
-
 const ROAD_TYPE_PATTERN = "(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)";
 const STREET_WORD_PATTERN = "[A-Z0-9'/-]+";
 
@@ -341,7 +328,6 @@ function looksLikeBannerLine(line) {
   return (
     cleaned === "CONNEWARRE BRIGADE ALL" ||
     cleaned === "FRESHWATER CREEK BRIGADE ALL" ||
-    cleaned === "MT DUNEED ALL" ||
     cleaned.includes("DUNEED ALL")
   );
 }
@@ -402,6 +388,14 @@ function buildNumberedRegex() {
   return new RegExp(
     `\\b\\d+[A-Z]?\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`,
     "g"
+  );
+}
+
+function buildCnrRegex() {
+  const road = buildRoadNamePattern(4);
+  const suburbs = SUBURB_PHRASES.join("|");
+  return new RegExp(
+    `\\bCNR\\s+${road}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${road}\\s+${ROAD_TYPE_PATTERN}\\s+(?:${suburbs})\\b`
   );
 }
 
@@ -471,24 +465,15 @@ function extractScannedAddress(lines) {
   const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(filteredLines.join(" ")));
   const normalised = normaliseAddressText(text);
 
-  // CNR rule
-  const cnrStart = normalised.indexOf("CNR ");
-  if (cnrStart >= 0) {
-    const cnrSlice = normalised.slice(cnrStart);
-    const trimmed = trimAfterSuburb(cnrSlice);
-
+  const cnrRegex = buildCnrRegex();
+  const cnrMatch = normalised.match(cnrRegex);
+  if (cnrMatch) {
+    const trimmed = trimAfterSuburb(cnrMatch[0]);
     if (trimmed.endedAtSuburb) {
-      const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
+      return trimmed.text.replace(/\s*\/\s*/g, " / ");
+    }
+  }
 
-const cnrValid = new RegExp(
-  `^CNR\\s+${STREET_WORD_PATTERN}+\\s+${ROAD_TYPE_PATTERN}\\s+/\\s+${STREET_WORD_PATTERN}+\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join("|")})`
-);
-
-if (cnrValid.test(candidate)) {
-  return candidate;
-}
-
-  // Numbered address rule
   const numberedRegex = buildNumberedRegex();
   const numberedMatches = [...normalised.matchAll(numberedRegex)]
     .map((m) => m[0])
@@ -501,7 +486,6 @@ if (cnrValid.test(candidate)) {
     }
   }
 
-  // Fallback raw address-like line
   return findFallbackAddressLine(filteredLines);
 }
 
@@ -583,8 +567,8 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
       continue;
     }
 
-    if (looksLikeBannerLine(line)) {
-      cleanedLines.push(normaliseBannerLine(line).includes("DUNEED ALL") ? "MT DUNEED ALL" : normaliseBannerLine(line));
+    if (line === "CONNEWARRE BRIGADE ALL" || line === "FRESHWATER CREEK BRIGADE ALL") {
+      cleanedLines.push(line);
       continue;
     }
 
@@ -605,7 +589,7 @@ function detectBlockType(lines) {
   };
 }
 
-function parsePagerBlock(rawBlockText) {
+export function parsePagerBlock(rawBlockText) {
   const cleanedText = cleanOcrText(rawBlockText);
   const lines = getLines(cleanedText);
   const blockFlags = detectBlockType(lines);
@@ -676,7 +660,7 @@ function parsePagerBlock(rawBlockText) {
   };
 }
 
-function mergeSceneUnits(baseUnits = [], extraUnits = []) {
+export function mergeSceneUnits(baseUnits = [], extraUnits = []) {
   const merged = new Set();
 
   for (const unit of baseUnits) {
@@ -690,7 +674,7 @@ function mergeSceneUnits(baseUnits = [], extraUnits = []) {
   return Array.from(merged);
 }
 
-function shouldAutoCopyActualAddress(currentActualAddress, actualAddressManuallyEdited = false) {
+export function shouldAutoCopyActualAddress(currentActualAddress, actualAddressManuallyEdited = false) {
   if (actualAddressManuallyEdited) return false;
   if (!currentActualAddress) return true;
   return false;
