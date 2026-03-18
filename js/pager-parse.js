@@ -446,24 +446,6 @@ function stripTrailingPagerNoise(text) {
     .trim();
 }
 
-function findFallbackAddressLine(lines) {
-  for (const rawLine of lines) {
-    const line = stripLeadingNoiseBeforeAddress(rawLine);
-    if (!looksLikeAddressStart(line)) continue;
-
-    const trimmed = trimAfterSuburb(stripTrailingPagerNoise(line));
-    if (trimmed.endedAtSuburb && trimmed.text) {
-      if (/^CNR\b/.test(trimmed.text)) return trimmed.text;
-      if (/^\d+[A-Z]?\b/.test(trimmed.text)) return trimmed.text;
-    }
-
-    const rough = stripTrailingPagerNoise(line);
-    if (rough) return rough;
-  }
-
-  return "";
-}
-
 function extractScannedAddress(lines) {
   const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
   const normalised = normaliseAddressText(text);
