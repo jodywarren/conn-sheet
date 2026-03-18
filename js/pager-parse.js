@@ -434,20 +434,36 @@ function stripTrailingPagerNoise(text) {
   );
 }
 
-function findFallbackAddressLine(lines) {
-  const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
-  const normalised = normaliseAddressText(joined);
+if (normalised.includes("CNR ")) {
+  const cnrStart = normalised.indexOf("CNR ");
+  let cnrSection = normalised.slice(cnrStart);
 
-  if (normalised.includes("CNR ")) {
-    const cnrSection = normalised.slice(normalised.indexOf("CNR "));
-    const cnrTrimmed = trimAfterSuburb(cnrSection);
-    const candidate = cnrTrimmed.text.replace(/\s*\/\s*/g, " / ");
+  // HARD STOP at map reference
+  cnrSection = cnrSection.replace(/\s+M\s+\d+\s+[A-Z]\d+\b.*$/, "");
 
-    const roadTypeMatches = candidate.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
-    if (candidate.startsWith("CNR ") && candidate.includes(" / ") && roadTypeMatches.length >= 2) {
-      return candidate;
-    }
+  // HARD STOP at brackets
+  cnrSection = cnrSection.replace(/\s+\([^)]+\).*$/, "");
+
+  // Normalize slash spacing
+  cnrSection = cnrSection.replace(/\s*\/\s*/g, " / ").trim();
+
+  // Must contain intersection
+  if (!cnrSection.includes(" / ")) return "";
+
+  // Must contain at least 2 road types
+  const roadTypes = cnrSection.match(new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`, "g")) || [];
+  if (roadTypes.length < 2) return "";
+
+  // Must end at suburb
+  const trimmed = trimAfterSuburb(cnrSection);
+
+  if (trimmed.endedAtSuburb && trimmed.text) {
+    return trimmed.text;
   }
+
+  // fallback: still return cleaned cnr without map junk
+  return cnrSection;
+}
 
   const numberedMatch = normalised.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+\s+/);
   if (numberedMatch && typeof numberedMatch.index === "number") {
