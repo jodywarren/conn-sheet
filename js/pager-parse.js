@@ -517,7 +517,10 @@ function extractScannedAddress(lines) {
     cnrText = cnrText.replace(/\s+F\d{9}.*$/, "");
 
     // Hard stop at obvious appliance / unit strings
-    cnrText = cnrText.replace(/\s+(?:AFP|AFPR|FP|CCONN|CGROV|CMTDU|CFRES|CTRQY|CP64|CR63|CR64|CSTHB1|P64|P63B|R63|R64|STHB1|AV)\b.*$/, "");
+    cnrText = cnrText.replace(
+      /\s+(?:AFP|AFPR|FP|CCONN|CGROV|CMTDU|CFRES|CTRQY|CP64|CR63|CR64|CSTHB1|P64|P63B|R63|R64|STHB1|AV)\b.*$/,
+      ""
+    );
 
     // Clean spacing around slash
     cnrText = cnrText.replace(/\s*\/\s*/g, " / ").trim();
@@ -528,7 +531,8 @@ function extractScannedAddress(lines) {
     }
 
     // Must contain at least two road types
-    const roadTypes = cnrText.match(/\b(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)\b/g) || [];
+    const roadTypes =
+      cnrText.match(/\b(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)\b/g) || [];
     if (roadTypes.length < 2) {
       return "";
     }
