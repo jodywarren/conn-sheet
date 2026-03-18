@@ -466,19 +466,28 @@ function findFallbackAddressLine(lines) {
 
 function extractScannedAddress(lines) {
   const text = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
+  const normalised = normaliseAddressText(text);
 
-  const cnrRegex = buildCnrRegex();
-  const numberedRegex = buildNumberedRegex();
+  const cnrStart = normalised.indexOf("CNR ");
+  if (cnrStart >= 0) {
+    const cnrSlice = normalised.slice(cnrStart);
+    const trimmed = trimAfterSuburb(cnrSlice);
 
-  const cnrMatch = text.match(cnrRegex);
-  if (cnrMatch) {
-    const trimmed = trimAfterSuburb(cnrMatch[0]);
-    if (trimmed.endedAtSuburb && trimmed.text) {
-      return trimmed.text;
+    if (trimmed.endedAtSuburb) {
+      const candidate = trimmed.text;
+
+      if (
+        candidate.startsWith("CNR ") &&
+        candidate.includes(" / ") &&
+        new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(candidate)
+      ) {
+        return candidate;
+      }
     }
   }
 
-  const numberedMatches = [...text.matchAll(new RegExp(numberedRegex, "g"))]
+  const numberedRegex = buildNumberedRegex();
+  const numberedMatches = [...normalised.matchAll(new RegExp(numberedRegex, "g"))]
     .map((m) => m[0])
     .filter(Boolean);
 
