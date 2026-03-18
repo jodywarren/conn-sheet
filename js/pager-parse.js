@@ -79,6 +79,8 @@ const SUBURB_PHRASES = [
 ];
 
 const ROAD_TYPE_PATTERN = '(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)';
+const STREET_NAME_PATTERN = "[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+){0,2}";
+const BANNER_NAME_PATTERN = "[A-Z]+(?: [A-Z]+){0,3}";
 
 function toUpperSafe(value) {
   return (value || '').toString().toUpperCase();
