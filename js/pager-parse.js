@@ -285,8 +285,6 @@ function findIncidentCode(lines) {
 
   const patterns = [
     /\bG&SC([13])\b/,
-    /\bGRASC([13])\b/,
-    /\bSCRBC([13])\b/,
     /\bRESCC([13])\b/,
     /\bSTRUC([13])\b/,
     /\bALARC([13])\b/,
