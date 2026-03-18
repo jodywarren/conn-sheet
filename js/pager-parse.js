@@ -480,15 +480,13 @@ function extractScannedAddress(lines) {
     if (trimmed.endedAtSuburb) {
       const candidate = trimmed.text.replace(/\s*\/\s*/g, " / ");
 
-      if (
-        candidate.startsWith("CNR ") &&
-        candidate.includes(" / ") &&
-        new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(candidate)
-      ) {
-        return candidate;
-      }
-    }
-  }
+const cnrValid = new RegExp(
+  `^CNR\\s+${STREET_WORD_PATTERN}+\\s+${ROAD_TYPE_PATTERN}\\s+/\\s+${STREET_WORD_PATTERN}+\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join("|")})`
+);
+
+if (cnrValid.test(candidate)) {
+  return candidate;
+}
 
   // Numbered address rule
   const numberedRegex = buildNumberedRegex();
