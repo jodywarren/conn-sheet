@@ -401,11 +401,13 @@ function normaliseBannerText(value) {
 
 function extractValidBannerText(value) {
   const cleaned = normaliseBannerText(value);
-  if (!cleaned) return "";
 
-  if (cleaned === "MT DUNEED ALL") {
-    return "MT DUNEED ALL";
-  }
+  if (cleaned === "CONNEWARRE BRIGADE ALL") return "CONNEWARRE BRIGADE ALL";
+  if (cleaned === "FRESHWATER CREEK BRIGADE ALL") return "FRESHWATER CREEK BRIGADE ALL";
+  if (cleaned === "MT DUNEED ALL") return "MT DUNEED ALL";
+
+  return "";
+}
 
   const brigadeMatch = cleaned.match(new RegExp(`\\b(${BANNER_NAME_PATTERN}) BRIGADE ALL\\b$`));
   if (!brigadeMatch) return "";
