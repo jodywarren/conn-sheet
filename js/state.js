@@ -58,7 +58,9 @@ function createDefaultState() {
       signalNotes: "",
 
       comments: "",
-      hosesUsed: ""
+      hosesUsed: "",
+
+      activeDetailTab: ""
     },
 
     responders: {
@@ -219,8 +221,13 @@ export function loadState() {
     const saved = JSON.parse(raw);
     const fresh = createDefaultState();
 
-    if (saved.ui) Object.assign(fresh.ui, saved.ui);
-    if (saved.profile) Object.assign(fresh.profile, saved.profile);
+    if (saved.ui) {
+      Object.assign(fresh.ui, saved.ui);
+    }
+
+    if (saved.profile) {
+      Object.assign(fresh.profile, saved.profile);
+    }
 
     if (saved.incident) {
       Object.assign(fresh.incident, saved.incident);
@@ -240,27 +247,37 @@ export function loadState() {
       if (!Array.isArray(fresh.incident.otherAgencies)) {
         fresh.incident.otherAgencies = [];
       }
+
+      if (typeof fresh.incident.activeDetailTab !== "string") {
+        fresh.incident.activeDetailTab = "";
+      }
     }
 
     if (saved.responders) {
       if (saved.responders.members) {
         fresh.responders.members = saved.responders.members;
       }
+
       if (saved.responders.appliances) {
         Object.assign(fresh.responders.appliances, saved.responders.appliances);
       }
+
       if (Array.isArray(saved.responders.stationResponders)) {
         fresh.responders.stationResponders = saved.responders.stationResponders;
       }
+
       if (Array.isArray(saved.responders.directResponders)) {
         fresh.responders.directResponders = saved.responders.directResponders;
       }
+
       if (typeof saved.responders.injuryNotes === "string") {
         fresh.responders.injuryNotes = saved.responders.injuryNotes;
       }
+
       if (typeof saved.responders.oicName === "string") {
         fresh.responders.oicName = saved.responders.oicName;
       }
+
       if (typeof saved.responders.oicPhone === "string") {
         fresh.responders.oicPhone = saved.responders.oicPhone;
       }
