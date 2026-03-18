@@ -503,9 +503,7 @@ function extractScannedAddress(lines) {
   const filteredLines = (lines || []).filter((line) => !looksLikeBannerLine(line));
   const joined = normaliseAddressText(filteredLines.join(" "));
 
-  // -----------------------------
   // 1. CNR / intersection rule
-  // -----------------------------
   if (joined.includes("CNR ")) {
     let cnrText = joined.slice(joined.indexOf("CNR "));
 
@@ -529,33 +527,27 @@ function extractScannedAddress(lines) {
       return "";
     }
 
-    // Trim at suburb
-    const trimmed = trimAfterSuburb(cnrText);
-    let candidate = trimmed.text.replace(/\s*\/\s*/g, " / ").trim();
-
-    // Must still start with CNR
-    if (!candidate.startsWith("CNR ")) {
-      return "";
-    }
-
     // Must contain at least two road types
-    const roadTypes = candidate.match(/\b(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)\b/g) || [];
+    const roadTypes = cnrText.match(/\b(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)\b/g) || [];
     if (roadTypes.length < 2) {
       return "";
     }
 
-    // Must contain a suburb
-    const hasSuburb = SUBURB_PHRASES.some((suburb) => candidate.endsWith(suburb));
-    if (!hasSuburb) {
-      return "";
+    // Trim to suburb
+    const trimmed = trimAfterSuburb(cnrText);
+
+    if (
+      trimmed.endedAtSuburb &&
+      trimmed.text &&
+      trimmed.text.startsWith("CNR ")
+    ) {
+      return trimmed.text;
     }
 
-    return candidate;
+    return "";
   }
 
-  // -----------------------------
   // 2. Normal numbered address
-  // -----------------------------
   const numberedRegex = buildNumberedRegex();
   const numberedMatches = [...joined.matchAll(numberedRegex)]
     .map((m) => m[0])
@@ -576,9 +568,7 @@ function extractScannedAddress(lines) {
     }
   }
 
-  // -----------------------------
   // 3. Fallback raw line
-  // -----------------------------
   return findFallbackAddressLine(filteredLines);
 }
 
