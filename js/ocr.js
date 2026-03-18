@@ -79,30 +79,47 @@ async function runPagerOcrIntoIncident(file) {
     ocrBusy = true;
     setScanStatus("Preparing screenshot...", "scan-working");
 
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
     const preparedImage = await prepareOcrImage(file);
     setPreviewFromPreparedImage(preparedImage);
 
     setScanStatus("Reading pager text...", "scan-working");
     const ocrResult = await readPreparedOcr(preparedImage);
 
-    const rawCandidates = [];
+    const bestRawText = ocrResult?.best?.rawText?.trim() || "";
+    const combinedText = ocrResult?.combinedText?.trim() || "";
 
-    if (ocrResult?.best?.rawText) rawCandidates.push(ocrResult.best.rawText);
-    if (ocrResult?.combinedText) rawCandidates.push(ocrResult.combinedText);
-
-    if (!rawCandidates.length) {
+    if (!bestRawText && !combinedText) {
       setScanStatus("OCR failed. No text found.", "scan-error");
       return;
     }
 
     setScanStatus("Parsing pager details...", "scan-working");
 
-    const scored = rawCandidates
-      .map((text) => scorePagerCandidates(text))
-      .filter(Boolean)
-      .sort((a, b) => (b.score || 0) - (a.score || 0));
+    const primary = bestRawText ? scorePagerCandidates(bestRawText) : null;
 
-    const best = scored[0];
+    const primaryLooksUsable =
+      primary?.merged &&
+      primary?.merged?.eventNumber &&
+      primary?.merged?.alertAreaCode &&
+      primary?.merged?.incidentType;
+
+    let best = primary;
+
+    if (!primaryLooksUsable && combinedText && combinedText !== bestRawText) {
+      const fallback = scorePagerCandidates(combinedText);
+
+      if (
+        fallback &&
+        (
+          !best ||
+          (fallback.score || 0) > (best.score || 0)
+        )
+      ) {
+        best = fallback;
+      }
+    }
 
     if (!best || !best.merged) {
       setScanStatus("OCR could not safely extract incident details.", "scan-error");
