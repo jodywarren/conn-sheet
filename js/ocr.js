@@ -17,18 +17,6 @@ function setScanStatus(message, className = "scan-idle") {
   el.className = `scan-status ${className}`;
 }
 
-function setPreviewFromFile(file) {
-  const preview = qs("pagerPreview");
-  if (!preview || !file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    preview.src = reader.result;
-    preview.classList.remove("hidden");
-  };
-  reader.readAsDataURL(file);
-}
-
 function setPreviewFromPreparedImage(preparedImage) {
   const preview = qs("pagerPreview");
   if (!preview) return;
