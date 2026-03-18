@@ -81,6 +81,7 @@ const SUBURB_PHRASES = [
 const ROAD_TYPE_PATTERN = "(RD|ST|AV|AVE|DR|CT|LN|HWY|PL|WAY|CRES|BLVD|PDE|CL|TCE)";
 const STREET_NAME_PATTERN = "[A-Z0-9'/-]+(?:\\s+[A-Z0-9'/-]+){0,2}";
 const BANNER_NAME_PATTERN = "[A-Z]+(?: [A-Z]+){0,3}";
+const SUBURB_PATTERN = `(${SUBURB_PHRASES.join("|")})`;
 
 function toUpperSafe(value) {
   return (value || "").toString().toUpperCase();
@@ -364,6 +365,38 @@ function normaliseAddressPunctuation(address) {
   );
 }
 
+function truncateAddressToKnownEnd(address) {
+  let value = collapseSpaces(address);
+
+  const numberedRegex = new RegExp(
+    `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
+  const cnrRegex = new RegExp(
+    `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
+  );
+
+  const cnrMatch = value.match(cnrRegex);
+  if (cnrMatch) return normaliseAddressPunctuation(cnrMatch[0]);
+
+  const numberedMatch = value.match(numberedRegex);
+  if (numberedMatch) return normaliseAddressPunctuation(numberedMatch[0]);
+
+  let bestCut = -1;
+  for (const suburb of SUBURB_PHRASES) {
+    const idx = value.indexOf(suburb);
+    if (idx >= 0) {
+      const end = idx + suburb.length;
+      if (end > bestCut) bestCut = end;
+    }
+  }
+
+  if (bestCut > 0) {
+    value = value.slice(0, bestCut);
+  }
+
+  return normaliseAddressPunctuation(value);
+}
+
 function normaliseBannerText(value) {
   return String(value || "")
     .toUpperCase()
@@ -451,29 +484,37 @@ function cleanAddressCandidate(line) {
 
   if (/\bCNR\b/.test(value)) {
     const cnrRegex = new RegExp(
-      `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join("|")})\\b`
+      `\\bCNR\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s*/\\s*${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
     );
     const cnrMatch = value.match(cnrRegex);
 
     if (cnrMatch) {
-      return normaliseAddressPunctuation(cnrMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED"));
+      return truncateAddressToKnownEnd(
+        cnrMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+      );
     }
 
-    return normaliseAddressPunctuation(value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED"));
+    return truncateAddressToKnownEnd(
+      value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+    );
   }
 
   if (/\b\d+[A-Z]?\b/.test(value)) {
     const numberedRegex = new RegExp(
-      `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+(${SUBURB_PHRASES.join("|")})\\b`
+      `\\b\\d+[A-Z]?\\s+${STREET_NAME_PATTERN}\\s+${ROAD_TYPE_PATTERN}\\s+${SUBURB_PATTERN}\\b`
     );
     const numberedMatch = value.match(numberedRegex);
 
     if (numberedMatch) {
-      return normaliseAddressPunctuation(numberedMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED"));
+      return truncateAddressToKnownEnd(
+        numberedMatch[0].replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+      );
     }
   }
 
-  return normaliseAddressPunctuation(value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED"));
+  return truncateAddressToKnownEnd(
+    value.replace(/\bMOUNT DUNEED\b/g, "MT DUNEED")
+  );
 }
 
 function scoreAddressCandidate(line) {
@@ -486,6 +527,7 @@ function scoreAddressCandidate(line) {
   if (new RegExp(`\\b${ROAD_TYPE_PATTERN}\\b`).test(cleaned)) score += 4;
   if ([...SUBURB_WORDS].some((word) => cleaned.includes(word))) score += 4;
   if (cleaned.length >= 12) score += 1;
+  if (SUBURB_PHRASES.some((suburb) => cleaned.endsWith(suburb))) score += 4;
 
   return score;
 }
@@ -527,7 +569,7 @@ function extractScannedAddress(lines, incidentCode, eventNumber) {
     candidates.push({
       line: joinedBody,
       cleaned: cleanedJoined,
-      score: scoreAddressCandidate(cleanedJoined) + 3,
+      score: scoreAddressCandidate(cleanedJoined) + 2,
       lineIndex: start
     });
   }
@@ -633,6 +675,15 @@ function detectBlockType(lines) {
   };
 }
 
+function detectMvaFromText(text) {
+  return /\b(INCI|MVA|MVC|MVI|VEHICLE|COLLISION|CRASH|ROLLOVER|TRAPPED|ROAD RESCUE|CAR INTO)\b/.test(text);
+}
+
+function detectStructureFromIncident(incidentParsed, text) {
+  if (incidentParsed.family === "STRU") return true;
+  return /\b(STRUCTURE FIRE|HOUSE FIRE|BUILDING FIRE|SHED FIRE|GARAGE FIRE)\b/.test(text);
+}
+
 export function parsePagerBlock(rawBlockText) {
   const cleanedText = cleanOcrText(rawBlockText);
   const lines = getLines(cleanedText);
@@ -658,6 +709,10 @@ export function parsePagerBlock(rawBlockText) {
   const pagerDetails = header && eventNumber
     ? extractPagerDetails(lines, header.lineIndex, eventNumber)
     : "";
+
+  const incidentSearchText = [cleanedText, incidentParsed.incidentType, pagerDetails].filter(Boolean).join("\n");
+  const isMva = detectMvaFromText(incidentSearchText);
+  const isStructureFire = detectStructureFromIncident(incidentParsed, incidentSearchText);
 
   const warnings = [];
 
@@ -695,6 +750,8 @@ export function parsePagerBlock(rawBlockText) {
     pagerDetails,
     scannedAddress,
     sceneUnits,
+    isMva,
+    isStructureFire,
     headerLineIndex: header?.lineIndex ?? -1,
     eventDateValid,
     isStrictlyValidPrimaryBlock,
