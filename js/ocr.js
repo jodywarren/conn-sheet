@@ -152,11 +152,9 @@ export function bindOcrEvents() {
       return;
     }
 
-    setPreviewFromFile(file);
-    setScanStatus("Screenshot loaded. Scanning...", "scan-working");
-
     if (ocrBusy) return;
 
+    setScanStatus("Screenshot loaded. Scanning...", "scan-working");
     await runPagerOcrIntoIncident(file);
   });
 }
