@@ -473,7 +473,6 @@ function normaliseSceneUnitToken(token) {
     if (KNOWN_BRIGADE_CODES.has(stripped)) value = stripped;
   }
 
-  if (value === "TQRY") value = "TRQY";
   if (value === "AFP" || value === "AFPR" || value === "FP") value = "Police";
   if (value === "POLICE") value = "Police";
 
