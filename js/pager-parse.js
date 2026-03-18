@@ -409,12 +409,6 @@ function extractValidBannerText(value) {
   return "";
 }
 
-  const brigadeMatch = cleaned.match(new RegExp(`\\b(${BANNER_NAME_PATTERN}) BRIGADE ALL\\b$`));
-  if (!brigadeMatch) return "";
-
-  return `${brigadeMatch[1]} BRIGADE ALL`;
-}
-
 function extractBrigadeBannerLine(lines, headerLineIndex = -1, eventLineIndex = -1) {
   const start = headerLineIndex >= 0 ? headerLineIndex : 0;
   const end = eventLineIndex >= 0 ? eventLineIndex : Math.min(lines.length - 1, start + 8);
