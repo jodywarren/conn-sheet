@@ -382,37 +382,37 @@ function buildNumberedRegex() {
   );
 }
 
-function trimAfterSuburb(value) {
-  const text = normaliseAddressText(value);
+function findFallbackAddressLine(lines) {
+  const joined = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(lines.join(" ")));
+  const normalised = normaliseAddressText(joined);
 
-  let bestEnd = -1;
-  let bestSuburb = "";
-
-  for (const suburb of SUBURB_PHRASES) {
-    const normalisedSuburb = normaliseMtDuneedNoise(suburb);
-    const idx = text.indexOf(normalisedSuburb);
-    if (idx >= 0) {
-      const end = idx + normalisedSuburb.length;
-      if (end > bestEnd) {
-        bestEnd = end;
-        bestSuburb = normalisedSuburb;
-      }
+  const cnrStart = normalised.indexOf("CNR ");
+  if (cnrStart >= 0) {
+    const cnrSlice = normalised.slice(cnrStart);
+    const trimmed = trimAfterSuburb(cnrSlice);
+    if (trimmed.endedAtSuburb) {
+      return trimmed.text;
     }
   }
 
-  if (bestEnd < 0) {
-    return {
-      text: "",
-      suburb: "",
-      endedAtSuburb: false
-    };
+  const numberedMatch = normalised.match(/\b\d+[A-Z]?\s+[A-Z0-9'/-]+/);
+  if (numberedMatch && typeof numberedMatch.index === "number") {
+    const numberedSlice = normalised.slice(numberedMatch.index);
+    const trimmed = trimAfterSuburb(numberedSlice);
+    if (trimmed.endedAtSuburb) {
+      return trimmed.text;
+    }
   }
 
-  return {
-    text: collapseSpaces(text.slice(0, bestEnd)),
-    suburb: bestSuburb,
-    endedAtSuburb: true
-  };
+  for (const rawLine of lines) {
+    const line = stripTrailingPagerNoise(stripLeadingNoiseBeforeAddress(rawLine));
+    const trimmed = trimAfterSuburb(line);
+    if (trimmed.endedAtSuburb && trimmed.text) {
+      return trimmed.text;
+    }
+  }
+
+  return "";
 }
 
 function looksLikeAddressStart(line) {
