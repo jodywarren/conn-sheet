@@ -226,21 +226,29 @@ function selectBestEventNumber(text, pagerDate) {
 }
 
 function normaliseAlertAreaCandidate(value) {
-  let code = String(value || "").trim().toUpperCase();
+  let code = String(value || "").trim().toUpperCase().replace(/\s+/g, "");
 
-  // Common OCR swaps
-  code = code
+  const match = code.match(/^([A-Z0-9]{4})([A-Z0-9]{1,2})$/);
+  if (!match) return code;
+
+  let prefix = match[1];
+  let suffix = match[2];
+
+  prefix = prefix
     .replace(/0/g, "O")
-    .replace(/(?<=^[A-Z]{4})I/g, "1")
-    .replace(/(?<=^[A-Z]{4})L/g, "1")
-    .replace(/(?<=^[A-Z]{4})O/g, "0");
+    .replace(/1/g, "I")
+    .replace(/5/g, "S");
 
-  // Fix brigade letter OCR where possible
-  if (code.startsWith("GR0V")) code = code.replace(/^GR0V/, "GROV");
-  if (code.startsWith("C0NN")) code = code.replace(/^C0NN/, "CONN");
-  if (code.startsWith("MT0U")) code = code.replace(/^MT0U/, "MTDU");
+  suffix = suffix
+    .replace(/[IOQL]/g, "1")
+    .replace(/S/g, "5")
+    .replace(/B/g, "8");
 
-  return code;
+  if (prefix === "GR0V") prefix = "GROV";
+  if (prefix === "C0NN") prefix = "CONN";
+  if (prefix === "MT0U") prefix = "MTDU";
+
+  return `${prefix}${suffix}`;
 }
 
 function extractAlertAreaCode(lines) {
