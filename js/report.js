@@ -240,19 +240,26 @@ function getReportLines() {
   lines.push("MEMBERS RESPONDING");
   lines.push("");
 
-  Object.values(responders.appliances || {}).forEach((appliance) => {
-    if (!appliance.crew?.length) return;
+  const appliancesWithCrew = Object.values(responders.appliances || {}).filter(
+    (appliance) => Array.isArray(appliance.crew) && appliance.crew.length > 0
+  );
 
-    const applianceLabel = formatApplianceLabel(appliance.label);
-    const code = appliance.code ? appliance.code.toUpperCase().replace(/^C/, "CODE ") : "";
-    lines.push(`${applianceLabel.padEnd(30)} ${code}`.trimEnd());
-
-    appliance.crew.forEach((member) => {
-      lines.push(buildCrewLine(member));
-    });
-
+  if (!appliancesWithCrew.length) {
+    lines.push("NO APPLIANCE ON SCENE");
     lines.push("");
-  });
+  } else {
+    appliancesWithCrew.forEach((appliance) => {
+      const applianceLabel = formatApplianceLabel(appliance.label);
+      const code = appliance.code ? appliance.code.toUpperCase().replace(/^C/, "CODE ") : "";
+      lines.push(`${applianceLabel.padEnd(30)} ${code}`.trimEnd());
+
+      appliance.crew.forEach((member) => {
+        lines.push(buildCrewLine(member));
+      });
+
+      lines.push("");
+    });
+  }
 
   if (responders.directResponders?.length) {
     lines.push("DIRECT");
@@ -538,11 +545,9 @@ function openEmail() {
 }
 
 function renderPanelText() {
-  const reportText = getReportText().replace(/[ \t]+\n/g, "\n").trim();
-
   const preview = document.getElementById("reportPreview");
   if (preview) {
-    preview.textContent = reportText;
+    preview.textContent = getReportText();
   }
 
   const emailSubject = document.getElementById("reportEmailSubject");
@@ -552,7 +557,7 @@ function renderPanelText() {
 
   const emailBody = document.getElementById("reportEmailBody");
   if (emailBody) {
-    emailBody.value = reportText;
+    emailBody.value = getReportText();
   }
 }
 
