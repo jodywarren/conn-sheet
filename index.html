@@ -233,23 +233,62 @@
             </div>
           </div>
 
-          <div class="section">
-            <div class="row wrap">
-              <input id="sceneUnitInput" class="field-input editable-field" type="text" placeholder="Add another appliance or unit" />
-              <button id="addSceneUnitBtn" class="secondary-btn orange-btn" type="button">Add another appliance</button>
-            </div>
+ <div class="section">
 
-            <div id="sceneUnitChips" class="chip-wrap"></div>
-          </div>
+  <div class="chips ops-chip-row">
+    <button id="tabAddAppliance" class="chip-btn ops-chip active" type="button">
+      ADD APPLIANCE
+    </button>
 
-          <div class="section">
-            <div class="row between align-center agency-strip">
-              <button id="addAgencyBtn" class="secondary-btn orange-btn" type="button">Add Agency</button>
-            </div>
+    <button id="tabAddAgency" class="chip-btn ops-chip" type="button">
+      ADD AGENCY
+    </button>
+  </div>
 
-            <div id="otherAgencyList" class="agency-list"></div>
-          </div>
+  <!-- APPLIANCE PANEL -->
+  <div id="appliancePanel">
 
+    <div class="row wrap">
+      <select id="applianceDropdown" class="field-input editable-field">
+        <option value="">Select appliance</option>
+        <option>P64</option>
+        <option>R64</option>
+        <option>P63B</option>
+        <option>FRES</option>
+        <option>BELL</option>
+        <option>MODE</option>
+        <option>BELM</option>
+        <option>HIGH</option>
+        <option>TRQY</option>
+        <option>CONN</option>
+        <option>ANGL</option>
+        <option>LP63</option>
+        <option>BA support</option>
+        <option>GROV</option>
+      </select>
+    </div>
+
+    <div id="sceneUnitChips" class="chip-wrap"></div>
+  </div>
+
+  <!-- AGENCY PANEL -->
+  <div id="agencyPanel" class="hidden">
+
+    <div class="row wrap">
+      <select id="agencyDropdown" class="field-input editable-field">
+        <option value="">Select agency</option>
+        <option>Police</option>
+        <option>Ambulance</option>
+        <option>SES</option>
+        <option>FRV</option>
+      </select>
+    </div>
+
+    <div id="otherAgencyList" class="agency-list"></div>
+  </div>
+
+</div>      
+          
           <div class="section">
             <div class="chips ops-chip-row">
               <button id="membersBeforeChip" class="chip-btn ops-chip" type="button">Members before 1st appliance</button>
