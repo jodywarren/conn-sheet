@@ -61,7 +61,8 @@ const SUBURB_PHRASES = [
   "TORQUAY",
   "MODEWARRE",
   "GEELONG",
-  "CHARLEMONT"
+  "CHARLEMONT",
+  "BELLBRAE"
 ];
 
 const ROAD_TYPE_PATTERN = "(RD|ST|AV|DR|CT|LN|LANE|HWY|PL|WAY|CR|BLVD|PDE|CL|TCE)";
@@ -289,15 +290,7 @@ function parseIncidentCode(incidentCode) {
 function normaliseBannerLine(line) {
   return collapseSpaces(
     normaliseMtDuneedText(
-      normaliseCommonOcrNoise(
-        String(line || "")
-          .toUpperCase()
-          .replace(/\bBRIGADF\b/g, "BRIGADE")
-          .replace(/\bBRIGA0E\b/g, "BRIGADE")
-          .replace(/\bAII\b/g, "ALL")
-          .replace(/\bALI\b/g, "ALL")
-          .replace(/^(?:E\d{1,3}|288|259|28B|588|2&8|CFA|\(|\[)\s*/g, "")
-      )
+      normaliseCommonOcrNoise(String(line || "").toUpperCase())
     )
   );
 }
@@ -305,19 +298,18 @@ function normaliseBannerLine(line) {
 function extractBrigadeBannerLine(lines, headerLineIndex = -1) {
   if (headerLineIndex < 0) return "";
 
-  const nextLine = lines[headerLineIndex + 1] || "";
-  const cleanedNextLine = normaliseBannerLine(nextLine);
+  const nextLine = normaliseBannerLine(lines[headerLineIndex + 1] || "");
 
-  if (cleanedNextLine.includes("DUNEED ALL")) {
+  if (nextLine.includes("FRESHWATER CREEK BRIGADE ALL")) {
+    return "FRESHWATER CREEK BRIGADE ALL";
+  }
+
+  if (nextLine.includes("DUNEED ALL")) {
     return "MT DUNEED ALL";
   }
 
-  if (cleanedNextLine === "CONNEWARRE BRIGADE ALL") {
+  if (nextLine.includes("CONNEWARRE BRIGADE ALL")) {
     return "CONNEWARRE BRIGADE ALL";
-  }
-
-  if (cleanedNextLine === "FRESHWATER CREEK BRIGADE ALL") {
-    return "FRESHWATER CREEK BRIGADE ALL";
   }
 
   return "";
@@ -326,8 +318,8 @@ function extractBrigadeBannerLine(lines, headerLineIndex = -1) {
 function looksLikeBannerLine(line) {
   const cleaned = normaliseBannerLine(line);
   return (
-    cleaned === "CONNEWARRE BRIGADE ALL" ||
-    cleaned === "FRESHWATER CREEK BRIGADE ALL" ||
+    cleaned.includes("CONNEWARRE BRIGADE ALL") ||
+    cleaned.includes("FRESHWATER CREEK BRIGADE ALL") ||
     cleaned.includes("DUNEED ALL")
   );
 }
@@ -350,7 +342,6 @@ function trimAfterSuburb(value) {
   const text = normaliseAddressText(value);
 
   let bestEnd = -1;
-  let bestSuburb = "";
 
   for (const suburb of SUBURB_PHRASES) {
     const idx = text.indexOf(suburb);
@@ -358,7 +349,6 @@ function trimAfterSuburb(value) {
       const end = idx + suburb.length;
       if (end > bestEnd) {
         bestEnd = end;
-        bestSuburb = suburb;
       }
     }
   }
@@ -366,14 +356,12 @@ function trimAfterSuburb(value) {
   if (bestEnd < 0) {
     return {
       text: "",
-      suburb: "",
       endedAtSuburb: false
     };
   }
 
   return {
     text: collapseSpaces(text.slice(0, bestEnd)),
-    suburb: bestSuburb,
     endedAtSuburb: true
   };
 }
@@ -422,10 +410,18 @@ function findFallbackAddressLine(lines) {
 
   if (normalised.includes("CNR ")) {
     let cnrText = normalised.slice(normalised.indexOf("CNR "));
-    const mapIndex = cnrText.indexOf(" M ");
-    if (mapIndex >= 0) {
-      cnrText = cnrText.slice(0, mapIndex);
+    const stopM = cnrText.indexOf(" M ");
+    const stopSvc = cnrText.indexOf(" SVC ");
+
+    let stopIndex = -1;
+    if (stopM >= 0 && stopSvc >= 0) stopIndex = Math.min(stopM, stopSvc);
+    else if (stopM >= 0) stopIndex = stopM;
+    else if (stopSvc >= 0) stopIndex = stopSvc;
+
+    if (stopIndex >= 0) {
+      cnrText = cnrText.slice(0, stopIndex);
     }
+
     cnrText = cnrText.replace(/\s*\/\s*/g, " / ").trim();
 
     if (cnrText.includes(" / ")) {
@@ -450,10 +446,18 @@ function findFallbackAddressLine(lines) {
 
     if (line.includes("CNR ")) {
       let cnrText = line.slice(line.indexOf("CNR "));
-      const mapIndex = cnrText.indexOf(" M ");
-      if (mapIndex >= 0) {
-        cnrText = cnrText.slice(0, mapIndex);
+      const stopM = cnrText.indexOf(" M ");
+      const stopSvc = cnrText.indexOf(" SVC ");
+
+      let stopIndex = -1;
+      if (stopM >= 0 && stopSvc >= 0) stopIndex = Math.min(stopM, stopSvc);
+      else if (stopM >= 0) stopIndex = stopM;
+      else if (stopSvc >= 0) stopIndex = stopSvc;
+
+      if (stopIndex >= 0) {
+        cnrText = cnrText.slice(0, stopIndex);
       }
+
       cnrText = cnrText.replace(/\s*\/\s*/g, " / ").trim();
 
       if (cnrText.includes(" / ")) {
@@ -478,13 +482,19 @@ function extractScannedAddress(lines) {
   const joined = normaliseAddressText(filteredLines.join(" "));
 
   // Rule 1: CNR rule
-  // Start at CNR and keep everything until the lone " M "
   if (joined.includes("CNR ")) {
     let cnrText = joined.slice(joined.indexOf("CNR "));
 
-    const mapIndex = cnrText.indexOf(" M ");
-    if (mapIndex >= 0) {
-      cnrText = cnrText.slice(0, mapIndex);
+    const stopM = cnrText.indexOf(" M ");
+    const stopSvc = cnrText.indexOf(" SVC ");
+
+    let stopIndex = -1;
+    if (stopM >= 0 && stopSvc >= 0) stopIndex = Math.min(stopM, stopSvc);
+    else if (stopM >= 0) stopIndex = stopM;
+    else if (stopSvc >= 0) stopIndex = stopSvc;
+
+    if (stopIndex >= 0) {
+      cnrText = cnrText.slice(0, stopIndex);
     }
 
     cnrText = cnrText.replace(/\s+F\d{9}.*$/, "");
@@ -500,7 +510,6 @@ function extractScannedAddress(lines) {
   }
 
   // Rule 2: street number rule
-  // Start at number, include suburb, stop before slash
   const numberedRegex = buildNumberedRegex();
   const numberedMatches = [...joined.matchAll(numberedRegex)]
     .map((m) => m[0])
@@ -593,13 +602,18 @@ function extractPagerDetails(lines, headerLineIndex, eventNumber) {
 
     if (!line) continue;
 
+    if (i === 1 && line.includes("FRESHWATER CREEK BRIGADE ALL")) {
+      cleanedLines.push("FRESHWATER CREEK BRIGADE ALL");
+      continue;
+    }
+
     if (i === 1 && line.includes("DUNEED ALL")) {
       cleanedLines.push("MT DUNEED ALL");
       continue;
     }
 
-    if (line === "CONNEWARRE BRIGADE ALL" || line === "FRESHWATER CREEK BRIGADE ALL") {
-      cleanedLines.push(line);
+    if (i === 1 && line.includes("CONNEWARRE BRIGADE ALL")) {
+      cleanedLines.push("CONNEWARRE BRIGADE ALL");
       continue;
     }
 
