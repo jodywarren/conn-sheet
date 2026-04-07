@@ -2,7 +2,13 @@ import { state, saveState } from "./state.js";
 import { loadIncidentIntoInputs, setSceneBrigades } from "./incident.js";
 
 const AREA_PRIORITY = ["CONNEWARRE", "MT DUNEED"];
-const VALID_INCIDENT_PREFIXES = ["STRU", "INCI", "RESC", "ALAR", "ALARC", "NONS", "G&SC"];
+const KNOWN_AREA_LINES = [
+  "CONNEWARRE BRIGADE ALL",
+  "CONNEWARRE ALL",
+  "MT DUNEED ALL",
+  "FRESHWATER CREEK BRIGADE ALL",
+  "FRESHWATER CREEK ALL"
+];
 
 const UNIT_MAP = {
   AFP: "Police",
@@ -10,11 +16,6 @@ const UNIT_MAP = {
   AV: "Ambulance",
   STHB1: "SES"
 };
-
-const KNOWN_UNITS = [
-  "CONN", "GROV", "FRES", "BARW", "TRQY", "MTDU", "MODE",
-  "P64", "P63B", "R63", "AFPR", "AFP", "FP", "AV", "STHB1"
-];
 
 export function bindOcrEvents() {
   const upload = document.getElementById("pagerUpload");
@@ -43,8 +44,6 @@ async function handleScreenshotUpload(event) {
 }
 
 async function runOcrFromPreview() {
-  console.log("runOcrFromPreview started");
-
   if (!window.Tesseract) {
     setScanStatus("OCR library not loaded.", "scan-error");
     return;
@@ -59,31 +58,29 @@ async function runOcrFromPreview() {
     hideJobPicker();
     setScanStatus("Reading screenshot...", "scan-working");
 
-    const result = await window.Tesseract.recognize(
-      state.incident.pagerScreenshot,
-      "eng",
-      {
-        logger: (msg) => {
-          if (msg.status === "recognizing text" && typeof msg.progress === "number") {
-            setScanStatus(`Reading screenshot... ${Math.round(msg.progress * 100)}%`, "scan-working");
-          }
+    const imageForOcr = await cropPagerScreenshot(state.incident.pagerScreenshot);
+
+    const result = await window.Tesseract.recognize(imageForOcr, "eng", {
+      logger: (msg) => {
+        if (msg.status === "recognizing text" && typeof msg.progress === "number") {
+          setScanStatus(
+            `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
+            "scan-working"
+          );
         }
       }
-    );
+    });
 
     const rawText = result?.data?.text || "";
-    console.log("OCR RAW TEXT:", rawText);
-
     const cleanedText = normalizeOcrText(rawText);
-    console.log("OCR CLEANED TEXT:", cleanedText);
-
     const blocks = splitPagerBlocks(cleanedText);
-    console.log("PAGER BLOCKS:", blocks);
-
     const groupedEvents = buildGroupedEvents(blocks);
-    console.log("GROUPED EVENTS:", groupedEvents);
+    const validEvents = groupedEvents.filter((eventObj) => eventObj.eventNumber);
 
-    const validEvents = groupedEvents.filter((event) => event.eventNumber);
+    console.log("OCR RAW TEXT:", rawText);
+    console.log("OCR CLEANED TEXT:", cleanedText);
+    console.log("OCR BLOCKS:", blocks);
+    console.log("OCR GROUPED EVENTS:", groupedEvents);
 
     if (!validEvents.length) {
       state.incident.pagerDetails = cleanedText;
@@ -116,6 +113,37 @@ function fileToDataUrl(file) {
   });
 }
 
+async function cropPagerScreenshot(dataUrl) {
+  try {
+    const img = await loadImage(dataUrl);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const sx = Math.floor(img.width * 0.03);
+    const sy = Math.floor(img.height * 0.18);
+    const sw = Math.floor(img.width * 0.94);
+    const sh = Math.floor(img.height * 0.48);
+
+    canvas.width = sw;
+    canvas.height = sh;
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    console.warn("Crop failed, falling back to full screenshot.", error);
+    return dataUrl;
+  }
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 function normalizeOcrText(text) {
   return String(text || "")
     .replace(/\r/g, "")
@@ -126,24 +154,30 @@ function normalizeOcrText(text) {
     .replace(/EMERGENCV/g, "EMERGENCY")
     .replace(/EMERGENC Y/g, "EMERGENCY")
     .replace(/NONEMERGENCY/g, "NON EMERGENCY")
+    .replace(/NON-EMERGENCY/g, "NON EMERGENCY")
     .replace(/ADMINISTRATIVE/g, "ADMIN")
-    .replace(/MT DUNEED ALL/g, "MT DUNEED ALL")
-    .replace(/CONNEWARRE ALL/g, "CONNEWARRE BRIGADE ALL")
     .replace(/2&8\\T/g, "MT DUNEED ALL")
     .replace(/2&8\s?\\T/g, "MT DUNEED ALL")
     .replace(/ALARCI/g, "ALARC1")
+    .replace(/ALARC!/g, "ALARC1")
     .replace(/STRUCI/g, "STRUC1")
+    .replace(/STRUC!/g, "STRUC1")
+    .replace(/INCICI/g, "INCIC1")
+    .replace(/INCIC!/g, "INCIC1")
     .replace(/INCII/g, "INCI1")
-    .replace(/INCIC/g, "INCI")
-    .replace(/RESCCI/g, "RESCC1")
+    .replace(/INCI!/g, "INCI1")
+    .replace(/NSTRCI/g, "NSTRC1")
+    .replace(/NSTRC!/g, "NSTRC1")
+    .replace(/G&SCI/g, "G&SC1")
+    .replace(/G&SC!/g, "G&SC1")
     .replace(/HOME CHAT SETTINGS/g, "")
     .replace(/PLEASE UPDATE YOUR AVAILABILITY/g, "")
     .replace(/REFRESH FILTER SORT/g, "")
-    .replace(/REFRESH/g, "")
-    .replace(/FILTER/g, "")
-    .replace(/SORT/g, "")
-    .replace(/ATTENDING/g, "")
-    .replace(/RESPOND/g, "")
+    .replace(/\bREFRESH\b/g, "")
+    .replace(/\bFILTER\b/g, "")
+    .replace(/\bSORT\b/g, "")
+    .replace(/\bATTENDING\b/g, "")
+    .replace(/\bRESPOND\b/g, "")
     .replace(/[^\S\n]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .toUpperCase()
@@ -151,7 +185,7 @@ function normalizeOcrText(text) {
 }
 
 function splitPagerBlocks(text) {
-  const lines = text
+  const lines = String(text || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
@@ -159,13 +193,16 @@ function splitPagerBlocks(text) {
   const blocks = [];
   let current = [];
 
-  for (const line of lines) {
-    const startsBlock =
-      line.includes("EMERGENCY") ||
-      line.includes("NON EMERGENCY") ||
-      line.includes("ADMIN");
+  function isBlockStart(line) {
+    return (
+      /^EMERGENCY\b/.test(line) ||
+      /^NON[\s-]?EMERGENCY\b/.test(line) ||
+      /^ADMIN\b/.test(line)
+    );
+  }
 
-    if (startsBlock && current.length) {
+  for (const line of lines) {
+    if (isBlockStart(line) && current.length) {
       blocks.push(current.join("\n"));
       current = [line];
     } else {
@@ -182,6 +219,7 @@ function splitPagerBlocks(text) {
 
 function buildGroupedEvents(blocks) {
   const parsedBlocks = blocks
+    .filter(isValidPagerBlock)
     .map(parsePagerBlock)
     .filter((block) => block.eventNumber);
 
@@ -199,60 +237,76 @@ function buildGroupedEvents(blocks) {
   );
 }
 
+function isValidPagerBlock(blockText) {
+  const text = String(blockText || "").toUpperCase();
+  return hasKnownAreaLine(text) && Boolean(extractEventNumber(text));
+}
+
+function hasKnownAreaLine(text) {
+  return KNOWN_AREA_LINES.some((line) => text.includes(line));
+}
+
 function parsePagerBlock(blockText) {
   const text = String(blockText || "").trim();
 
   const type = extractMessageType(text);
   const dateTime = extractDateTime(text);
-  const area = normalizeAreaLine(extractAreaLine(text));
+  const areaLine = extractAreaLine(text);
+  const area = normalizeAreaLine(areaLine);
   const alertLine = extractAlertLine(text);
   const eventNumber = extractEventNumber(text);
-  const incidentType = extractIncidentType(alertLine || text);
+  const incidentCode = extractIncidentCode(alertLine || text);
+  const incidentType = normalizeIncidentType(incidentCode);
+  const responseCode = extractResponseCode(incidentCode);
   const units = extractUnits(text);
-  const mapRef = extractMapRef(text);
   const locationText = extractLocationText(text);
-  const description = extractDescription(alertLine || "", locationText);
+  const actualLocation = buildActualLocation(locationText);
+  const description = extractDescription(alertLine, actualLocation);
 
   return {
     rawText: text,
     type,
+    areaLine,
     area,
     alertLine,
     eventNumber,
+    incidentCode,
     incidentType,
+    responseCode,
     pagerDate: dateTime.date,
     pagerTime: dateTime.time,
     units,
-    mapRef,
     locationText,
+    actualLocation,
     description,
     areaPriority: getAreaPriority(area),
-    isEmergency: type === "EMERGENCY"
+    isEmergency: type === "EMERGENCY",
+    matchesDate: eventNumberMatchesDate(eventNumber, dateTime.date)
   };
 }
 
 function mergeEventBlocks(eventNumber, blocks) {
   const emergencyBlocks = blocks.filter((b) => b.isEmergency);
   const basePool = emergencyBlocks.length ? emergencyBlocks : blocks;
+  const baseBlock = [...basePool].sort(compareBlocksForBaseSelection)[0];
 
-  const sortedBasePool = [...basePool].sort(compareBlocksForBaseSelection);
-  const baseBlock = sortedBasePool[0];
-
-  const mergedUnits = [...new Set(blocks.flatMap((b) => b.units))];
+  const mergedUnits = [...new Set(blocks.flatMap((b) => b.units).filter(Boolean))];
 
   return {
     eventNumber,
-    baseBlock,
     blocks,
+    baseBlock,
     pagerDate: baseBlock?.pagerDate || "",
     pagerTime: baseBlock?.pagerTime || "",
     area: baseBlock?.area || "",
+    incidentCode: baseBlock?.incidentCode || "",
     incidentType: baseBlock?.incidentType || "",
+    responseCode: baseBlock?.responseCode || "",
     units: mergedUnits,
     description: baseBlock?.description || "",
     locationText: baseBlock?.locationText || "",
-    rawText: baseBlock?.rawText || "",
-    confidence: buildConfidence(baseBlock)
+    actualLocation: baseBlock?.actualLocation || "",
+    rawText: baseBlock?.rawText || ""
   };
 }
 
@@ -266,7 +320,6 @@ function compareBlocksForBaseSelection(a, b) {
 
   if (aStamp < bStamp) return -1;
   if (aStamp > bStamp) return 1;
-
   return 0;
 }
 
@@ -274,23 +327,6 @@ function buildSortableStamp(date, time) {
   const d = String(date || "");
   const t = String(time || "");
   return `${d}|${t}`;
-}
-
-function buildConfidence(block) {
-  if (!block) return "low";
-
-  const checks = [
-    Boolean(block.eventNumber),
-    Boolean(block.alertLine),
-    Boolean(block.incidentType),
-    Boolean(block.area),
-    eventNumberMatchesDate(block.eventNumber, block.pagerDate)
-  ];
-
-  const count = checks.filter(Boolean).length;
-  if (count >= 5) return "high";
-  if (count >= 3) return "medium";
-  return "low";
 }
 
 function applyChosenIncident(eventObj) {
@@ -301,9 +337,12 @@ function applyChosenIncident(eventObj) {
   state.incident.pagerDate = toInputDate(eventObj.pagerDate || "");
   state.incident.pagerTime = eventObj.pagerTime || "";
   state.incident.brigadeCode = deriveBrigadeCode(block.area, block.alertLine);
-  state.incident.incidentType = normalizeIncidentDisplay(eventObj.incidentType || "");
+  state.incident.brigadeRole = deriveBrigadeRole(block.area, block.alertLine);
+  state.incident.incidentType = eventObj.incidentType || "";
+  state.incident.responseCode = eventObj.responseCode || "";
   state.incident.pagerDetails = block.rawText || "";
-  state.incident.actualLocation = buildActualLocation(eventObj.locationText || "");
+  state.incident.scannedLocation = eventObj.actualLocation || "";
+  state.incident.actualLocation = eventObj.actualLocation || "";
   setSceneBrigades(eventObj.units || []);
 
   loadIncidentIntoInputs();
@@ -323,13 +362,15 @@ function renderJobPicker(events) {
     button.type = "button";
     button.className = "job-picker-item";
 
-    const title = [
+    const parts = [
       eventObj.eventNumber,
-      normalizeIncidentDisplay(eventObj.incidentType || ""),
-      compactLocation(eventObj.locationText || "")
-    ].filter(Boolean).join(" • ");
+      eventObj.area,
+      eventObj.incidentType,
+      eventObj.responseCode,
+      compactLocation(eventObj.actualLocation || eventObj.locationText || "")
+    ].filter(Boolean);
 
-    button.textContent = title || eventObj.eventNumber;
+    button.textContent = parts.join(" • ");
 
     button.addEventListener("click", () => {
       applyChosenIncident(eventObj);
@@ -350,14 +391,16 @@ function hideJobPicker() {
 }
 
 function extractMessageType(text) {
-  if (text.includes("NON-EMERGENCY")) return "NON-EMERGENCY";
-  if (text.includes("EMERGENCY")) return "EMERGENCY";
-  if (text.includes("ADMIN")) return "ADMIN";
+  const value = String(text || "").toUpperCase();
+
+  if (/\bNON[\s-]?EMERGENCY\b/.test(value)) return "NON-EMERGENCY";
+  if (/\bEMERGENCY\b/.test(value)) return "EMERGENCY";
+  if (/\bADMIN\b/.test(value)) return "ADMIN";
   return "UNKNOWN";
 }
 
 function extractDateTime(text) {
-  const match = text.match(/(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})/);
+  const match = String(text || "").match(/(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})/);
   return {
     time: match?.[1] || "",
     date: match?.[2] || ""
@@ -365,71 +408,87 @@ function extractDateTime(text) {
 }
 
 function extractAreaLine(text) {
-  const candidates = [
-    "CONNEWARRE BRIGADE ALL",
-    "CONNEWARRE ALL",
-    "MT DUNEED ALL",
-    "FRESHWATER CREEK BRIGADE ALL",
-    "FRESHWATER CREEK ALL",
-    "CFA ALL"
-  ];
+  const value = String(text || "").toUpperCase();
 
-  for (const candidate of candidates) {
-    if (text.includes(candidate)) return candidate;
+  for (const candidate of KNOWN_AREA_LINES) {
+    if (value.includes(candidate)) return candidate;
   }
+
   return "";
 }
 
-function normalizeAreaLine(area) {
-  const value = String(area || "").toUpperCase();
+function normalizeAreaLine(areaLine) {
+  const value = String(areaLine || "").toUpperCase();
 
   if (value.includes("CONNEWARRE")) return "CONNEWARRE";
   if (value.includes("MT DUNEED")) return "MT DUNEED";
   if (value.includes("FRESHWATER CREEK")) return "FRESHWATER CREEK";
-  if (value.includes("CFA ALL")) return "CFA ALL";
 
   return value;
 }
 
 function getAreaPriority(area) {
-  const idx = AREA_PRIORITY.indexOf(area);
-  return idx === -1 ? 999 : idx;
+  const index = AREA_PRIORITY.indexOf(area);
+  return index === -1 ? 999 : index;
 }
 
 function extractAlertLine(text) {
-  const match = text.match(/ALERT\s+[A-Z0-9]+\s+[A-Z&]{4,6}\d\b[^\n]*/);
-  return match?.[0] || "";
+  const lines = String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const alertLine = lines.find((line) => line.startsWith("ALERT "));
+  return alertLine || "";
 }
 
 function extractEventNumber(text) {
-  return text.match(/\bF\d{9}\b/)?.[0] || "";
+  const raw = String(text || "").toUpperCase();
+
+  const direct = raw.match(/\bF[0-9IO]{9}\b/);
+  if (direct) {
+    return direct[0].replace(/I/g, "1").replace(/O/g, "0");
+  }
+
+  const header = raw.match(/EVENT\s*ID[:\s]+(F[0-9IO]{9})\b/);
+  if (header?.[1]) {
+    return header[1].replace(/I/g, "1").replace(/O/g, "0");
+  }
+
+  return "";
 }
 
-function extractIncidentType(text) {
-  const value = String(text || "");
+function extractIncidentCode(text) {
+  const value = String(text || "").toUpperCase();
 
-  const match = value.match(/\b(RESCC?\d|RESC\d|ALARC\d|ALARC\d|INCI\d|STRUC\d|NONS\d|G&SC\d)\b/);
-  if (match?.[1]) return match[1];
-
-  const fallback = value.match(/\b(RESC|ALAR|INCI|STRU|NONS|G&SC)\b/);
-  return fallback?.[1] || "";
+  const match = value.match(/\b(ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\b/);
+  return match?.[1] || "";
 }
 
-function normalizeIncidentDisplay(code) {
+function normalizeIncidentType(code) {
   const upper = String(code || "").toUpperCase();
 
-  if (upper.startsWith("RESC")) return "RESC";
-  if (upper.startsWith("ALAR")) return "ALAR";
-  if (upper.startsWith("INCI")) return "INCI";
-  if (upper.startsWith("STRU")) return "STRU";
-  if (upper.startsWith("NONS")) return "NONS";
+  if (upper.startsWith("ALARC")) return "ALAR";
+  if (upper.startsWith("STRUC")) return "STRU";
+  if (upper.startsWith("INCIC")) return "INCI";
   if (upper.startsWith("G&SC")) return "G&SC";
+  if (upper.startsWith("NSTRC")) return "NSTR";
 
-  return upper;
+  return "";
+}
+
+function extractResponseCode(code) {
+  const upper = String(code || "").toUpperCase();
+
+  if (upper.endsWith("1")) return "Code 1";
+  if (upper.endsWith("3")) return "Code 3";
+
+  return "";
 }
 
 function extractUnits(text) {
   const tokens = String(text || "")
+    .toUpperCase()
     .split(/\s+/)
     .map((token) => token.replace(/[^A-Z0-9]/g, ""))
     .filter(Boolean);
@@ -439,56 +498,46 @@ function extractUnits(text) {
   tokens.forEach((token) => {
     let clean = token;
 
-    if (clean.startsWith("C") && clean.length > 1) {
-      const stripped = clean.slice(1);
-      if (KNOWN_UNITS.includes(stripped)) {
-        clean = stripped;
-      }
-    }
-
     if (UNIT_MAP[clean]) {
       clean = UNIT_MAP[clean];
+    } else if (/^C[A-Z]{4}$/.test(clean)) {
+      clean = clean.slice(1);
+    } else if (/^P\d+[A-Z]?$/.test(clean)) {
+      clean = clean;
+    } else if (/^R\d+[A-Z]?$/.test(clean)) {
+      clean = clean;
+    } else {
+      return;
     }
 
-    if (KNOWN_UNITS.includes(clean) || Object.values(UNIT_MAP).includes(clean)) {
-      if (!units.includes(clean)) {
-        units.push(clean);
-      }
+    if (!units.includes(clean)) {
+      units.push(clean);
     }
   });
 
   return units;
 }
 
-function extractMapRef(text) {
-  return text.match(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)/)?.[0] || "";
-}
-
 function extractLocationText(text) {
-  const withoutHeader = String(text || "")
-    .replace(/.*?ALERT\s+[A-Z0-9]+\s+[A-Z&]{4,6}\d\b/, "")
-    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)/g, "")
+  const lines = String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const alertIndex = lines.findIndex((line) => line.startsWith("ALERT "));
+  if (alertIndex === -1) return "";
+
+  let combined = lines.slice(alertIndex).join(" ");
+
+  combined = combined
+    .replace(/^ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
+    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
     .replace(/\bF\d{9}\b/g, "")
-    .replace(/\b(?:C[A-Z0-9]+|P64|P63B|R63|AFP|FP|AV|STHB1)\b/g, "")
-    .replace(/\d{1,2}:\d{2}:\d{2}\s+SINCE ALERT/g, "")
+    .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
-  return withoutHeader;
-}
-
-function extractDescription(alertLine, locationText) {
-  const afterIncident = String(alertLine || "").replace(/ALERT\s+[A-Z0-9]+\s+[A-Z&]{4,6}\d\b/, "").trim();
-  if (afterIncident) return afterIncident;
-
-  return String(locationText || "").split("/")[0].trim();
-}
-
-function deriveBrigadeCode(area, alertLine) {
-  if (area === "CONNEWARRE") return "CONN";
-  if (area === "MT DUNEED") return "MTDU";
-
-  const match = String(alertLine || "").match(/ALERT\s+([A-Z]+)\d/);
-  return match?.[1] || "";
+  return combined;
 }
 
 function buildActualLocation(text) {
@@ -497,43 +546,97 @@ function buildActualLocation(text) {
 
   let cleaned = raw
     .replace(/\s+/g, " ")
-    .replace(/\s\/\/\s*/g, " / ")
-    .replace(/\s\/\s*/g, " / ");
+    .replace(/\/{2,}/g, " // ")
+    .replace(/\s*\/\/\s*/g, " // ")
+    .replace(/\s*\/\s*/g, " / ")
+    .trim();
 
-  const addressMatch = cleaned.match(/\b\d+\s+[A-Z0-9 ]+?(?:ST|RD|AVE|AV|DR|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s+[A-Z ]+/);
-  if (addressMatch?.[0]) {
-    return addressMatch[0].trim();
+  if (/\bCNR\b/.test(cleaned)) {
+    const cnrMatch = cleaned.match(
+      /\bCNR\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
+    );
+    if (cnrMatch?.[0]) {
+      return cnrMatch[0].trim();
+    }
   }
 
-  const intersectionMatch = cleaned.match(/\bCNR\s+[A-Z0-9 ]+?(?:ST|RD|AVE|AV|DR|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 ]+?(?:ST|RD|AVE|AV|DR|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)/);
-  if (intersectionMatch?.[0]) {
-    return intersectionMatch[0].trim();
+  const primaryAddress = cleaned.match(
+    /\b\d+\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
+  );
+  if (primaryAddress?.[0]) {
+    return primaryAddress[0].trim();
+  }
+
+  const slashIndex = cleaned.indexOf(" / ");
+  if (slashIndex > 0) {
+    return cleaned.slice(0, slashIndex).trim();
+  }
+
+  const doubleSlashIndex = cleaned.indexOf(" // ");
+  if (doubleSlashIndex > 0) {
+    return cleaned.slice(0, doubleSlashIndex).trim();
   }
 
   return cleaned;
 }
 
+function extractDescription(alertLine, actualLocation) {
+  const value = String(alertLine || "")
+    .replace(/^ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
+    .trim();
+
+  if (!value) return "";
+
+  if (actualLocation && value.includes(actualLocation)) {
+    return value.replace(actualLocation, "").replace(/\s+/g, " ").trim();
+  }
+
+  return value;
+}
+
+function deriveBrigadeCode(area, alertLine) {
+  if (area === "CONNEWARRE") return "CONN";
+  if (area === "MT DUNEED") return "MTDU";
+  if (area === "FRESHWATER CREEK") return "FRES";
+
+  const match = String(alertLine || "").match(/^ALERT\s+([A-Z]+)\d+/);
+  return match?.[1] || "";
+}
+
+function deriveBrigadeRole(area, alertLine) {
+  if (area === "CONNEWARRE") return "Primary";
+  if (area === "MT DUNEED") return "Support to Mt Duneed";
+  if (area === "FRESHWATER CREEK") return "Support to Freshwater Creek";
+
+  const prefix = String(alertLine || "").match(/^ALERT\s+([A-Z]+)\d+/)?.[1] || "";
+  if (prefix === "CONN") return "Primary";
+  if (prefix) return `Support to ${prefix}`;
+
+  return "";
+}
+
 function compactLocation(text) {
-  return buildActualLocation(text).slice(0, 80);
+  return String(text || "").trim().slice(0, 90);
 }
 
 function eventNumberMatchesDate(eventNumber, dateText) {
   if (!eventNumber || !dateText) return false;
 
-  const match = String(eventNumber).match(/^F(\d{2})(\d{2})\d{5}$/);
-  if (!match) return false;
-
-  const [, yy, mm] = match;
+  const eventMatch = String(eventNumber).match(/^F(\d{2})(\d{2})\d{5}$/);
   const dateMatch = String(dateText).match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (!dateMatch) return false;
 
+  if (!eventMatch || !dateMatch) return false;
+
+  const [, yy, mm] = eventMatch;
   const [, , dateMonth, dateYear] = dateMatch;
+
   return yy === dateYear.slice(2) && mm === dateMonth;
 }
 
 function toInputDate(dateText) {
   const match = String(dateText || "").match(/^(\d{2})-(\d{2})-(\d{4})$/);
   if (!match) return "";
+
   const [, dd, mm, yyyy] = match;
   return `${yyyy}-${mm}-${dd}`;
 }
