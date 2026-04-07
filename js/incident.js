@@ -655,3 +655,39 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+export function setSceneBrigades(codes = []) {
+  const uniqueCodes = [...new Set(codes.filter(Boolean))];
+
+  if (!state.incident) return;
+
+  state.incident.brigadesOnScene = uniqueCodes;
+
+  const wrap = document.getElementById("sceneBrigadeChips");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  uniqueCodes.forEach((code) => {
+    const chip = document.createElement("div");
+    chip.className = "scene-chip";
+
+    const label = document.createElement("span");
+    label.textContent = code;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", () => {
+      state.incident.brigadesOnScene = state.incident.brigadesOnScene.filter((x) => x !== code);
+      setSceneBrigades(state.incident.brigadesOnScene);
+      saveState();
+    });
+
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+    wrap.appendChild(chip);
+  });
+
+  saveState();
+}
+
