@@ -978,3 +978,32 @@ body.dark-mode #oicBanner.missing {
     margin-left: 0;
   }
 }
+.job-picker{
+  margin-top:12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  background:#fff;
+}
+
+.job-picker-title{
+  font-weight:800;
+  margin-bottom:10px;
+}
+
+.job-picker-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.job-picker-item{
+  border:1px solid var(--cfa-red-border);
+  background:var(--cfa-red-soft);
+  color:#7d0017;
+  border-radius:10px;
+  padding:10px 12px;
+  text-align:left;
+  font-weight:700;
+  cursor:pointer;
+}
