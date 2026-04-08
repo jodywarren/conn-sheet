@@ -144,11 +144,10 @@ async function cropPagerScreenshot(dataUrl) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // tighter crop around the pager detail card area
-    const sx = Math.floor(img.width * 0.04);
-    const sy = Math.floor(img.height * 0.28);
-    const sw = Math.floor(img.width * 0.92);
-    const sh = Math.floor(img.height * 0.34);
+    const sx = Math.floor(img.width * 0.03);
+    const sy = Math.floor(img.height * 0.20);
+    const sw = Math.floor(img.width * 0.94);
+    const sh = Math.floor(img.height * 0.46);
 
     canvas.width = sw;
     canvas.height = sh;
