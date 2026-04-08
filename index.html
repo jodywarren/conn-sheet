@@ -10,6 +10,55 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./connewarre-logo.png" />
   <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    .upload-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .upload-half {
+      min-height: 42px;
+      border-radius: 12px;
+      border: 1px solid #cfd4dc;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      font-weight: 600;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .upload-label {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .upload-label:hover {
+      background: #f7f8fa;
+    }
+
+    .upload-filename {
+      justify-content: flex-start;
+      color: #374151;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hidden-file-input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 1px;
+      height: 1px;
+    }
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -81,14 +130,17 @@
           <div class="section">
             <h2 class="section-title">Pager Screenshot</h2>
 
-            <div class="row wrap pager-upload-row">
-              <input
-                id="pagerUpload"
-                class="field-input editable-field file-input"
-                type="file"
-                accept="image/*"
-              />
+            <div class="upload-split">
+              <label for="pagerUpload" class="upload-half upload-label">Add Screenshot here</label>
+              <div id="pagerFileName" class="upload-half upload-filename">No file selected</div>
             </div>
+
+            <input
+              id="pagerUpload"
+              class="hidden-file-input"
+              type="file"
+              accept="image/*"
+            />
 
             <div id="scanStatus" class="scan-status scan-idle">
               Waiting for screenshot
@@ -516,6 +568,20 @@
       </div>
     </div>
   </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const upload = document.getElementById("pagerUpload");
+      const fileName = document.getElementById("pagerFileName");
+
+      if (!upload || !fileName) return;
+
+      upload.addEventListener("change", () => {
+        const file = upload.files && upload.files[0];
+        fileName.textContent = file ? file.name : "No file selected";
+      });
+    });
+  </script>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script type="module" src="./app.js"></script>
