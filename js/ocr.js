@@ -1,767 +1,472 @@
-import { state, saveState } from "./state.js";
-import { loadIncidentIntoInputs, setSceneBrigades } from "./incident.js";
+// ocr.js
+// OCR orchestration and DOM binding for the Incident page only.
+// Keeps existing layout/workflow intact.
 
-const AREA_PRIORITY = ["CONNEWARRE", "MT DUNEED"];
+import { state, saveState } from './state.js';
+import { loadIncidentIntoInputs, setPagedSceneUnits } from './incident.js';
+import { prepareOcrImage, getBestPreviewCanvas, variantToDataUrl } from './ocr-image.js';
+import { readPreparedOcr } from './ocr-read.js';
+import { scorePagerCandidates } from './pager-score.js';
+import { shouldAutoCopyActualAddress } from './pager-parse.js';
 
-const KNOWN_AREA_LINES = [
-  "CONNEWARRE BRIGADE ALL",
-  "CONNEWARRE ALL",
-  "MT DUNEED ALL",
-  "FRESHWATER CREEK BRIGADE ALL",
-  "FRESHWATER CREEK ALL"
-];
+let ocrBusy = false;
 
-const UNIT_MAP = {
-  AFP: "Police",
-  FP: "Police",
-  AV: "Ambulance",
-  STHB1: "SES"
-};
-
-const UI_NOISE_PATTERNS = [
-  /\bDETAILS\b/,
-  /\bATTENDANCE\b/,
-  /\bLOCATION\b/,
-  /\bVERIFIED\b/,
-  /\bMAP LAYERS\b/,
-  /\bNOT ATTENDING\b/,
-  /\bATTENDING\b/,
-  /\bUNAVAILABLE\b/,
-  /\bOTHER\b/,
-  /\bMODIFY\b/,
-  /\bSINCE ALERT\b/,
-  /\bEVENT ID[:\s]/,
-  /\bHOME\b/,
-  /\bCHAT\b/,
-  /\bSETTINGS\b/,
-  /\bREFRESH\b/,
-  /\bFILTER\b/,
-  /\bSORT\b/,
-  /\bPLEASE UPDATE YOUR AVAILABILITY\b/,
-  /\bBACK TO TOP\b/,
-  /\bNAVIGATE TO THIS EVENT\b/,
-  /\bSTATION\b/,
-  /\bEVENT\b/,
-  /\bYOU\b/
-];
-
-export function bindOcrEvents() {
-  const upload = document.getElementById("pagerUpload");
-  if (!upload) return;
-
-  upload.addEventListener("change", handleScreenshotUpload);
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
-async function handleScreenshotUpload(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  const dataUrl = await fileToDataUrl(file);
-  state.incident.pagerScreenshot = dataUrl;
-
-  const preview = document.getElementById("pagerPreview");
-  if (preview) {
-    preview.src = dataUrl;
-    preview.classList.remove("hidden");
-  }
-
-  hideJobPicker();
-  setScanStatus("Reading screenshot...", "scan-working");
-  saveState();
-
-  await runOcrFromPreview();
+function cleanString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
-async function runOcrFromPreview() {
-  if (!window.Tesseract) {
-    setScanStatus("OCR library not loaded.", "scan-error");
-    return;
+function uniqueStrings(values) {
+  const seen = new Set();
+  const out = [];
+
+  for (const value of values || []) {
+    const cleaned = cleanString(value);
+    if (!cleaned) continue;
+    if (seen.has(cleaned)) continue;
+    seen.add(cleaned);
+    out.push(cleaned);
   }
 
-  if (!state.incident.pagerScreenshot) {
-    setScanStatus("Upload a screenshot first.", "scan-error");
-    return;
+  return out;
+}
+
+function qs(id) {
+  return document.getElementById(id);
+}
+
+function setScanStatus(message, className = 'scan-idle') {
+  const el = qs('scanStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = `scan-status ${className}`.trim();
+}
+
+function setPreviewFromFile(file) {
+  const img = qs('pagerPreview');
+  if (!img || !file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    img.src = reader.result;
+    img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setPreviewFromCanvas(canvas) {
+  const img = qs('pagerPreview');
+  if (!img || !canvas) return;
+
+  img.src = variantToDataUrl(canvas);
+  img.classList.remove('hidden');
+}
+
+function countFilledMergedFields(merged) {
+  let count = 0;
+  if (merged?.eventNumber) count += 1;
+  if (merged?.pagerDate) count += 1;
+  if (merged?.pagerTime) count += 1;
+  if (merged?.alertAreaCode) count += 1;
+  if (merged?.brigadeRole) count += 1;
+  if (merged?.incidentType) count += 1;
+  if (merged?.responseCode) count += 1;
+  if (merged?.pagerDetails) count += 1;
+  if (merged?.scannedAddress) count += 1;
+  if (Array.isArray(merged?.sceneUnits) && merged.sceneUnits.length > 0) count += 1;
+  return count;
+}
+
+function getPrimaryScore(scoredResult) {
+  return scoredResult?.primary?.score ?? -999999;
+}
+
+function buildTextCandidates(ocrReadResult) {
+  const candidates = [];
+
+  if (ocrReadResult?.best?.rawText) {
+    candidates.push({
+      sourceKey: `best:${ocrReadResult.best.key}`,
+      label: `Best OCR variant: ${ocrReadResult.best.label}`,
+      rawText: ocrReadResult.best.rawText
+    });
   }
+
+  if (ocrReadResult?.combinedText) {
+    candidates.push({
+      sourceKey: 'combined-top-variants',
+      label: 'Combined top OCR variants',
+      rawText: ocrReadResult.combinedText
+    });
+  }
+
+  if (Array.isArray(ocrReadResult?.ranked)) {
+    for (const ranked of ocrReadResult.ranked) {
+      if (!ranked?.rawText) continue;
+      candidates.push({
+        sourceKey: `ranked:${ranked.key}`,
+        label: `Ranked OCR variant: ${ranked.label}`,
+        rawText: ranked.rawText
+      });
+    }
+  }
+
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const key = candidate.rawText.trim();
+    if (!key) return false;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function chooseBestScoredResult(scoredCandidates) {
+  if (!scoredCandidates.length) return null;
+
+  return [...scoredCandidates].sort((a, b) => {
+    const aSuccess = a.result?.success ? 1 : 0;
+    const bSuccess = b.result?.success ? 1 : 0;
+    if (bSuccess !== aSuccess) return bSuccess - aSuccess;
+
+    const aFilled = countFilledMergedFields(a.result?.merged);
+    const bFilled = countFilledMergedFields(b.result?.merged);
+    if (bFilled !== aFilled) return bFilled - aFilled;
+
+    const aPrimaryScore = getPrimaryScore(a.result);
+    const bPrimaryScore = getPrimaryScore(b.result);
+    if (bPrimaryScore !== aPrimaryScore) return bPrimaryScore - aPrimaryScore;
+
+    return 0;
+  })[0];
+}
+
+function convertPagerDateToInputDate(value) {
+  if (!value || !/^\d{2}-\d{2}-\d{4}$/.test(value)) return '';
+  const [dd, mm, yyyy] = value.split('-');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normaliseSceneUnits(sceneUnits) {
+  return uniqueStrings(sceneUnits || []);
+}
+
+function buildIncidentPatchFromScoredResult(scoredResult) {
+  const merged = scoredResult?.merged || {};
+  const currentActualAddress = cleanString(state?.incident?.actualAddress || '');
+  const actualAddressEdited = !!state?.incident?.actualAddressEdited;
+  const scannedAddress = cleanString(merged.scannedAddress || '');
+
+  const patch = {
+    eventNumber: cleanString(merged.eventNumber || ''),
+    pagerDate: convertPagerDateToInputDate(cleanString(merged.pagerDate || '')),
+    pagerTime: cleanString(merged.pagerTime || ''),
+    alertAreaCode: cleanString(merged.alertAreaCode || ''),
+    brigadeRole: cleanString(merged.brigadeRole || ''),
+    incidentType: cleanString(merged.incidentType || ''),
+    responseCode: cleanString(merged.responseCode || ''),
+    pagerDetails: cleanString(merged.pagerDetails || ''),
+    scannedAddress,
+    sceneUnits: normaliseSceneUnits(merged.sceneUnits || [])
+  };
+
+  const shouldCopy = scannedAddress
+    ? shouldAutoCopyActualAddress(currentActualAddress, actualAddressEdited)
+    : false;
+
+  if (shouldCopy) {
+    patch.actualAddress = scannedAddress;
+  }
+
+  return patch;
+}
+
+function buildNonEmptyPatch(patch) {
+  const out = {};
+
+  for (const [key, value] of Object.entries(patch || {})) {
+    if (Array.isArray(value)) {
+      if (value.length > 0) out[key] = value;
+      continue;
+    }
+
+    if (isNonEmptyString(value)) {
+      out[key] = value;
+    }
+  }
+
+  return out;
+}
+
+function applyPatchToIncidentState(patch) {
+  if (!state?.incident) return;
+
+  if (patch.eventNumber) state.incident.eventNumber = patch.eventNumber;
+  if (patch.pagerDate) state.incident.pagerDate = patch.pagerDate;
+  if (patch.pagerTime) state.incident.pagerTime = patch.pagerTime;
+  if (patch.alertAreaCode) state.incident.alertAreaCode = patch.alertAreaCode;
+  if (patch.brigadeRole) state.incident.brigadeRole = patch.brigadeRole;
+  if (patch.incidentType) state.incident.incidentType = patch.incidentType;
+  if (patch.responseCode) state.incident.responseCode = patch.responseCode;
+  if (patch.pagerDetails) state.incident.pagerDetails = patch.pagerDetails;
+  if (patch.scannedAddress) state.incident.scannedAddress = patch.scannedAddress;
+
+  if (patch.actualAddress) {
+    state.incident.actualAddress = patch.actualAddress;
+  }
+
+  if (Array.isArray(patch.sceneUnits) && patch.sceneUnits.length > 0) {
+    setPagedSceneUnits(patch.sceneUnits);
+  } else {
+    saveState();
+  }
+
+  loadIncidentIntoInputs();
+}
+
+function buildDebugSummary(chosenCandidate, allScoredCandidates) {
+  return {
+    selectedSource: chosenCandidate?.sourceKey || '',
+    selectedLabel: chosenCandidate?.label || '',
+    success: !!chosenCandidate?.result?.success,
+    primaryScore: getPrimaryScore(chosenCandidate?.result),
+    merged: chosenCandidate?.result?.merged || {},
+    candidates: (allScoredCandidates || []).map((entry) => ({
+      sourceKey: entry.sourceKey,
+      label: entry.label,
+      success: !!entry.result?.success,
+      primaryScore: getPrimaryScore(entry.result),
+      filledFields: countFilledMergedFields(entry.result?.merged),
+      reason: entry.result?.reason || '',
+      primaryBlockIndex: entry.result?.primary?.blockIndex ?? null
+    }))
+  };
+}
+
+function makeProgressNotifier(callback) {
+  if (typeof callback !== 'function') {
+    return () => {};
+  }
+
+  return (payload) => {
+    try {
+      callback(payload);
+    } catch (error) {
+      console.error('OCR progress callback failed:', error);
+    }
+  };
+}
+
+export async function extractPagerDataFromFile(file, options = {}) {
+  if (!file) {
+    throw new Error('No screenshot file provided');
+  }
+
+  const notify = makeProgressNotifier(options.onProgress);
+
+  notify({ stage: 'prepare-start', message: 'Preparing image for OCR' });
+  const preparedImage = await prepareOcrImage(file);
+
+  const previewCanvas = getBestPreviewCanvas(preparedImage);
+  notify({
+    stage: 'prepare-complete',
+    message: 'Image prepared for OCR',
+    crop: preparedImage.crop,
+    previewCanvas
+  });
+
+  notify({ stage: 'ocr-start', message: 'Running OCR' });
+  const ocrReadResult = await readPreparedOcr(preparedImage, {
+    onProgress: (payload) => notify(payload)
+  });
+
+  notify({
+    stage: 'ocr-complete',
+    message: 'OCR complete',
+    bestVariant: ocrReadResult?.best?.key || '',
+    bestConfidence: ocrReadResult?.best?.confidence || 0,
+    bestQualityScore: ocrReadResult?.best?.qualityScore || 0
+  });
+
+  const textCandidates = buildTextCandidates(ocrReadResult);
+
+  notify({
+    stage: 'score-start',
+    message: 'Scoring pager candidates',
+    textCandidateCount: textCandidates.length
+  });
+
+  const scoredCandidates = textCandidates.map((candidate) => ({
+    sourceKey: candidate.sourceKey,
+    label: candidate.label,
+    rawText: candidate.rawText,
+    result: scorePagerCandidates(candidate.rawText)
+  }));
+
+  const chosen = chooseBestScoredResult(scoredCandidates);
+
+  notify({
+    stage: 'score-complete',
+    message: chosen?.result?.success
+      ? 'Pager candidate selected'
+      : 'No valid pager candidate selected'
+  });
+
+  return {
+    success: !!chosen?.result?.success,
+    reason: chosen?.result?.reason || 'No OCR result available',
+    preparedImage,
+    ocrReadResult,
+    scoredCandidates,
+    chosenCandidate: chosen || null,
+    chosenResult: chosen?.result || null,
+    merged: chosen?.result?.merged || null,
+    debug: buildDebugSummary(chosen, scoredCandidates)
+  };
+}
+
+export async function runPagerOcrIntoIncident(file, integration = {}) {
+  const {
+    onOcrProgress,
+    onOcrComplete,
+    onOcrError,
+    previewPreparedCrop = true
+  } = integration;
+
+  const notifyProgress = makeProgressNotifier(onOcrProgress);
 
   try {
-    hideJobPicker();
-    setScanStatus("Reading screenshot...", "scan-working");
+    ocrBusy = true;
+    setScanStatus('Preparing image...', 'scan-working');
 
-    const imageForOcr = await cropPagerScreenshot(state.incident.pagerScreenshot);
+    const extraction = await extractPagerDataFromFile(file, {
+      onProgress: (payload) => {
+        notifyProgress(payload);
 
-    const result = await window.Tesseract.recognize(imageForOcr, "eng", {
-      logger: (msg) => {
-        if (msg.status === "recognizing text" && typeof msg.progress === "number") {
-          setScanStatus(
-            `Reading screenshot... ${Math.round(msg.progress * 100)}%`,
-            "scan-working"
-          );
+        switch (payload.stage) {
+          case 'prepare-start':
+            setScanStatus('Preparing image...', 'scan-working');
+            break;
+          case 'prepare-complete':
+            setScanStatus('Image prepared', 'scan-working');
+            if (previewPreparedCrop && payload.previewCanvas) {
+              setPreviewFromCanvas(payload.previewCanvas);
+            }
+            break;
+          case 'ocr-start':
+            setScanStatus('Reading pager text...', 'scan-working');
+            break;
+          case 'ocr-variant-start':
+            setScanStatus(`Reading OCR variant ${payload.index + 1} of ${payload.total}...`, 'scan-working');
+            break;
+          case 'ocr-complete':
+            setScanStatus('OCR finished', 'scan-working');
+            break;
+          case 'score-start':
+            setScanStatus('Scoring pager blocks...', 'scan-working');
+            break;
+          case 'score-complete':
+            setScanStatus(payload.message || 'Scoring complete', 'scan-working');
+            break;
+          default:
+            break;
         }
       }
     });
 
-    const rawText = result?.data?.text || "";
-    const cleanedText = normalizeOcrText(rawText);
-    const lines = toUsefulLines(cleanedText);
-    const sections = buildCandidateSections(lines);
-    const groupedEvents = buildGroupedEvents(sections);
-    const validEvents = groupedEvents.filter((eventObj) => eventObj.eventNumber);
-
-    console.log("OCR RAW TEXT:", rawText);
-    console.log("OCR CLEANED TEXT:", cleanedText);
-    console.log("OCR USEFUL LINES:", lines);
-    console.log("OCR CANDIDATE SECTIONS:", sections);
-    console.log("OCR GROUPED EVENTS:", groupedEvents);
-
-    if (!validEvents.length) {
-      state.incident.pagerDetails = cleanedText;
-      loadIncidentIntoInputs();
-      saveState();
-      setScanStatus("No valid pager message found. OCR text loaded into Pager Details.", "scan-warn");
-      return;
-    }
-
-    if (validEvents.length === 1) {
-      applyChosenIncident(validEvents[0]);
-      setScanStatus("Scan complete. Pager extracted.", "scan-good");
-      return;
-    }
-
-    renderJobPicker(validEvents);
-    setScanStatus("Multiple jobs detected. Select the correct job.", "scan-warn");
-  } catch (error) {
-    console.error("OCR FAILED:", error);
-    setScanStatus("Scan failed. Check screenshot or enter details manually.", "scan-error");
-  }
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function cropPagerScreenshot(dataUrl) {
-  try {
-    const img = await loadImage(dataUrl);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    // Wider/taller crop so the red header line stays included
-    const sx = Math.floor(img.width * 0.03);
-    const sy = Math.floor(img.height * 0.20);
-    const sw = Math.floor(img.width * 0.94);
-    const sh = Math.floor(img.height * 0.46);
-
-    canvas.width = sw;
-    canvas.height = sh;
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-
-    return canvas.toDataURL("image/png");
-  } catch (error) {
-    console.warn("Crop failed, falling back to full screenshot.", error);
-    return dataUrl;
-  }
-}
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-function normalizeOcrText(text) {
-  return String(text || "")
-    .replace(/\r/g, "")
-    .replace(/[|]/g, "1")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[—–]/g, "-")
-    .replace(/EMERGENCV/g, "EMERGENCY")
-    .replace(/EMERGENC Y/g, "EMERGENCY")
-    .replace(/EMERGENC¥/g, "EMERGENCY")
-    .replace(/EMERGENC7/g, "EMERGENCY")
-    .replace(/NONEMERGENCY/g, "NON EMERGENCY")
-    .replace(/NON-EMERGENCY/g, "NON EMERGENCY")
-    .replace(/ADMINISTRATIVE/g, "ADMIN")
-    .replace(/2&8\\T/g, "MT DUNEED ALL")
-    .replace(/2&8\s?\\T/g, "MT DUNEED ALL")
-    .replace(/ALARCI/g, "ALARC1")
-    .replace(/ALARC!/g, "ALARC1")
-    .replace(/STRUCI/g, "STRUC1")
-    .replace(/STRUC!/g, "STRUC1")
-    .replace(/INCICI/g, "INCIC1")
-    .replace(/INCIC!/g, "INCIC1")
-    .replace(/INCIC3I/g, "INCIC3")
-    .replace(/NSTRCI/g, "NSTRC1")
-    .replace(/NSTRC!/g, "NSTRC1")
-    .replace(/G&SCI/g, "G&SC1")
-    .replace(/G&SC!/g, "G&SC1")
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .toUpperCase()
-    .trim();
-}
-
-function toUsefulLines(text) {
-  return String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !isUiNoiseLine(line));
-}
-
-function isUiNoiseLine(line) {
-  const value = String(line || "").toUpperCase();
-  return UI_NOISE_PATTERNS.some((pattern) => pattern.test(value));
-}
-
-function buildCandidateSections(lines) {
-  const sections = [];
-
-  lines.forEach((line, index) => {
-    if (!isKnownAreaLineLine(line)) return;
-
-    const start = Math.max(0, index - 3);
-    const end = Math.min(lines.length, index + 10);
-
-    const sectionLines = lines.slice(start, end);
-    sections.push(sectionLines.join("\n"));
-  });
-
-  return [...new Set(sections)];
-}
-
-function isKnownAreaLineLine(line) {
-  const value = String(line || "").toUpperCase();
-  return KNOWN_AREA_LINES.some((candidate) => value.includes(candidate));
-}
-
-function buildGroupedEvents(sections) {
-  const parsedBlocks = sections
-    .map(parsePagerSection)
-    .filter((block) => block.eventNumber);
-
-  const byEvent = new Map();
-
-  parsedBlocks.forEach((block) => {
-    if (!byEvent.has(block.eventNumber)) {
-      byEvent.set(block.eventNumber, []);
-    }
-    byEvent.get(block.eventNumber).push(block);
-  });
-
-  return Array.from(byEvent.entries()).map(([eventNumber, eventBlocks]) =>
-    mergeEventBlocks(eventNumber, eventBlocks)
-  );
-}
-
-function parsePagerSection(sectionText) {
-  const text = String(sectionText || "").trim();
-
-  const type = extractMessageType(text);
-  const areaLine = extractAreaLine(text);
-  const area = normalizeAreaLine(areaLine);
-  const alertText = extractAlertText(text);
-  const eventNumber = extractEventNumber(text);
-
-  const headerLine = extractEmergencyHeaderLine(text);
-  const verifiedDateTime = extractVerifiedPagerDateTime(headerLine, eventNumber);
-
-  const incidentCode = extractIncidentCode(alertText || text);
-  const incidentType = normalizeIncidentType(incidentCode);
-  const responseCode = extractResponseCode(incidentCode);
-  const units = extractUnits(text);
-  const locationText = extractLocationText(alertText || text);
-  const actualLocation = buildActualLocation(locationText);
-  const description = extractDescription(alertText, actualLocation);
-
-  return {
-    rawText: text,
-    type,
-    areaLine,
-    area,
-    alertText,
-    eventNumber,
-    headerLine,
-    incidentCode,
-    incidentType,
-    responseCode,
-    pagerDate: verifiedDateTime.date,
-    pagerTime: verifiedDateTime.time,
-    units,
-    locationText,
-    actualLocation,
-    description,
-    areaPriority: getAreaPriority(area),
-    isEmergency: type === "EMERGENCY",
-    matchesDate: verifiedDateTime.valid
-  };
-}
-
-function mergeEventBlocks(eventNumber, blocks) {
-  const emergencyBlocks = blocks.filter((b) => b.isEmergency);
-  const basePool = emergencyBlocks.length ? emergencyBlocks : blocks;
-  const baseBlock = [...basePool].sort(compareBlocksForBaseSelection)[0];
-
-  const mergedUnits = [...new Set(blocks.flatMap((b) => b.units).filter(Boolean))];
-
-  return {
-    eventNumber,
-    blocks,
-    baseBlock,
-    pagerDate: baseBlock?.pagerDate || "",
-    pagerTime: baseBlock?.pagerTime || "",
-    area: baseBlock?.area || "",
-    incidentCode: baseBlock?.incidentCode || "",
-    incidentType: baseBlock?.incidentType || "",
-    responseCode: baseBlock?.responseCode || "",
-    units: mergedUnits,
-    description: baseBlock?.description || "",
-    locationText: baseBlock?.locationText || "",
-    actualLocation: baseBlock?.actualLocation || "",
-    rawText: baseBlock?.rawText || "",
-    matchesDate: Boolean(baseBlock?.matchesDate)
-  };
-}
-
-function compareBlocksForBaseSelection(a, b) {
-  if (a.matchesDate !== b.matchesDate) {
-    return a.matchesDate ? -1 : 1;
-  }
-
-  if (a.areaPriority !== b.areaPriority) {
-    return a.areaPriority - b.areaPriority;
-  }
-
-  const aStamp = buildSortableStamp(a.pagerDate, a.pagerTime);
-  const bStamp = buildSortableStamp(b.pagerDate, b.pagerTime);
-
-  if (aStamp < bStamp) return -1;
-  if (aStamp > bStamp) return 1;
-  return 0;
-}
-
-function buildSortableStamp(date, time) {
-  const d = String(date || "");
-  const t = String(time || "");
-  return `${d}|${t}`;
-}
-
-function applyChosenIncident(eventObj) {
-  const block = eventObj.baseBlock;
-  if (!block) return;
-
-  const inputDate = toInputDate(eventObj.pagerDate || "");
-  const brigadeCode = deriveBrigadeCode(block.area, block.alertText);
-  const brigadeRole = deriveBrigadeRole(block.area, block.alertText);
-  const scannedAddress = eventObj.actualLocation || "";
-  const actualAddress = eventObj.actualLocation || "";
-
-  state.incident.eventNumber = eventObj.eventNumber || "";
-  state.incident.pagerDate = inputDate;
-  state.incident.pagerTime = eventObj.pagerTime || "";
-
-  state.incident.brigadeCode = brigadeCode;
-  state.incident.alertAreaCode = brigadeCode;
-  state.incident.brigadeRole = brigadeRole;
-  state.incident.incidentType = eventObj.incidentType || "";
-  state.incident.responseCode = eventObj.responseCode || "";
-
-  // Keep full pager message for final report
-  state.incident.pagerDetails = block.rawText || "";
-
-  state.incident.scannedLocation = scannedAddress;
-  state.incident.scannedAddress = scannedAddress;
-  state.incident.actualLocation = actualAddress;
-  state.incident.actualAddress = actualAddress;
-
-  setSceneBrigades(eventObj.units || []);
-  loadIncidentIntoInputs();
-  saveState();
-  hideJobPicker();
-}
-
-function renderJobPicker(events) {
-  const wrap = document.getElementById("jobPickerWrap");
-  const list = document.getElementById("jobPickerList");
-  if (!wrap || !list) return;
-
-  list.innerHTML = "";
-
-  events.forEach((eventObj) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "job-picker-item";
-
-    const parts = [
-      eventObj.eventNumber,
-      eventObj.area,
-      eventObj.incidentType,
-      eventObj.responseCode,
-      compactLocation(eventObj.actualLocation || eventObj.locationText || "")
-    ].filter(Boolean);
-
-    button.textContent = parts.join(" • ");
-
-    button.addEventListener("click", () => {
-      applyChosenIncident(eventObj);
-      setScanStatus("Job selected and loaded.", "scan-good");
-    });
-
-    list.appendChild(button);
-  });
-
-  wrap.classList.remove("hidden");
-}
-
-function hideJobPicker() {
-  const wrap = document.getElementById("jobPickerWrap");
-  const list = document.getElementById("jobPickerList");
-  if (list) list.innerHTML = "";
-  wrap?.classList.add("hidden");
-}
-
-function extractMessageType(text) {
-  const value = String(text || "").toUpperCase();
-
-  if (/\bNON[\s-]?EMERGENCY\b/.test(value)) return "NON-EMERGENCY";
-  if (/\bEMERGENCY\b/.test(value)) return "EMERGENCY";
-  if (/\bEMERGENCV\b/.test(value)) return "EMERGENCY";
-  if (/\bEMERGENC[YV]\b/.test(value)) return "EMERGENCY";
-  if (/\bEMERGENC\s*Y\b/.test(value)) return "EMERGENCY";
-  if (/\bEMERGENC7\b/.test(value)) return "EMERGENCY";
-  if (/\bEMERGENC¥\b/.test(value)) return "EMERGENCY";
-
-  return "UNKNOWN";
-}
-
-function extractEmergencyHeaderLine(text) {
-  const lines = String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const headerPatterns = [
-    /\bEMERGENCY\b/,
-    /\bEMERGENCV\b/,
-    /\bEMERGENC[YV]\b/,
-    /\bEMERGENC\s*Y\b/,
-    /\bEMERGENC7\b/,
-    /\bEMERGENC¥\b/
-  ];
-
-  for (const line of lines) {
-    const upper = line.toUpperCase();
-
-    const looksLikeHeaderWord = headerPatterns.some((pattern) => pattern.test(upper));
-    const hasTime = /\b\d{1,2}:\d{2}:\d{2}\b/.test(upper);
-    const hasDate = /\b\d{2}[-/:]\d{2}[-/:]\d{4}\b/.test(upper);
-
-    if (looksLikeHeaderWord && hasTime && hasDate) {
-      return upper;
-    }
-  }
-
-  return "";
-}
-
-function extractVerifiedPagerDateTime(headerLine, eventNumber) {
-  const header = String(headerLine || "").toUpperCase();
-  const eventNo = String(eventNumber || "").toUpperCase();
-
-  if (!header || !eventNo) {
-    return { date: "", time: "", valid: false };
-  }
-
-  const timeMatch = header.match(/\b(\d{1,2}:\d{2}:\d{2})\b/);
-  const dateMatch = header.match(/\b(\d{2})[-/:](\d{2})[-/:](\d{4})\b/);
-  const eventMatch = eventNo.match(/^F(\d{2})(\d{2})\d{5}$/);
-
-  if (!timeMatch || !dateMatch || !eventMatch) {
-    return { date: "", time: "", valid: false };
-  }
-
-  const [, dd, mm, yyyy] = dateMatch;
-  const [, yyFromEvent, mmFromEvent] = eventMatch;
-
-  const yearMatches = yyyy.slice(2) === yyFromEvent;
-  const monthMatches = mm === mmFromEvent;
-
-  if (!yearMatches || !monthMatches) {
-    return { date: "", time: "", valid: false };
-  }
-
-  return {
-    date: `${dd}-${mm}-${yyyy}`,
-    time: timeMatch[1].slice(0, 5),
-    valid: true
-  };
-}
-
-function extractDateTime(text) {
-  const match = String(text || "").match(/(\d{1,2}:\d{2}:\d{2})\s+(\d{2}[-/:]\d{2}[-/:]\d{4})/);
-  if (!match) {
-    return { time: "", date: "" };
-  }
-
-  const rawTime = match[1];
-  const rawDate = match[2].replace(/\//g, "-").replace(/:/g, "-");
-
-  return {
-    time: rawTime.slice(0, 5),
-    date: rawDate
-  };
-}
-
-function extractAreaLine(text) {
-  const value = String(text || "").toUpperCase();
-
-  for (const candidate of KNOWN_AREA_LINES) {
-    if (value.includes(candidate)) return candidate;
-  }
-
-  return "";
-}
-
-function normalizeAreaLine(areaLine) {
-  const value = String(areaLine || "").toUpperCase();
-
-  if (value.includes("CONNEWARRE")) return "CONNEWARRE";
-  if (value.includes("MT DUNEED")) return "MT DUNEED";
-  if (value.includes("FRESHWATER CREEK")) return "FRESHWATER CREEK";
-
-  return value;
-}
-
-function getAreaPriority(area) {
-  const index = AREA_PRIORITY.indexOf(area);
-  return index === -1 ? 999 : index;
-}
-
-function extractAlertText(text) {
-  const lines = String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const startIndex = lines.findIndex((line) => line.includes("ALERT "));
-  if (startIndex === -1) return "";
-
-  const collected = [];
-  for (let i = startIndex; i < lines.length; i += 1) {
-    const line = lines[i];
-    collected.push(line);
-
-    if (extractEventNumber(line) || /\bF[0-9IO]{9}\b/.test(line)) break;
-  }
-
-  return collected.join(" ");
-}
-
-function extractEventNumber(text) {
-  const raw = String(text || "").toUpperCase();
-
-  const direct = raw.match(/\bF[0-9IO]{9}\b/);
-  if (direct) {
-    return direct[0].replace(/I/g, "1").replace(/O/g, "0");
-  }
-
-  const header = raw.match(/EVENT\s*ID[:\s]+(F[0-9IO]{9})\b/);
-  if (header?.[1]) {
-    return header[1].replace(/I/g, "1").replace(/O/g, "0");
-  }
-
-  return "";
-}
-
-function extractIncidentCode(text) {
-  const value = String(text || "").toUpperCase();
-  return value.match(/\b(ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\b/)?.[1] || "";
-}
-
-function normalizeIncidentType(code) {
-  const upper = String(code || "").toUpperCase();
-
-  if (upper.startsWith("ALARC")) return "ALAR";
-  if (upper.startsWith("STRUC")) return "STRU";
-  if (upper.startsWith("INCIC")) return "INCI";
-  if (upper.startsWith("G&SC")) return "G&SC";
-  if (upper.startsWith("NSTRC")) return "NSTR";
-
-  return "";
-}
-
-function extractResponseCode(code) {
-  const upper = String(code || "").toUpperCase();
-
-  if (upper.endsWith("1")) return "Code 1";
-  if (upper.endsWith("3")) return "Code 3";
-
-  return "";
-}
-
-function extractUnits(text) {
-  const tokens = String(text || "")
-    .toUpperCase()
-    .split(/\s+/)
-    .map((token) => token.replace(/[^A-Z0-9]/g, ""))
-    .filter(Boolean);
-
-  const units = [];
-
-  tokens.forEach((token) => {
-    let clean = token;
-
-    if (UNIT_MAP[clean]) {
-      clean = UNIT_MAP[clean];
-    } else if (/^C[A-Z]{4}$/.test(clean)) {
-      clean = clean.slice(1);
-    } else if (/^P\d+[A-Z]?$/.test(clean)) {
-      clean = clean;
-    } else if (/^R\d+[A-Z]?$/.test(clean)) {
-      clean = clean;
+    const rawPatch = buildIncidentPatchFromScoredResult(extraction.chosenResult);
+    const patch = buildNonEmptyPatch(rawPatch);
+
+    if (extraction.success) {
+      applyPatchToIncidentState(patch);
+      setScanStatus('OCR complete. Check the populated fields.', 'scan-success');
     } else {
+      setScanStatus('OCR could not safely extract a valid emergency page. Please correct fields manually.', 'scan-error');
+    }
+
+    const result = {
+      success: extraction.success,
+      reason: extraction.reason,
+      patch,
+      extraction
+    };
+
+    if (typeof onOcrComplete === 'function') {
+      onOcrComplete(result);
+    }
+
+    return result;
+  } catch (error) {
+    console.error('OCR pipeline failed:', error);
+    setScanStatus('OCR failed. Upload again or correct fields manually.', 'scan-error');
+
+    const failure = {
+      success: false,
+      reason: error?.message || 'OCR failed',
+      error
+    };
+
+    if (typeof onOcrError === 'function') {
+      onOcrError(failure);
+    }
+
+    return failure;
+  } finally {
+    ocrBusy = false;
+  }
+}
+
+export function createPagerOcrController(integration = {}) {
+  return {
+    runFromFile(file) {
+      return runPagerOcrIntoIncident(file, integration);
+    }
+  };
+}
+
+export function buildIncidentPatchForPreview(extractionResult) {
+  const patch = buildIncidentPatchFromScoredResult(
+    extractionResult?.chosenResult || extractionResult
+  );
+
+  return buildNonEmptyPatch(patch);
+}
+
+export function bindOcrEvents() {
+  const pagerUpload = qs('pagerUpload');
+  const scanPagerBtn = qs('scanPagerBtn');
+
+  if (!pagerUpload || !scanPagerBtn) {
+    console.warn('OCR controls not found in DOM');
+    return;
+  }
+
+  pagerUpload.addEventListener('change', async () => {
+    const file = pagerUpload.files && pagerUpload.files[0];
+    if (!file) {
+      setScanStatus('Waiting for screenshot', 'scan-idle');
       return;
     }
 
-    if (!units.includes(clean)) {
-      units.push(clean);
-    }
+    setPreviewFromFile(file);
+    setScanStatus('Screenshot loaded. Scanning...', 'scan-working');
+
+    if (ocrBusy) return;
+    await runPagerOcrIntoIncident(file);
   });
 
-  return units;
-}
+  scanPagerBtn.addEventListener('click', async () => {
+    if (ocrBusy) return;
 
-function extractLocationText(text) {
-  let combined = String(text || "").toUpperCase();
-
-  combined = combined
-    .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
-    .replace(/\bF\d{9}\b/g, "")
-    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
-    .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return combined;
-}
-
-function buildActualLocation(text) {
-  const raw = String(text || "").trim();
-  if (!raw) return "";
-
-  let cleaned = raw
-    .replace(/\s+/g, " ")
-    .replace(/\/{2,}/g, " // ")
-    .replace(/\s*\/\/\s*/g, " // ")
-    .replace(/\s*\/\s*/g, " / ")
-    .trim();
-
-  if (/\bCNR\b/.test(cleaned)) {
-    const cnrMatch = cleaned.match(
-      /\bCNR\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
-    );
-    if (cnrMatch?.[0]) {
-      return cnrMatch[0].trim();
+    const file = pagerUpload.files && pagerUpload.files[0];
+    if (!file) {
+      setScanStatus('Please choose a screenshot first.', 'scan-error');
+      return;
     }
-  }
 
-  const numbered = cleaned.match(
-    /\b\d+\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
-  );
-  if (numbered?.[0]) {
-    return numbered[0].trim();
-  }
-
-  const slashIndex = cleaned.indexOf(" / ");
-  if (slashIndex > 0) {
-    return cleaned.slice(0, slashIndex).trim();
-  }
-
-  const doubleSlashIndex = cleaned.indexOf(" // ");
-  if (doubleSlashIndex > 0) {
-    return cleaned.slice(0, doubleSlashIndex).trim();
-  }
-
-  return cleaned;
-}
-
-function extractDescription(alertText, actualLocation) {
-  const value = String(alertText || "")
-    .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
-    .replace(/\bF\d{9}\b/g, "")
-    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
-    .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!value) return "";
-
-  if (actualLocation && value.includes(actualLocation)) {
-    return value.replace(actualLocation, "").replace(/\s+/g, " ").trim();
-  }
-
-  return value;
-}
-
-function deriveBrigadeCode(area, alertText) {
-  if (area === "CONNEWARRE") return "CONN";
-  if (area === "MT DUNEED") return "MTDU";
-  if (area === "FRESHWATER CREEK") return "FRES";
-
-  const match = String(alertText || "").match(/ALERT\s+([A-Z]+)\d+/);
-  return match?.[1] || "";
-}
-
-function deriveBrigadeRole(area, alertText) {
-  if (area === "CONNEWARRE") return "Primary";
-  if (area === "MT DUNEED") return "Support to Mt Duneed";
-  if (area === "FRESHWATER CREEK") return "Support to Freshwater Creek";
-
-  const prefix = String(alertText || "").match(/ALERT\s+([A-Z]+)\d+/)?.[1] || "";
-  if (prefix === "CONN") return "Primary";
-  if (prefix) return `Support to ${prefix}`;
-
-  return "";
-}
-
-function compactLocation(text) {
-  return String(text || "").trim().slice(0, 90);
-}
-
-function eventNumberMatchesDate(eventNumber, dateText) {
-  if (!eventNumber || !dateText) return false;
-
-  const eventMatch = String(eventNumber).match(/^F(\d{2})(\d{2})\d{5}$/);
-  const dateMatch = String(dateText).match(/^(\d{2})-(\d{2})-(\d{4})$/);
-
-  if (!eventMatch || !dateMatch) return false;
-
-  const [, yy, mm] = eventMatch;
-  const [, , dateMonth, dateYear] = dateMatch;
-
-  return yy === dateYear.slice(2) && mm === dateMonth;
-}
-
-function toInputDate(dateText) {
-  const match = String(dateText || "").match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (!match) return "";
-
-  const [, dd, mm, yyyy] = match;
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function setScanStatus(message, className) {
-  const target = document.getElementById("scanStatus");
-  if (!target) return;
-
-  target.textContent = message;
-  target.className = `scan-status ${className}`;
+    await runPagerOcrIntoIncident(file);
+  });
 }
