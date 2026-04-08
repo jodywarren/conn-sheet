@@ -437,15 +437,15 @@ export function buildIncidentPatchForPreview(extractionResult) {
 
 export function bindOcrEvents() {
   const pagerUpload = qs('pagerUpload');
-  const scanPagerBtn = qs('scanPagerBtn');
 
-  if (!pagerUpload || !scanPagerBtn) {
-    console.warn('OCR controls not found in DOM');
+  if (!pagerUpload) {
+    console.warn('Pager upload control not found in DOM');
     return;
   }
 
   pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
+
     if (!file) {
       setScanStatus('Waiting for screenshot', 'scan-idle');
       return;
@@ -457,6 +457,7 @@ export function bindOcrEvents() {
     if (ocrBusy) return;
     await runPagerOcrIntoIncident(file);
   });
+}
 
   scanPagerBtn.addEventListener('click', async () => {
     if (ocrBusy) return;
