@@ -219,7 +219,7 @@ function applyPatchToIncidentState(patch) {
   }
 
   if (Array.isArray(patch.sceneUnits) && patch.sceneUnits.length > 0) {
-    setSceneBrigades(patch.sceneUnits);
+    setPagedSceneUnits(patch.sceneUnits);
   } else {
     saveState();
   }
