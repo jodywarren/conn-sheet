@@ -459,14 +459,26 @@ export function bindOcrEvents() {
   });
 }
 
-  scanPagerBtn.addEventListener('click', async () => {
-    if (ocrBusy) return;
+export function bindOcrEvents() {
+  const pagerUpload = qs('pagerUpload');
 
+  if (!pagerUpload) {
+    console.warn('Pager upload control not found in DOM');
+    return;
+  }
+
+  pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
+
     if (!file) {
-      setScanStatus('Please choose a screenshot first.', 'scan-error');
+      setScanStatus('Waiting for screenshot', 'scan-idle');
       return;
     }
 
+    setPreviewFromFile(file);
+    setScanStatus('Screenshot loaded. Scanning...', 'scan-working');
+
+    if (ocrBusy) return;
     await runPagerOcrIntoIncident(file);
   });
+}
