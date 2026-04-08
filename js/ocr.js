@@ -470,4 +470,3 @@ export function bindOcrEvents() {
 
     await runPagerOcrIntoIncident(file);
   });
-}
