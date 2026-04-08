@@ -437,11 +437,6 @@ label {
   border-color: var(--cfa-red);
 }
 
-.field-complete {
-  border-color: #3ca35c !important;
-  background: #edf8ef !important;
-}
-
 .file-input {
   min-width: 280px;
 }
@@ -1045,6 +1040,66 @@ body.dark-mode .ops-chip.complete,
 .dark-mode .tab-btn.complete,
 .dark-mode .chip-btn.complete,
 .dark-mode .ops-chip.complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+/* ===== COMPLETE STATES ===== */
+
+.field-complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b1b1b !important;
+}
+
+.scene-chip.complete {
+  background: #e8f5e9 !important;
+  border: 1px solid #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+.tab-btn.complete,
+.chip-btn.complete,
+.ops-chip.complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+/* keep active tab green if it is also complete */
+.tab-btn.active.complete,
+.chip-btn.active.complete,
+.ops-chip.active.complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+/* ===== DARK MODE COMPLETE STATES ===== */
+
+body.dark-mode .field-complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+
+body.dark-mode .scene-chip.complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+
+body.dark-mode .tab-btn.complete,
+body.dark-mode .chip-btn.complete,
+body.dark-mode .ops-chip.complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+
+body.dark-mode .tab-btn.active.complete,
+body.dark-mode .chip-btn.active.complete,
+body.dark-mode .ops-chip.active.complete {
   background: #1f3a28 !important;
   border-color: #66bb6a !important;
   color: #e8f5e9 !important;
