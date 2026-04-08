@@ -550,8 +550,8 @@ function extractLocationText(text) {
 
   combined = combined
     .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
-    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
     .replace(/\bF\d{9}\b/g, "")
+    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
     .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
