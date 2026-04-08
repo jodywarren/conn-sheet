@@ -3,7 +3,7 @@
 // Keeps existing layout/workflow intact.
 
 import { state, saveState } from './state.js';
-import { loadIncidentIntoInputs, setSceneBrigades } from './incident.js';
+import { loadIncidentIntoInputs, setPagedSceneUnits } from './incident.js';
 import { prepareOcrImage, getBestPreviewCanvas, variantToDataUrl } from './ocr-image.js';
 import { readPreparedOcr } from './ocr-read.js';
 import { scorePagerCandidates } from './pager-score.js';
