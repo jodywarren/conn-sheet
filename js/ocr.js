@@ -17,6 +17,28 @@ const UNIT_MAP = {
   STHB1: "SES"
 };
 
+const UI_NOISE_PATTERNS = [
+  /\bDETAILS\b/,
+  /\bATTENDANCE\b/,
+  /\bLOCATION\b/,
+  /\bVERIFIED\b/,
+  /\bMAP LAYERS\b/,
+  /\bNOT ATTENDING\b/,
+  /\bATTENDING\b/,
+  /\bUNAVAILABLE\b/,
+  /\bOTHER\b/,
+  /\bMODIFY\b/,
+  /\bSINCE ALERT\b/,
+  /\bEVENT ID[:\s]/,
+  /\bHOME\b/,
+  /\bCHAT\b/,
+  /\bSETTINGS\b/,
+  /\bREFRESH\b/,
+  /\bFILTER\b/,
+  /\bSORT\b/,
+  /\bPLEASE UPDATE YOUR AVAILABILITY\b/
+];
+
 export function bindOcrEvents() {
   const upload = document.getElementById("pagerUpload");
   if (!upload) return;
@@ -41,7 +63,6 @@ async function handleScreenshotUpload(event) {
   setScanStatus("Reading screenshot...", "scan-working");
   saveState();
 
-  // 🔥 THIS IS THE MISSING PIECE
   await runOcrFromPreview();
 }
 
@@ -75,20 +96,22 @@ async function runOcrFromPreview() {
 
     const rawText = result?.data?.text || "";
     const cleanedText = normalizeOcrText(rawText);
-    const blocks = splitPagerBlocks(cleanedText);
-    const groupedEvents = buildGroupedEvents(blocks);
+    const lines = toUsefulLines(cleanedText);
+    const sections = buildCandidateSections(lines);
+    const groupedEvents = buildGroupedEvents(sections);
     const validEvents = groupedEvents.filter((eventObj) => eventObj.eventNumber);
 
     console.log("OCR RAW TEXT:", rawText);
     console.log("OCR CLEANED TEXT:", cleanedText);
-    console.log("OCR BLOCKS:", blocks);
+    console.log("OCR USEFUL LINES:", lines);
+    console.log("OCR CANDIDATE SECTIONS:", sections);
     console.log("OCR GROUPED EVENTS:", groupedEvents);
 
     if (!validEvents.length) {
       state.incident.pagerDetails = cleanedText;
       loadIncidentIntoInputs();
       saveState();
-      setScanStatus("No valid event found. OCR text loaded into Pager Details.", "scan-warn");
+      setScanStatus("No valid pager message found. OCR text loaded into Pager Details.", "scan-warn");
       return;
     }
 
@@ -121,10 +144,11 @@ async function cropPagerScreenshot(dataUrl) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    const sx = Math.floor(img.width * 0.03);
-    const sy = Math.floor(img.height * 0.18);
-    const sw = Math.floor(img.width * 0.94);
-    const sh = Math.floor(img.height * 0.48);
+    // tighter crop around the pager detail card area
+    const sx = Math.floor(img.width * 0.04);
+    const sy = Math.floor(img.height * 0.28);
+    const sw = Math.floor(img.width * 0.92);
+    const sh = Math.floor(img.height * 0.34);
 
     canvas.width = sw;
     canvas.height = sh;
@@ -166,63 +190,70 @@ function normalizeOcrText(text) {
     .replace(/STRUC!/g, "STRUC1")
     .replace(/INCICI/g, "INCIC1")
     .replace(/INCIC!/g, "INCIC1")
+    .replace(/INCIC3I/g, "INCIC3")
     .replace(/INCII/g, "INCI1")
     .replace(/INCI!/g, "INCI1")
     .replace(/NSTRCI/g, "NSTRC1")
     .replace(/NSTRC!/g, "NSTRC1")
     .replace(/G&SCI/g, "G&SC1")
     .replace(/G&SC!/g, "G&SC1")
-    .replace(/HOME CHAT SETTINGS/g, "")
-    .replace(/PLEASE UPDATE YOUR AVAILABILITY/g, "")
-    .replace(/REFRESH FILTER SORT/g, "")
-    .replace(/\bREFRESH\b/g, "")
-    .replace(/\bFILTER\b/g, "")
-    .replace(/\bSORT\b/g, "")
-    .replace(/\bATTENDING\b/g, "")
-    .replace(/\bRESPOND\b/g, "")
     .replace(/[^\S\n]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .toUpperCase()
     .trim();
 }
 
-function splitPagerBlocks(text) {
-  const lines = String(text || "")
+function toUsefulLines(text) {
+  return String(text || "")
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean);
-
-  const blocks = [];
-  let current = [];
-
-  function isBlockStart(line) {
-    return (
-      /^EMERGENCY\b/.test(line) ||
-      /^NON[\s-]?EMERGENCY\b/.test(line) ||
-      /^ADMIN\b/.test(line)
-    );
-  }
-
-  for (const line of lines) {
-    if (isBlockStart(line) && current.length) {
-      blocks.push(current.join("\n"));
-      current = [line];
-    } else {
-      current.push(line);
-    }
-  }
-
-  if (current.length) {
-    blocks.push(current.join("\n"));
-  }
-
-  return blocks.filter(Boolean);
+    .filter(Boolean)
+    .filter((line) => !isUiNoiseLine(line));
 }
 
-function buildGroupedEvents(blocks) {
-  const parsedBlocks = blocks
-    .filter(isValidPagerBlock)
-    .map(parsePagerBlock)
+function isUiNoiseLine(line) {
+  const value = String(line || "").toUpperCase();
+  return UI_NOISE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function buildCandidateSections(lines) {
+  const sections = [];
+
+  lines.forEach((line, index) => {
+    if (!isKnownAreaLineLine(line)) return;
+
+    const start = Math.max(0, index - 2);
+    const end = Math.min(lines.length, index + 7);
+
+    const slice = lines.slice(start, end);
+
+    let sectionLines = [...slice];
+
+    // extend until event number found or max window reached
+    let cursor = end;
+    while (
+      cursor < lines.length &&
+      sectionLines.length < 12 &&
+      !extractEventNumber(sectionLines.join(" "))
+    ) {
+      sectionLines.push(lines[cursor]);
+      cursor += 1;
+    }
+
+    sections.push(sectionLines.join("\n"));
+  });
+
+  return [...new Set(sections)];
+}
+
+function isKnownAreaLineLine(line) {
+  const value = String(line || "").toUpperCase();
+  return KNOWN_AREA_LINES.some((candidate) => value.includes(candidate));
+}
+
+function buildGroupedEvents(sections) {
+  const parsedBlocks = sections
+    .map(parsePagerSection)
     .filter((block) => block.eventNumber);
 
   const byEvent = new Map();
@@ -239,38 +270,29 @@ function buildGroupedEvents(blocks) {
   );
 }
 
-function isValidPagerBlock(blockText) {
-  const text = String(blockText || "").toUpperCase();
-  return hasKnownAreaLine(text) && Boolean(extractEventNumber(text));
-}
-
-function hasKnownAreaLine(text) {
-  return KNOWN_AREA_LINES.some((line) => text.includes(line));
-}
-
-function parsePagerBlock(blockText) {
-  const text = String(blockText || "").trim();
+function parsePagerSection(sectionText) {
+  const text = String(sectionText || "").trim();
 
   const type = extractMessageType(text);
   const dateTime = extractDateTime(text);
   const areaLine = extractAreaLine(text);
   const area = normalizeAreaLine(areaLine);
-  const alertLine = extractAlertLine(text);
+  const alertText = extractAlertText(text);
   const eventNumber = extractEventNumber(text);
-  const incidentCode = extractIncidentCode(alertLine || text);
+  const incidentCode = extractIncidentCode(alertText || text);
   const incidentType = normalizeIncidentType(incidentCode);
   const responseCode = extractResponseCode(incidentCode);
   const units = extractUnits(text);
-  const locationText = extractLocationText(text);
+  const locationText = extractLocationText(alertText || text);
   const actualLocation = buildActualLocation(locationText);
-  const description = extractDescription(alertLine, actualLocation);
+  const description = extractDescription(alertText, actualLocation);
 
   return {
     rawText: text,
     type,
     areaLine,
     area,
-    alertLine,
+    alertText,
     eventNumber,
     incidentCode,
     incidentType,
@@ -335,18 +357,29 @@ function applyChosenIncident(eventObj) {
   const block = eventObj.baseBlock;
   if (!block) return;
 
+  const inputDate = toInputDate(eventObj.pagerDate || "");
+  const brigadeCode = deriveBrigadeCode(block.area, block.alertText);
+  const brigadeRole = deriveBrigadeRole(block.area, block.alertText);
+  const scannedAddress = eventObj.actualLocation || "";
+  const actualAddress = eventObj.actualLocation || "";
+
   state.incident.eventNumber = eventObj.eventNumber || "";
-  state.incident.pagerDate = toInputDate(eventObj.pagerDate || "");
+  state.incident.pagerDate = inputDate;
   state.incident.pagerTime = eventObj.pagerTime || "";
-  state.incident.brigadeCode = deriveBrigadeCode(block.area, block.alertLine);
-  state.incident.brigadeRole = deriveBrigadeRole(block.area, block.alertLine);
+
+  // set both old and new keys so the rest of the app keeps working
+  state.incident.brigadeCode = brigadeCode;
+  state.incident.alertAreaCode = brigadeCode;
+  state.incident.brigadeRole = brigadeRole;
   state.incident.incidentType = eventObj.incidentType || "";
   state.incident.responseCode = eventObj.responseCode || "";
   state.incident.pagerDetails = block.rawText || "";
-  state.incident.scannedLocation = eventObj.actualLocation || "";
-  state.incident.actualLocation = eventObj.actualLocation || "";
-  setSceneBrigades(eventObj.units || []);
+  state.incident.scannedLocation = scannedAddress;
+  state.incident.scannedAddress = scannedAddress;
+  state.incident.actualLocation = actualAddress;
+  state.incident.actualAddress = actualAddress;
 
+  setSceneBrigades(eventObj.units || []);
   loadIncidentIntoInputs();
   saveState();
   hideJobPicker();
@@ -397,8 +430,7 @@ function extractMessageType(text) {
 
   if (/\bNON[\s-]?EMERGENCY\b/.test(value)) return "NON-EMERGENCY";
   if (/\bEMERGENCY\b/.test(value)) return "EMERGENCY";
-  if (/\bADMIN\b/.test(value)) return "ADMIN";
-  return "UNKNOWN";
+  return "EMERGENCY";
 }
 
 function extractDateTime(text) {
@@ -434,14 +466,24 @@ function getAreaPriority(area) {
   return index === -1 ? 999 : index;
 }
 
-function extractAlertLine(text) {
-  const lines = String(text || "")
+function extractAlertText(text) {
+  const value = String(text || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const alertLine = lines.find((line) => line.startsWith("ALERT "));
-  return alertLine || "";
+  const startIndex = value.findIndex((line) => line.includes("ALERT "));
+  if (startIndex === -1) return "";
+
+  const collected = [];
+  for (let i = startIndex; i < value.length; i += 1) {
+    const line = value[i];
+    collected.push(line);
+
+    if (extractEventNumber(line) || /\bF[0-9IO]{9}\b/.test(line)) break;
+  }
+
+  return collected.join(" ");
 }
 
 function extractEventNumber(text) {
@@ -462,9 +504,7 @@ function extractEventNumber(text) {
 
 function extractIncidentCode(text) {
   const value = String(text || "").toUpperCase();
-
-  const match = value.match(/\b(ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\b/);
-  return match?.[1] || "";
+  return value.match(/\b(ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\b/)?.[1] || "";
 }
 
 function normalizeIncidentType(code) {
@@ -521,18 +561,10 @@ function extractUnits(text) {
 }
 
 function extractLocationText(text) {
-  const lines = String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const alertIndex = lines.findIndex((line) => line.startsWith("ALERT "));
-  if (alertIndex === -1) return "";
-
-  let combined = lines.slice(alertIndex).join(" ");
+  let combined = String(text || "").toUpperCase();
 
   combined = combined
-    .replace(/^ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
+    .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
     .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
     .replace(/\bF\d{9}\b/g, "")
     .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
@@ -553,6 +585,7 @@ function buildActualLocation(text) {
     .replace(/\s*\/\s*/g, " / ")
     .trim();
 
+  // CNR rule first
   if (/\bCNR\b/.test(cleaned)) {
     const cnrMatch = cleaned.match(
       /\bCNR\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
@@ -562,13 +595,15 @@ function buildActualLocation(text) {
     }
   }
 
-  const primaryAddress = cleaned.match(
+  // numbered address rule, stop before first /
+  const numbered = cleaned.match(
     /\b\d+\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
   );
-  if (primaryAddress?.[0]) {
-    return primaryAddress[0].trim();
+  if (numbered?.[0]) {
+    return numbered[0].trim();
   }
 
+  // fallback: take text before / or //
   const slashIndex = cleaned.indexOf(" / ");
   if (slashIndex > 0) {
     return cleaned.slice(0, slashIndex).trim();
@@ -582,9 +617,13 @@ function buildActualLocation(text) {
   return cleaned;
 }
 
-function extractDescription(alertLine, actualLocation) {
-  const value = String(alertLine || "")
-    .replace(/^ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
+function extractDescription(alertText, actualLocation) {
+  const value = String(alertText || "")
+    .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, "")
+    .replace(/\bF\d{9}\b/g, "")
+    .replace(/\b(?:M|SVC)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, "")
+    .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (!value) return "";
@@ -596,21 +635,21 @@ function extractDescription(alertLine, actualLocation) {
   return value;
 }
 
-function deriveBrigadeCode(area, alertLine) {
+function deriveBrigadeCode(area, alertText) {
   if (area === "CONNEWARRE") return "CONN";
   if (area === "MT DUNEED") return "MTDU";
   if (area === "FRESHWATER CREEK") return "FRES";
 
-  const match = String(alertLine || "").match(/^ALERT\s+([A-Z]+)\d+/);
+  const match = String(alertText || "").match(/ALERT\s+([A-Z]+)\d+/);
   return match?.[1] || "";
 }
 
-function deriveBrigadeRole(area, alertLine) {
+function deriveBrigadeRole(area, alertText) {
   if (area === "CONNEWARRE") return "Primary";
   if (area === "MT DUNEED") return "Support to Mt Duneed";
   if (area === "FRESHWATER CREEK") return "Support to Freshwater Creek";
 
-  const prefix = String(alertLine || "").match(/^ALERT\s+([A-Z]+)\d+/)?.[1] || "";
+  const prefix = String(alertText || "").match(/ALERT\s+([A-Z]+)\d+/)?.[1] || "";
   if (prefix === "CONN") return "Primary";
   if (prefix) return `Support to ${prefix}`;
 
