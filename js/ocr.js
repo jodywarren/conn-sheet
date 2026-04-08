@@ -19,10 +19,9 @@ const UNIT_MAP = {
 
 export function bindOcrEvents() {
   const upload = document.getElementById("pagerUpload");
-  const scanBtn = document.getElementById("scanPagerBtn");
+  if (!upload) return;
 
-  upload?.addEventListener("change", handleScreenshotUpload);
-  scanBtn?.addEventListener("click", runOcrFromPreview);
+  upload.addEventListener("change", handleScreenshotUpload);
 }
 
 async function handleScreenshotUpload(event) {
@@ -39,8 +38,11 @@ async function handleScreenshotUpload(event) {
   }
 
   hideJobPicker();
-  setScanStatus("Screenshot loaded. Press Scan Screenshot.", "scan-idle");
+  setScanStatus("Reading screenshot...", "scan-working");
   saveState();
+
+  // 🔥 THIS IS THE MISSING PIECE
+  await runOcrFromPreview();
 }
 
 async function runOcrFromPreview() {
