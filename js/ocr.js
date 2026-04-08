@@ -221,24 +221,10 @@ function buildCandidateSections(lines) {
   lines.forEach((line, index) => {
     if (!isKnownAreaLineLine(line)) return;
 
-    const start = Math.max(0, index - 2);
-    const end = Math.min(lines.length, index + 7);
+    const start = Math.max(0, index - 3);
+    const end = Math.min(lines.length, index + 10);
 
-    const slice = lines.slice(start, end);
-
-    let sectionLines = [...slice];
-
-    // extend until event number found or max window reached
-    let cursor = end;
-    while (
-      cursor < lines.length &&
-      sectionLines.length < 12 &&
-      !extractEventNumber(sectionLines.join(" "))
-    ) {
-      sectionLines.push(lines[cursor]);
-      cursor += 1;
-    }
-
+    const sectionLines = lines.slice(start, end);
     sections.push(sectionLines.join("\n"));
   });
 
