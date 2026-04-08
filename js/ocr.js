@@ -2,6 +2,7 @@ import { state, saveState } from "./state.js";
 import { loadIncidentIntoInputs, setSceneBrigades } from "./incident.js";
 
 const AREA_PRIORITY = ["CONNEWARRE", "MT DUNEED"];
+
 const KNOWN_AREA_LINES = [
   "CONNEWARRE BRIGADE ALL",
   "CONNEWARRE ALL",
@@ -36,7 +37,12 @@ const UI_NOISE_PATTERNS = [
   /\bREFRESH\b/,
   /\bFILTER\b/,
   /\bSORT\b/,
-  /\bPLEASE UPDATE YOUR AVAILABILITY\b/
+  /\bPLEASE UPDATE YOUR AVAILABILITY\b/,
+  /\bBACK TO TOP\b/,
+  /\bNAVIGATE TO THIS EVENT\b/,
+  /\bSTATION\b/,
+  /\bEVENT\b/,
+  /\bYOU\b/
 ];
 
 export function bindOcrEvents() {
@@ -144,6 +150,7 @@ async function cropPagerScreenshot(dataUrl) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
+    // Wider/taller crop so the red header line stays included
     const sx = Math.floor(img.width * 0.03);
     const sy = Math.floor(img.height * 0.20);
     const sw = Math.floor(img.width * 0.94);
@@ -178,6 +185,8 @@ function normalizeOcrText(text) {
     .replace(/[—–]/g, "-")
     .replace(/EMERGENCV/g, "EMERGENCY")
     .replace(/EMERGENC Y/g, "EMERGENCY")
+    .replace(/EMERGENC¥/g, "EMERGENCY")
+    .replace(/EMERGENC7/g, "EMERGENCY")
     .replace(/NONEMERGENCY/g, "NON EMERGENCY")
     .replace(/NON-EMERGENCY/g, "NON EMERGENCY")
     .replace(/ADMINISTRATIVE/g, "ADMIN")
@@ -190,8 +199,6 @@ function normalizeOcrText(text) {
     .replace(/INCICI/g, "INCIC1")
     .replace(/INCIC!/g, "INCIC1")
     .replace(/INCIC3I/g, "INCIC3")
-    .replace(/INCII/g, "INCI1")
-    .replace(/INCI!/g, "INCI1")
     .replace(/NSTRCI/g, "NSTRC1")
     .replace(/NSTRC!/g, "NSTRC1")
     .replace(/G&SCI/g, "G&SC1")
@@ -259,11 +266,14 @@ function parsePagerSection(sectionText) {
   const text = String(sectionText || "").trim();
 
   const type = extractMessageType(text);
-  const dateTime = extractDateTime(text);
   const areaLine = extractAreaLine(text);
   const area = normalizeAreaLine(areaLine);
   const alertText = extractAlertText(text);
   const eventNumber = extractEventNumber(text);
+
+  const headerLine = extractEmergencyHeaderLine(text);
+  const verifiedDateTime = extractVerifiedPagerDateTime(headerLine, eventNumber);
+
   const incidentCode = extractIncidentCode(alertText || text);
   const incidentType = normalizeIncidentType(incidentCode);
   const responseCode = extractResponseCode(incidentCode);
@@ -279,18 +289,19 @@ function parsePagerSection(sectionText) {
     area,
     alertText,
     eventNumber,
+    headerLine,
     incidentCode,
     incidentType,
     responseCode,
-    pagerDate: dateTime.date,
-    pagerTime: dateTime.time,
+    pagerDate: verifiedDateTime.date,
+    pagerTime: verifiedDateTime.time,
     units,
     locationText,
     actualLocation,
     description,
     areaPriority: getAreaPriority(area),
     isEmergency: type === "EMERGENCY",
-    matchesDate: eventNumberMatchesDate(eventNumber, dateTime.date)
+    matchesDate: verifiedDateTime.valid
   };
 }
 
@@ -315,11 +326,16 @@ function mergeEventBlocks(eventNumber, blocks) {
     description: baseBlock?.description || "",
     locationText: baseBlock?.locationText || "",
     actualLocation: baseBlock?.actualLocation || "",
-    rawText: baseBlock?.rawText || ""
+    rawText: baseBlock?.rawText || "",
+    matchesDate: Boolean(baseBlock?.matchesDate)
   };
 }
 
 function compareBlocksForBaseSelection(a, b) {
+  if (a.matchesDate !== b.matchesDate) {
+    return a.matchesDate ? -1 : 1;
+  }
+
   if (a.areaPriority !== b.areaPriority) {
     return a.areaPriority - b.areaPriority;
   }
@@ -352,13 +368,15 @@ function applyChosenIncident(eventObj) {
   state.incident.pagerDate = inputDate;
   state.incident.pagerTime = eventObj.pagerTime || "";
 
-  // set both old and new keys so the rest of the app keeps working
   state.incident.brigadeCode = brigadeCode;
   state.incident.alertAreaCode = brigadeCode;
   state.incident.brigadeRole = brigadeRole;
   state.incident.incidentType = eventObj.incidentType || "";
   state.incident.responseCode = eventObj.responseCode || "";
+
+  // Keep full pager message for final report
   state.incident.pagerDetails = block.rawText || "";
+
   state.incident.scannedLocation = scannedAddress;
   state.incident.scannedAddress = scannedAddress;
   state.incident.actualLocation = actualAddress;
@@ -415,14 +433,90 @@ function extractMessageType(text) {
 
   if (/\bNON[\s-]?EMERGENCY\b/.test(value)) return "NON-EMERGENCY";
   if (/\bEMERGENCY\b/.test(value)) return "EMERGENCY";
-  return "EMERGENCY";
+  if (/\bEMERGENCV\b/.test(value)) return "EMERGENCY";
+  if (/\bEMERGENC[YV]\b/.test(value)) return "EMERGENCY";
+  if (/\bEMERGENC\s*Y\b/.test(value)) return "EMERGENCY";
+  if (/\bEMERGENC7\b/.test(value)) return "EMERGENCY";
+  if (/\bEMERGENC¥\b/.test(value)) return "EMERGENCY";
+
+  return "UNKNOWN";
+}
+
+function extractEmergencyHeaderLine(text) {
+  const lines = String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const headerPatterns = [
+    /\bEMERGENCY\b/,
+    /\bEMERGENCV\b/,
+    /\bEMERGENC[YV]\b/,
+    /\bEMERGENC\s*Y\b/,
+    /\bEMERGENC7\b/,
+    /\bEMERGENC¥\b/
+  ];
+
+  for (const line of lines) {
+    const upper = line.toUpperCase();
+
+    const looksLikeHeaderWord = headerPatterns.some((pattern) => pattern.test(upper));
+    const hasTime = /\b\d{1,2}:\d{2}:\d{2}\b/.test(upper);
+    const hasDate = /\b\d{2}[-/:]\d{2}[-/:]\d{4}\b/.test(upper);
+
+    if (looksLikeHeaderWord && hasTime && hasDate) {
+      return upper;
+    }
+  }
+
+  return "";
+}
+
+function extractVerifiedPagerDateTime(headerLine, eventNumber) {
+  const header = String(headerLine || "").toUpperCase();
+  const eventNo = String(eventNumber || "").toUpperCase();
+
+  if (!header || !eventNo) {
+    return { date: "", time: "", valid: false };
+  }
+
+  const timeMatch = header.match(/\b(\d{1,2}:\d{2}:\d{2})\b/);
+  const dateMatch = header.match(/\b(\d{2})[-/:](\d{2})[-/:](\d{4})\b/);
+  const eventMatch = eventNo.match(/^F(\d{2})(\d{2})\d{5}$/);
+
+  if (!timeMatch || !dateMatch || !eventMatch) {
+    return { date: "", time: "", valid: false };
+  }
+
+  const [, dd, mm, yyyy] = dateMatch;
+  const [, yyFromEvent, mmFromEvent] = eventMatch;
+
+  const yearMatches = yyyy.slice(2) === yyFromEvent;
+  const monthMatches = mm === mmFromEvent;
+
+  if (!yearMatches || !monthMatches) {
+    return { date: "", time: "", valid: false };
+  }
+
+  return {
+    date: `${dd}-${mm}-${yyyy}`,
+    time: timeMatch[1].slice(0, 5),
+    valid: true
+  };
 }
 
 function extractDateTime(text) {
-  const match = String(text || "").match(/(\d{2}:\d{2}:\d{2})\s+(\d{2}-\d{2}-\d{4})/);
+  const match = String(text || "").match(/(\d{1,2}:\d{2}:\d{2})\s+(\d{2}[-/:]\d{2}[-/:]\d{4})/);
+  if (!match) {
+    return { time: "", date: "" };
+  }
+
+  const rawTime = match[1];
+  const rawDate = match[2].replace(/\//g, "-").replace(/:/g, "-");
+
   return {
-    time: match?.[1] || "",
-    date: match?.[2] || ""
+    time: rawTime.slice(0, 5),
+    date: rawDate
   };
 }
 
@@ -452,17 +546,17 @@ function getAreaPriority(area) {
 }
 
 function extractAlertText(text) {
-  const value = String(text || "")
+  const lines = String(text || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const startIndex = value.findIndex((line) => line.includes("ALERT "));
+  const startIndex = lines.findIndex((line) => line.includes("ALERT "));
   if (startIndex === -1) return "";
 
   const collected = [];
-  for (let i = startIndex; i < value.length; i += 1) {
-    const line = value[i];
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i];
     collected.push(line);
 
     if (extractEventNumber(line) || /\bF[0-9IO]{9}\b/.test(line)) break;
@@ -570,7 +664,6 @@ function buildActualLocation(text) {
     .replace(/\s*\/\s*/g, " / ")
     .trim();
 
-  // CNR rule first
   if (/\bCNR\b/.test(cleaned)) {
     const cnrMatch = cleaned.match(
       /\bCNR\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
@@ -580,7 +673,6 @@ function buildActualLocation(text) {
     }
   }
 
-  // numbered address rule, stop before first /
   const numbered = cleaned.match(
     /\b\d+\s+[A-Z0-9 ]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
   );
@@ -588,7 +680,6 @@ function buildActualLocation(text) {
     return numbered[0].trim();
   }
 
-  // fallback: take text before / or //
   const slashIndex = cleaned.indexOf(" / ");
   if (slashIndex > 0) {
     return cleaned.slice(0, slashIndex).trim();
