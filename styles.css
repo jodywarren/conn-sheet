@@ -1007,3 +1007,45 @@ body.dark-mode #oicBanner.missing {
   font-weight:700;
   cursor:pointer;
 }
+.field-complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+}
+
+.scene-chip.complete {
+  background: #e8f5e9;
+  border: 1px solid #43a047;
+}
+
+.tab-btn.complete,
+.chip-btn.complete,
+.ops-chip.complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+body.dark-mode .field-complete,
+.dark-mode .field-complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+
+body.dark-mode .scene-chip.complete,
+.dark-mode .scene-chip.complete {
+  background: #1f3a28;
+  border-color: #66bb6a;
+  color: #e8f5e9;
+}
+
+body.dark-mode .tab-btn.complete,
+body.dark-mode .chip-btn.complete,
+body.dark-mode .ops-chip.complete,
+.dark-mode .tab-btn.complete,
+.dark-mode .chip-btn.complete,
+.dark-mode .ops-chip.complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
