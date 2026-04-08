@@ -1,6 +1,6 @@
 // ocr.js
 // OCR orchestration and DOM binding for the Incident page only.
-// Keeps existing layout/workflow intact.
+// Auto-scans on upload. No scan button required.
 
 import { state, saveState } from './state.js';
 import { loadIncidentIntoInputs, setPagedSceneUnits } from './incident.js';
@@ -10,6 +10,22 @@ import { scorePagerCandidates } from './pager-score.js';
 import { shouldAutoCopyActualAddress } from './pager-parse.js';
 
 let ocrBusy = false;
+
+const KNOWN_AREA_LINES = [
+  'CONNEWARRE BRIGADE ALL',
+  'CONNEWARRE ALL',
+  'MT DUNEED ALL',
+  'FRESHWATER CREEK BRIGADE ALL',
+  'FRESHWATER CREEK ALL'
+];
+
+const HEADER_VARIANTS = [
+  'EMERGENCY',
+  'EMERGENCV',
+  'EMERGENC Y',
+  'EMERGENC¥',
+  'EMERGENC7'
+];
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -154,21 +170,283 @@ function normaliseSceneUnits(sceneUnits) {
   return uniqueStrings(sceneUnits || []);
 }
 
-function buildIncidentPatchFromScoredResult(scoredResult) {
-  const merged = scoredResult?.merged || {};
+function normalizeRawText(value) {
+  return String(value || '')
+    .replace(/\r/g, '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[—–]/g, '-')
+    .replace(/[|]/g, '1')
+    .replace(/EMERGENCV/g, 'EMERGENCY')
+    .replace(/EMERGENC Y/g, 'EMERGENCY')
+    .replace(/EMERGENC¥/g, 'EMERGENCY')
+    .replace(/EMERGENC7/g, 'EMERGENCY')
+    .replace(/NONEMERGENCY/g, 'NON EMERGENCY')
+    .replace(/NON-EMERGENCY/g, 'NON EMERGENCY')
+    .replace(/2&8\\T/g, 'MT DUNEED ALL')
+    .replace(/2&8\s?\\T/g, 'MT DUNEED ALL')
+    .replace(/ALARCI/g, 'ALARC1')
+    .replace(/ALARC!/g, 'ALARC1')
+    .replace(/STRUCI/g, 'STRUC1')
+    .replace(/STRUC!/g, 'STRUC1')
+    .replace(/INCICI/g, 'INCIC1')
+    .replace(/INCIC!/g, 'INCIC1')
+    .replace(/NSTRCI/g, 'NSTRC1')
+    .replace(/NSTRC!/g, 'NSTRC1')
+    .replace(/G&SCI/g, 'G&SC1')
+    .replace(/G&SC!/g, 'G&SC1')
+    .replace(/[^\S\n]+/g, ' ')
+    .trim();
+}
+
+function upperLines(text) {
+  return normalizeRawText(text)
+    .toUpperCase()
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function extractEventNumber(text) {
+  const raw = normalizeRawText(text).toUpperCase();
+
+  const direct = raw.match(/\bF[0-9IO]{9}\b/);
+  if (direct) {
+    return direct[0].replace(/I/g, '1').replace(/O/g, '0');
+  }
+
+  const header = raw.match(/EVENT\s*ID[:\s]+(F[0-9IO]{9})\b/);
+  if (header?.[1]) {
+    return header[1].replace(/I/g, '1').replace(/O/g, '0');
+  }
+
+  return '';
+}
+
+function extractEmergencyHeaderLine(text) {
+  const lines = upperLines(text);
+
+  for (const line of lines) {
+    const hasHeaderWord = HEADER_VARIANTS.some((word) => line.includes(word));
+    const hasTime = /\b\d{1,2}:\d{2}:\d{2}\b/.test(line);
+    const hasDate = /\b\d{2}[-/:]\d{2}[-/:]\d{4}\b/.test(line);
+
+    if (hasHeaderWord && hasTime && hasDate) {
+      return line.replace(/\//g, '-').replace(/:/g, (m, idx, full) => {
+        return /\d{2}:\d{2}:\d{2}/.test(full) ? ':' : '-';
+      });
+    }
+  }
+
+  return '';
+}
+
+function extractVerifiedPagerDateTime(text, eventNumber) {
+  const header = extractEmergencyHeaderLine(text);
+  const eventNo = String(eventNumber || '').toUpperCase();
+
+  if (!header || !eventNo) {
+    return { date: '', time: '', valid: false };
+  }
+
+  const timeMatch = header.match(/\b(\d{1,2}:\d{2}:\d{2})\b/);
+  const dateMatch = header.match(/\b(\d{2})[-/:](\d{2})[-/:](\d{4})\b/);
+  const eventMatch = eventNo.match(/^F(\d{2})(\d{2})\d{5}$/);
+
+  if (!timeMatch || !dateMatch || !eventMatch) {
+    return { date: '', time: '', valid: false };
+  }
+
+  const [, dd, mm, yyyy] = dateMatch;
+  const [, yyFromEvent, mmFromEvent] = eventMatch;
+
+  const yearMatches = yyyy.slice(2) === yyFromEvent;
+  const monthMatches = mm === mmFromEvent;
+
+  if (!yearMatches || !monthMatches) {
+    return { date: '', time: '', valid: false };
+  }
+
+  return {
+    date: `${dd}-${mm}-${yyyy}`,
+    time: timeMatch[1].slice(0, 5),
+    valid: true
+  };
+}
+
+function extractAreaLine(text) {
+  const upper = normalizeRawText(text).toUpperCase();
+
+  for (const candidate of KNOWN_AREA_LINES) {
+    if (upper.includes(candidate)) return candidate;
+  }
+
+  return '';
+}
+
+function deriveAlertAreaCode(text) {
+  const areaLine = extractAreaLine(text);
+
+  if (areaLine.includes('CONNEWARRE')) return 'CONN';
+  if (areaLine.includes('MT DUNEED')) return 'MTDU';
+  if (areaLine.includes('FRESHWATER CREEK')) return 'FRES';
+
+  const alertPrefix = normalizeRawText(text).toUpperCase().match(/\bALERT\s+([A-Z]+)\d+/);
+  return alertPrefix?.[1] || '';
+}
+
+function deriveBrigadeRole(text) {
+  const areaLine = extractAreaLine(text);
+  const code = deriveAlertAreaCode(text);
+
+  if (areaLine.includes('CONNEWARRE')) return 'Primary';
+  if (areaLine.includes('MT DUNEED')) return 'Support to Mt Duneed';
+  if (areaLine.includes('FRESHWATER CREEK')) return 'Support to Freshwater Creek';
+  if (code === 'CONN') return 'Primary';
+  if (code) return `Support to ${code}`;
+
+  return '';
+}
+
+function extractIncidentCode(text) {
+  const upper = normalizeRawText(text).toUpperCase();
+  return upper.match(/\b(ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\b/)?.[1] || '';
+}
+
+function deriveIncidentType(code) {
+  const upper = String(code || '').toUpperCase();
+
+  if (upper.startsWith('ALARC')) return 'ALAR';
+  if (upper.startsWith('STRUC')) return 'STRU';
+  if (upper.startsWith('INCIC')) return 'INCI';
+  if (upper.startsWith('G&SC')) return 'G&SC';
+  if (upper.startsWith('NSTRC')) return 'NSTR';
+
+  return '';
+}
+
+function deriveResponseCode(code) {
+  const upper = String(code || '').toUpperCase();
+  if (upper.endsWith('1')) return 'Code 1';
+  if (upper.endsWith('3')) return 'Code 3';
+  return '';
+}
+
+function extractAlertBlockText(text) {
+  const lines = upperLines(text);
+  const startIndex = lines.findIndex((line) => line.includes('ALERT '));
+  if (startIndex === -1) return '';
+
+  const collected = [];
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i];
+    collected.push(line);
+    if (extractEventNumber(line) || /\bF[0-9IO]{9}\b/.test(line)) break;
+  }
+
+  return collected.join(' ');
+}
+
+function stripTrailingOperationalTokens(text) {
+  return String(text || '')
+    .replace(/\bF[0-9IO]{9}\b/g, '')
+    .replace(/\b(?:M|SVC|SVSW)\s+\d{3,4}\s+[A-Z]\d{1,2}\s+\(\d+\)\b/g, '')
+    .replace(/\b(?:C[A-Z]{4}|P\d+[A-Z]?|R\d+[A-Z]?|AFP|FP|AV|STHB1)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractScannedAddress(text) {
+  let combined = extractAlertBlockText(text);
+  if (!combined) return '';
+
+  combined = combined
+    .replace(/^.*?ALERT\s+[A-Z0-9]+\s+(?:ALARC[13]|STRUC[13]|INCIC[13]|G&SC[13]|NSTRC[13])\s*/, '')
+    .trim();
+
+  combined = stripTrailingOperationalTokens(combined)
+    .replace(/\/{2,}/g, ' // ')
+    .replace(/\s*\/\/\s*/g, ' // ')
+    .replace(/\s*\/\s*/g, ' / ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!combined) return '';
+
+  if (/\bCNR\b/.test(combined)) {
+    const cnrMatch = combined.match(
+      /\bCNR\s+[A-Z0-9 \-]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\s*\/\s*[A-Z0-9 \-]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
+    );
+    if (cnrMatch?.[0]) {
+      return cnrMatch[0].trim();
+    }
+  }
+
+  const numbered = combined.match(
+    /\b\d+\s+[A-Z0-9 \-]+?(?:ST|RD|DR|AVE|AV|HWY|CT|CRT|CRES|PL|WAY|LANE|LN)\b/
+  );
+  if (numbered?.[0]) {
+    return numbered[0].trim();
+  }
+
+  const slashIndex = combined.indexOf(' / ');
+  if (slashIndex > 0) {
+    return combined.slice(0, slashIndex).trim();
+  }
+
+  const doubleSlashIndex = combined.indexOf(' // ');
+  if (doubleSlashIndex > 0) {
+    return combined.slice(0, doubleSlashIndex).trim();
+  }
+
+  return combined;
+}
+
+function buildIncidentPatchFromExtraction(extraction) {
+  const merged = extraction?.chosenResult?.merged || {};
+  const chosenRawText =
+    extraction?.chosenResult?.primary?.rawText ||
+    extraction?.chosenCandidate?.rawText ||
+    '';
+
+  const fullPagerText = cleanString(merged.pagerDetails || chosenRawText);
+  const eventNumber = cleanString(merged.eventNumber || extractEventNumber(fullPagerText));
+
+  const verifiedDateTime = extractVerifiedPagerDateTime(fullPagerText, eventNumber);
+
+  const alertAreaCode = cleanString(
+    merged.alertAreaCode || deriveAlertAreaCode(fullPagerText)
+  );
+
+  const brigadeRole = cleanString(
+    merged.brigadeRole || deriveBrigadeRole(fullPagerText)
+  );
+
+  const incidentCode = cleanString(extractIncidentCode(fullPagerText));
+  const incidentType = cleanString(
+    merged.incidentType || deriveIncidentType(incidentCode)
+  );
+
+  const responseCode = cleanString(
+    merged.responseCode || deriveResponseCode(incidentCode)
+  );
+
+  const scannedAddress = cleanString(
+    merged.scannedAddress || extractScannedAddress(fullPagerText)
+  );
+
   const currentActualAddress = cleanString(state?.incident?.actualAddress || '');
   const actualAddressEdited = !!state?.incident?.actualAddressEdited;
-  const scannedAddress = cleanString(merged.scannedAddress || '');
 
   const patch = {
-    eventNumber: cleanString(merged.eventNumber || ''),
-    pagerDate: convertPagerDateToInputDate(cleanString(merged.pagerDate || '')),
-    pagerTime: cleanString(merged.pagerTime || ''),
-    alertAreaCode: cleanString(merged.alertAreaCode || ''),
-    brigadeRole: cleanString(merged.brigadeRole || ''),
-    incidentType: cleanString(merged.incidentType || ''),
-    responseCode: cleanString(merged.responseCode || ''),
-    pagerDetails: cleanString(merged.pagerDetails || ''),
+    eventNumber,
+    pagerDate: convertPagerDateToInputDate(cleanString(merged.pagerDate || verifiedDateTime.date)),
+    pagerTime: cleanString(merged.pagerTime || verifiedDateTime.time),
+    alertAreaCode,
+    brigadeRole,
+    incidentType,
+    responseCode,
+    pagerDetails: fullPagerText,
     scannedAddress,
     sceneUnits: normaliseSceneUnits(merged.sceneUnits || [])
   };
@@ -377,12 +655,12 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
       }
     });
 
-    const rawPatch = buildIncidentPatchFromScoredResult(extraction.chosenResult);
+    const rawPatch = buildIncidentPatchFromExtraction(extraction);
     const patch = buildNonEmptyPatch(rawPatch);
 
     if (extraction.success) {
       applyPatchToIncidentState(patch);
-      setScanStatus('OCR complete. Check the populated fields.', 'scan-success');
+      setScanStatus('OCR complete. Check the populated fields.', 'scan-good');
     } else {
       setScanStatus('OCR could not safely extract a valid emergency page. Please correct fields manually.', 'scan-error');
     }
@@ -428,35 +706,12 @@ export function createPagerOcrController(integration = {}) {
 }
 
 export function buildIncidentPatchForPreview(extractionResult) {
-  const patch = buildIncidentPatchFromScoredResult(
-    extractionResult?.chosenResult || extractionResult
-  );
+  const extraction = extractionResult?.chosenResult
+    ? extractionResult
+    : { chosenResult: extractionResult, chosenCandidate: null };
 
+  const patch = buildIncidentPatchFromExtraction(extraction);
   return buildNonEmptyPatch(patch);
-}
-
-export function bindOcrEvents() {
-  const pagerUpload = qs('pagerUpload');
-
-  if (!pagerUpload) {
-    console.warn('Pager upload control not found in DOM');
-    return;
-  }
-
-  pagerUpload.addEventListener('change', async () => {
-    const file = pagerUpload.files && pagerUpload.files[0];
-
-    if (!file) {
-      setScanStatus('Waiting for screenshot', 'scan-idle');
-      return;
-    }
-
-    setPreviewFromFile(file);
-    setScanStatus('Screenshot loaded. Scanning...', 'scan-working');
-
-    if (ocrBusy) return;
-    await runPagerOcrIntoIncident(file);
-  });
 }
 
 export function bindOcrEvents() {
