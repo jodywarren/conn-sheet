@@ -10,66 +10,13 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./connewarre-logo.png" />
   <link rel="stylesheet" href="./styles.css" />
-
-  <style>
-    .upload-split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-
-    .upload-half {
-      min-height: 42px;
-      border-radius: 12px;
-      border: 1px solid #cfd4dc;
-      background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 14px;
-      font-weight: 600;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-
-    .upload-label {
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .upload-label:hover {
-      background: #f7f8fa;
-    }
-
-    .upload-filename {
-      justify-content: flex-start;
-      color: #374151;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .hidden-file-input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-      width: 1px;
-      height: 1px;
-    }
-  </style>
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header compact-header">
       <div class="brand-wrap left-brand">
         <div class="logo-frame header-logo-frame">
-          <img
-            src="./connewarre-logo.png"
-            alt="Connewarre Fire Brigade logo"
-            class="logo header-logo"
-          />
+          <img src="./connewarre-logo.png" alt="Connewarre Fire Brigade logo" class="logo header-logo" />
         </div>
       </div>
 
@@ -102,14 +49,7 @@
       <button class="tab-btn active" data-page="incidentPage" type="button">Incident</button>
       <button class="tab-btn" data-page="respondersPage" type="button">Responders</button>
       <button class="tab-btn" data-page="sendPage" type="button">Send Report</button>
-      <button
-        class="tab-btn settings-tab"
-        id="openSettingsBtn"
-        type="button"
-        aria-label="Profile and settings"
-      >
-        ⚙
-      </button>
+      <button class="tab-btn settings-tab" id="openSettingsBtn" type="button" aria-label="Profile and settings">⚙</button>
     </nav>
 
     <section class="status-wrap">
@@ -130,33 +70,14 @@
           <div class="section">
             <h2 class="section-title">Pager Screenshot</h2>
 
-            <div class="upload-split">
-              <label for="pagerUpload" class="upload-half upload-label">Add Screenshot here</label>
-              <div id="pagerFileName" class="upload-half upload-filename">No file selected</div>
+            <div class="row wrap pager-upload-row">
+              <input id="pagerUpload" class="field-input editable-field file-input" type="file" accept="image/*" />
             </div>
 
-            <input
-              id="pagerUpload"
-              class="hidden-file-input"
-              type="file"
-              accept="image/*"
-            />
-
-            <div id="scanStatus" class="scan-status scan-idle">
-              Waiting for screenshot
-            </div>
+            <div id="scanStatus" class="scan-status scan-idle">Waiting for screenshot</div>
 
             <div class="preview-wrap">
-              <img
-                id="pagerPreview"
-                class="pager-preview hidden"
-                alt="Pager screenshot preview"
-              />
-            </div>
-
-            <div id="jobPickerWrap" class="hidden">
-              <h3 class="section-title" style="margin-top: 12px;">Select Job</h3>
-              <div id="jobPickerList" class="chip-wrap"></div>
+              <img id="pagerPreview" class="pager-preview hidden" alt="Pager screenshot preview" />
             </div>
           </div>
 
@@ -166,12 +87,7 @@
             <div class="grid">
               <label>
                 Event Number
-                <input
-                  id="eventNumber"
-                  class="field-input editable-field"
-                  type="text"
-                  placeholder="FYYMM#####"
-                />
+                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="FYYMM#####" />
               </label>
 
               <label>
@@ -317,74 +233,69 @@
             </div>
           </div>
 
+ <div class="section">
+
+  <div class="chips ops-chip-row">
+    <button id="tabAddAppliance" class="chip-btn ops-chip active" type="button">
+      ADD APPLIANCE
+    </button>
+
+    <button id="tabAddAgency" class="chip-btn ops-chip" type="button">
+      ADD AGENCY
+    </button>
+  </div>
+
+  <!-- APPLIANCE PANEL -->
+  <div id="appliancePanel">
+
+    <div class="row wrap">
+      <select id="applianceDropdown" class="field-input editable-field">
+        <option value="">Select appliance</option>
+        <option>P64</option>
+        <option>R64</option>
+        <option>P63B</option>
+        <option>FRES</option>
+        <option>BELL</option>
+        <option>MODE</option>
+        <option>BELM</option>
+        <option>HIGH</option>
+        <option>TRQY</option>
+        <option>CONN</option>
+        <option>ANGL</option>
+        <option>LP63</option>
+        <option>BA support</option>
+        <option>GROV</option>
+      </select>
+    </div>
+
+    <div id="sceneUnitChips" class="chip-wrap"></div>
+  </div>
+
+  <!-- AGENCY PANEL -->
+  <div id="agencyPanel" class="hidden">
+
+    <div class="row wrap">
+      <select id="agencyDropdown" class="field-input editable-field">
+        <option value="">Select agency</option>
+        <option>Police</option>
+        <option>Ambulance</option>
+        <option>SES</option>
+        <option>FRV</option>
+      </select>
+    </div>
+
+    <div id="otherAgencyList" class="agency-list"></div>
+  </div>
+
+</div>      
+          
           <div class="section">
             <div class="chips ops-chip-row">
-              <button id="tabAddAppliance" class="chip-btn ops-chip active" type="button">
-                ADD APPLIANCE
-              </button>
-
-              <button id="tabAddAgency" class="chip-btn ops-chip" type="button">
-                ADD AGENCY
-              </button>
-            </div>
-
-            <div id="appliancePanel">
-              <div class="row wrap">
-                <select id="applianceDropdown" class="field-input editable-field">
-                  <option value="">Select appliance</option>
-                  <option>P64</option>
-                  <option>P63B</option>
-                  <option>R63</option>
-                  <option>LP63</option>
-                  <option>CONN</option>
-                  <option>MTDU</option>
-                  <option>GROV</option>
-                  <option>FRES</option>
-                  <option>TRQY</option>
-                  <option>HIGH</option>
-                  <option>MODE</option>
-                  <option>ANGL</option>
-                  <option>BELM</option>
-                  <option>BA support</option>
-                  <option>Welfare</option>
-                </select>
-              </div>
-
-              <div id="sceneUnitChips" class="chip-wrap"></div>
-            </div>
-
-            <div id="agencyPanel" class="hidden">
-              <div class="row wrap">
-                <select id="agencyDropdown" class="field-input editable-field">
-                  <option value="">Select agency</option>
-                  <option>Police</option>
-                  <option>Ambulance</option>
-                  <option>SES</option>
-                  <option>FRV</option>
-                </select>
-              </div>
-
-              <div id="otherAgencyList" class="agency-list"></div>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="chips ops-chip-row">
-              <button id="membersBeforeChip" class="chip-btn ops-chip" type="button">
-                Members before 1st appliance
-              </button>
-              <button id="hotDebriefChip" class="chip-btn ops-chip" type="button">
-                Hot debrief conducted
-              </button>
-              <button id="aarRequiredChip" class="chip-btn ops-chip" type="button">
-                AAR required
-              </button>
-              <button id="injuryChip" class="chip-btn ops-chip" type="button">
-                Injury
-              </button>
-              <button id="signalChip" class="chip-btn ops-chip" type="button">
-                Signal
-              </button>
+              <button id="membersBeforeChip" class="chip-btn ops-chip" type="button">Members before 1st appliance</button>
+              <button id="hotDebriefChip" class="chip-btn ops-chip" type="button">Hot debrief conducted</button>
+              <button id="aarRequiredChip" class="chip-btn ops-chip" type="button">AAR required</button>
+              <button id="injuryChip" class="chip-btn ops-chip" type="button">Injury</button>
+              <button id="signalChip" class="chip-btn ops-chip" type="button">Signal</button>
             </div>
 
             <div id="injuryNotesWrap" class="hidden">
@@ -501,13 +412,7 @@
 
         <label>
           CFA Member Number
-          <input
-            id="profileMemberNumber"
-            class="field-input editable-field"
-            type="text"
-            inputmode="numeric"
-            pattern="[0-9]*"
-          />
+          <input id="profileMemberNumber" class="field-input editable-field" type="text" inputmode="numeric" pattern="[0-9]*" />
         </label>
 
         <label>
@@ -547,13 +452,7 @@
       <div class="grid">
         <label>
           OIC Name
-          <input
-            id="oicSearchInput"
-            class="field-input editable-field"
-            list="oicMembersList"
-            type="text"
-            autocomplete="off"
-          />
+          <input id="oicSearchInput" class="field-input editable-field" list="oicMembersList" type="text" autocomplete="off" />
           <datalist id="oicMembersList"></datalist>
         </label>
 
@@ -568,20 +467,6 @@
       </div>
     </div>
   </div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const upload = document.getElementById("pagerUpload");
-      const fileName = document.getElementById("pagerFileName");
-
-      if (!upload || !fileName) return;
-
-      upload.addEventListener("change", () => {
-        const file = upload.files && upload.files[0];
-        fileName.textContent = file ? file.name : "No file selected";
-      });
-    });
-  </script>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script type="module" src="./app.js"></script>
