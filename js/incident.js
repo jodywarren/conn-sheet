@@ -703,6 +703,7 @@ function bindPanelToggles() {
 
   const appliancePanel = document.getElementById("appliancePanel");
   const agencyPanel = document.getElementById("agencyPanel");
+  const agencyDropdown = document.getElementById("agencyDropdown");
 
   if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
 
@@ -717,12 +718,27 @@ function bindPanelToggles() {
   });
 
   agencyBtn.addEventListener("click", () => {
-    const isActive = !agencyPanel.classList.contains("hidden");
+    const isHidden = agencyPanel.classList.contains("hidden");
 
-    agencyPanel.classList.toggle("hidden", isActive);
     appliancePanel.classList.add("hidden");
-
-    agencyBtn.classList.toggle("active", !isActive);
     applianceBtn.classList.remove("active");
+
+    if (isHidden) {
+      agencyPanel.classList.remove("hidden");
+      agencyBtn.classList.add("active");
+
+      if (agencyDropdown) {
+        agencyDropdown.focus();
+
+        if (typeof agencyDropdown.showPicker === "function") {
+          agencyDropdown.showPicker();
+        } else {
+          agencyDropdown.click();
+        }
+      }
+    } else {
+      agencyPanel.classList.add("hidden");
+      agencyBtn.classList.remove("active");
+    }
   });
 }
