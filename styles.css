@@ -24,8 +24,14 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -37,7 +43,8 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+p {
   margin: 0;
 }
 
@@ -50,7 +57,7 @@ label {
 
 .app-shell {
   max-width: 1180px;
-  margin: auto;
+  margin: 0 auto;
   padding: 10px;
 }
 
@@ -272,10 +279,15 @@ label {
   padding: 18px;
   box-shadow: var(--shadow);
   margin-bottom: 20px;
+  overflow: hidden;
 }
 
 .section {
   margin-top: 20px;
+}
+
+.section:first-child {
+  margin-top: 0;
 }
 
 .section-head {
@@ -324,6 +336,10 @@ label {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
 }
 
 .row.between {
@@ -419,12 +435,20 @@ label {
 
 /* Inputs */
 
-.field-input {
+.field-input,
+input,
+select,
+textarea {
   width: 100%;
+  max-width: 100%;
   padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   font-size: 14px;
+}
+
+textarea {
+  resize: vertical;
 }
 
 .editable-field {
@@ -432,7 +456,10 @@ label {
   border-color: var(--cfa-red-border);
 }
 
-.editable-field:focus {
+.editable-field:focus,
+input:focus,
+select:focus,
+textarea:focus {
   outline: 2px solid rgba(176, 0, 32, 0.15);
   border-color: var(--cfa-red);
 }
@@ -547,10 +574,15 @@ label {
 
 .chips,
 .chip-wrap,
-.ops-chip-row {
+.ops-chip-row,
+.chip-group {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.chip-group {
+  margin-bottom: 10px;
 }
 
 .chip-btn {
@@ -603,6 +635,12 @@ label {
 .scene-chip.manual-unit {
   background: #fff3e0;
   border: 1px solid #f0a44b;
+}
+
+.scene-chip.complete {
+  background: #e8f5e9 !important;
+  border: 1px solid #43a047 !important;
+  color: #1b5e20 !important;
 }
 
 .scene-chip button {
@@ -659,6 +697,30 @@ label {
   background: var(--cfa-red-soft);
   color: #7d0017;
   border-color: var(--cfa-red-border);
+}
+
+.upload-box {
+  width: 100%;
+  height: 140px;
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-empty {
+  background: #c62828;
+  color: white;
+}
+
+.upload-loaded {
+  background: #2e7d32;
+  color: white;
 }
 
 /* Agencies */
@@ -729,8 +791,6 @@ label {
   overflow-x: hidden;
 }
 
-/* ===== REPORT WRAP FIX ===== */
-
 #reportPreview,
 #reportEmailBody,
 #reportEmailSubject,
@@ -769,6 +829,91 @@ textarea {
   resize: vertical;
 }
 
+/* Job picker */
+
+.job-picker {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.job-picker-title {
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.job-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.job-picker-item {
+  border: 1px solid var(--cfa-red-border);
+  background: var(--cfa-red-soft);
+  color: #7d0017;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Completion states */
+
+.field-complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b1b1b !important;
+}
+
+.tab-btn.complete,
+.chip-btn.complete,
+.ops-chip.complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+.tab-btn.active.complete,
+.chip-btn.active.complete,
+.ops-chip.active.complete {
+  background: #e8f5e9 !important;
+  border-color: #43a047 !important;
+  color: #1b5e20 !important;
+}
+
+/* Incident layout */
+
+.incident-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 260px;
+  gap: 12px;
+  align-items: start;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  min-width: 0;
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
 /* Dark mode */
 
 body.dark-mode {
@@ -784,7 +929,10 @@ body.dark-mode .modal-card,
 body.dark-mode .placeholder-panel,
 body.dark-mode .report-preview,
 body.dark-mode #reportEmailBody,
-body.dark-mode #reportEmailSubject {
+body.dark-mode #reportEmailSubject,
+body.dark-mode .panel,
+body.dark-mode .job-picker,
+body.dark-mode .agency-card {
   background: #181b20;
   color: #f3f4f6;
   border-color: #444b57;
@@ -817,8 +965,8 @@ body.dark-mode #pagerUpload {
 
 body.dark-mode .field-complete {
   color: #edf2f7 !important;
-  background: #1d2b22 !important;
-  border-color: #63a978 !important;
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
 }
 
 body.dark-mode .subtle,
@@ -900,7 +1048,8 @@ body.dark-mode .scene-chip button {
   color: #ffffff !important;
 }
 
-body.dark-mode .scene-chip.from-pager {
+body.dark-mode .scene-chip.from-pager,
+body.dark-mode .scene-chip.complete {
   background: #1f3a28 !important;
   border: 1px solid #63a978 !important;
   color: #eaffef !important;
@@ -946,7 +1095,39 @@ body.dark-mode #oicBanner.missing {
   color: #ffd6d6 !important;
 }
 
+body.dark-mode .upload-empty {
+  background: #8b1e1e !important;
+  color: #fff !important;
+}
+
+body.dark-mode .upload-loaded {
+  background: #1f5e2a !important;
+  color: #fff !important;
+}
+
+body.dark-mode .tab-btn.complete,
+body.dark-mode .chip-btn.complete,
+body.dark-mode .ops-chip.complete,
+body.dark-mode .tab-btn.active.complete,
+body.dark-mode .chip-btn.active.complete,
+body.dark-mode .ops-chip.active.complete {
+  background: #1f3a28 !important;
+  border-color: #66bb6a !important;
+  color: #e8f5e9 !important;
+}
+
 /* Responsive */
+
+@media (max-width: 980px) {
+  .incident-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .panel,
+  .card {
+    width: 100%;
+  }
+}
 
 @media (max-width: 820px) {
   .app-header.compact-header {
@@ -972,223 +1153,12 @@ body.dark-mode #oicBanner.missing {
   .settings-tab {
     margin-left: 0;
   }
-}
-.job-picker{
-  margin-top:12px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px;
-  background:#fff;
-}
 
-.job-picker-title{
-  font-weight:800;
-  margin-bottom:10px;
-}
+  .status-split {
+    grid-template-columns: 1fr;
+  }
 
-.job-picker-list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.job-picker-item{
-  border:1px solid var(--cfa-red-border);
-  background:var(--cfa-red-soft);
-  color:#7d0017;
-  border-radius:10px;
-  padding:10px 12px;
-  text-align:left;
-  font-weight:700;
-  cursor:pointer;
-}
-.field-complete {
-  background: #e8f5e9 !important;
-  border-color: #43a047 !important;
-}
-
-.scene-chip.complete {
-  background: #e8f5e9;
-  border: 1px solid #43a047;
-}
-
-.tab-btn.complete,
-.chip-btn.complete,
-.ops-chip.complete {
-  background: #e8f5e9 !important;
-  border-color: #43a047 !important;
-  color: #1b5e20 !important;
-}
-
-body.dark-mode .field-complete,
-.dark-mode .field-complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-}
-
-body.dark-mode .scene-chip.complete,
-.dark-mode .scene-chip.complete {
-  background: #1f3a28;
-  border-color: #66bb6a;
-  color: #e8f5e9;
-}
-
-body.dark-mode .tab-btn.complete,
-body.dark-mode .chip-btn.complete,
-body.dark-mode .ops-chip.complete,
-.dark-mode .tab-btn.complete,
-.dark-mode .chip-btn.complete,
-.dark-mode .ops-chip.complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-}
-/* ===== COMPLETE STATES ===== */
-
-.field-complete {
-  background: #e8f5e9 !important;
-  border-color: #43a047 !important;
-  color: #1b1b1b !important;
-}
-
-.scene-chip.complete {
-  background: #e8f5e9 !important;
-  border: 1px solid #43a047 !important;
-  color: #1b5e20 !important;
-}
-
-.tab-btn.complete,
-.chip-btn.complete,
-.ops-chip.complete {
-  background: #e8f5e9 !important;
-  border-color: #43a047 !important;
-  color: #1b5e20 !important;
-}
-
-/* keep active tab green if it is also complete */
-.tab-btn.active.complete,
-.chip-btn.active.complete,
-.ops-chip.active.complete {
-  background: #e8f5e9 !important;
-  border-color: #43a047 !important;
-  color: #1b5e20 !important;
-}
-
-/* ===== DARK MODE COMPLETE STATES ===== */
-
-body.dark-mode .field-complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-}
-
-body.dark-mode .scene-chip.complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-}
-
-body.dark-mode .tab-btn.complete,
-body.dark-mode .chip-btn.complete,
-body.dark-mode .ops-chip.complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-}
-
-body.dark-mode .tab-btn.active.complete,
-body.dark-mode .chip-btn.active.complete,
-body.dark-mode .ops-chip.active.complete {
-  background: #1f3a28 !important;
-  border-color: #66bb6a !important;
-  color: #e8f5e9 !important;
-  
-}
-.upload-box {
-  width: 100%;
-  padding: 20px;
-  text-align: center;
-  border-radius: 12px;
-  font-weight: bold;
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-
-.upload-empty {
-  background: #b00020;
-  color: white;
-}
-
-.upload-loaded {
-  background: #1b5e20;
-  color: white;
-}
-
-/* ===== INCIDENT LAYOUT ===== */
-
-.incident-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr 320px;
-  gap: 16px;
-  align-items: start;
-}
-
-.panel {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 14px;
-  border: 1px solid #ddd;
-}
-
-.panel-title {
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-/* ===== SCREENSHOT BOX ===== */
-
-.upload-box {
-  height: 140px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-}
-
-.upload-empty {
-  background: #c62828;
-  color: white;
-}
-
-.upload-loaded {
-  background: #2e7d32;
-  color: white;
-}
-
-/* ===== INPUT CLEANUP ===== */
-
-input, select, textarea {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-/* ===== CHIPS ===== */
-
-.chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-/* ===== ACTION BUTTONS ===== */
-
-.action-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
