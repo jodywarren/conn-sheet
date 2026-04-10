@@ -63,12 +63,23 @@ function setScanStatus(message, className = 'scan-idle') {
 
 function setPreviewFromFile(file) {
   const img = qs('pagerPreview');
+  const box = qs('pagerUploadBox');
+
   if (!img || !file) return;
 
   const reader = new FileReader();
   reader.onload = () => {
     img.src = reader.result;
     img.classList.remove('hidden');
+
+    if (box) {
+      box.classList.remove('upload-empty');
+      box.classList.add('upload-loaded');
+    }
+
+    // 🔥 persist screenshot
+    state.incident.pagerScreenshot = reader.result;
+    saveState();
   };
   reader.readAsDataURL(file);
 }
