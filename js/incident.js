@@ -692,18 +692,34 @@ function bindPanelToggles() {
 
   const appliancePanel = document.getElementById("appliancePanel");
   const agencyPanel = document.getElementById("agencyPanel");
+  const applianceDropdown = document.getElementById("applianceDropdown");
   const agencyDropdown = document.getElementById("agencyDropdown");
 
   if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
 
   applianceBtn.addEventListener("click", () => {
-    const isActive = !appliancePanel.classList.contains("hidden");
+    const isHidden = appliancePanel.classList.contains("hidden");
 
-    appliancePanel.classList.toggle("hidden", isActive);
     agencyPanel.classList.add("hidden");
-
-    applianceBtn.classList.toggle("active", !isActive);
     agencyBtn.classList.remove("active");
+
+    if (isHidden) {
+      appliancePanel.classList.remove("hidden");
+      applianceBtn.classList.add("active");
+
+      if (applianceDropdown) {
+        applianceDropdown.focus();
+
+        if (typeof applianceDropdown.showPicker === "function") {
+          applianceDropdown.showPicker();
+        } else {
+          applianceDropdown.click();
+        }
+      }
+    } else {
+      appliancePanel.classList.add("hidden");
+      applianceBtn.classList.remove("active");
+    }
   });
 
   agencyBtn.addEventListener("click", () => {
