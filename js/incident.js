@@ -87,18 +87,22 @@ function applyWeatherRules(changedId) {
 }
 
 function bindSceneUnits() {
-  const input = document.getElementById("sceneUnitInput");
-  const addBtn = document.getElementById("addSceneUnitBtn");
+  const dropdown = document.getElementById("applianceDropdown");
+  if (!dropdown) return;
 
-  if (!input || !addBtn) return;
+  dropdown.addEventListener("change", () => {
+    const raw = String(dropdown.value || "").trim().toUpperCase();
+    if (!raw) return;
 
-  addBtn.addEventListener("click", addSceneUnitFromInput);
+    const code = normalizeSceneUnit(raw);
 
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addSceneUnitFromInput();
+    if (!state.incident.sceneUnits.includes(code)) {
+      state.incident.sceneUnits.push(code);
     }
+
+    dropdown.value = "";
+    renderSceneUnitChips();
+    saveState();
   });
 }
 
