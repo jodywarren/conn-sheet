@@ -1124,3 +1124,71 @@ body.dark-mode .ops-chip.active.complete {
   background: #1b5e20;
   color: white;
 }
+
+/* ===== INCIDENT LAYOUT ===== */
+
+.incident-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #ddd;
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* ===== SCREENSHOT BOX ===== */
+
+.upload-box {
+  height: 140px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.upload-empty {
+  background: #c62828;
+  color: white;
+}
+
+.upload-loaded {
+  background: #2e7d32;
+  color: white;
+}
+
+/* ===== INPUT CLEANUP ===== */
+
+input, select, textarea {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* ===== CHIPS ===== */
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* ===== ACTION BUTTONS ===== */
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
