@@ -18,6 +18,7 @@ export function bindIncidentInputs() {
   bindOperationalChips();
   bindSignalChips();
   bindDetailTabs();
+  bindPanelToggles();
 }
 
 function bindTextInputs() {
