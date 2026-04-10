@@ -86,42 +86,6 @@ function applyWeatherRules(changedId) {
   }
 }
 
-function bindPanelToggles() {
-  const applianceBtn = document.getElementById("tabAddAppliance");
-  const agencyBtn = document.getElementById("tabAddAgency");
-
-  const appliancePanel = document.getElementById("appliancePanel");
-  const agencyPanel = document.getElementById("agencyPanel");
-  const applianceDropdown = document.getElementById("applianceDropdown");
-  const agencyDropdown = document.getElementById("agencyDropdown");
-
-  if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
-
-  applianceBtn.addEventListener("click", () => {
-    const isHidden = appliancePanel.classList.contains("hidden");
-
-    agencyPanel.classList.add("hidden");
-    agencyBtn.classList.remove("active");
-
-    if (isHidden) {
-      appliancePanel.classList.remove("hidden");
-      applianceBtn.classList.add("active");
-
-      if (applianceDropdown) {
-        applianceDropdown.focus();
-
-        if (typeof applianceDropdown.showPicker === "function") {
-          applianceDropdown.showPicker();
-        } else {
-          applianceDropdown.click();
-        }
-      }
-    } else {
-      appliancePanel.classList.add("hidden");
-      applianceBtn.classList.remove("active");
-    }
-  });
-
   agencyBtn.addEventListener("click", () => {
     const isHidden = agencyPanel.classList.contains("hidden");
 
