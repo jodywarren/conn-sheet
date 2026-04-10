@@ -88,6 +88,9 @@ function applyWeatherRules(changedId) {
 
 function bindSceneUnits() {
   const dropdown = document.getElementById("applianceDropdown");
+  const appliancePanel = document.getElementById("appliancePanel");
+  const applianceBtn = document.getElementById("tabAddAppliance");
+
   if (!dropdown) return;
 
   dropdown.addEventListener("change", () => {
@@ -103,6 +106,14 @@ function bindSceneUnits() {
     dropdown.value = "";
     renderSceneUnitChips();
     saveState();
+
+    if (appliancePanel) {
+      appliancePanel.classList.add("hidden");
+    }
+
+    if (applianceBtn) {
+      applianceBtn.classList.remove("active");
+    }
   });
 }
 
