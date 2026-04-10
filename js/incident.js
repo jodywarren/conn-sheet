@@ -370,9 +370,6 @@ export function renderOtherAgencies() {
   bindRenderedOtherAgencyEvents();
 }
 
-  bindRenderedOtherAgencyEvents();
-}
-
 function bindRenderedOtherAgencyEvents() {
   document.querySelectorAll("[data-remove-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
