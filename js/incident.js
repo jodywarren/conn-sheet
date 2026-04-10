@@ -343,7 +343,7 @@ export function renderOtherAgencies() {
               <option ${agency.type === "Police" ? "selected" : ""}>Police</option>
               <option ${agency.type === "Ambulance" ? "selected" : ""}>Ambulance</option>
               <option ${agency.type === "SES" ? "selected" : ""}>SES</option>
-              <option ${agency.type === "Powercor" ? "selected" : ""}>Powercor</option>
+              <option ${agency.type === "PowerCor" ? "selected" : ""}>Powercor</option>
               <option ${agency.type === "Gas" ? "selected" : ""}>Gas</option>
               <option ${agency.type === "Council" ? "selected" : ""}>Council</option>
               <option ${agency.type === "Other" ? "selected" : ""}>Other</option>
