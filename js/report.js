@@ -276,19 +276,23 @@ function getReportLines() {
     lines.push("");
   }
 
- if (incident.otherAgencies?.length) {
+if (incident.otherAgencies?.length) {
   incident.otherAgencies.forEach((agency) => {
+    const typeLabel = String(agency.type || agency.agencyName || "").trim().toUpperCase();
     const summary = getOtherAgencySummary(agency);
+    const notes = String(agency.notes || "").trim();
 
-    if (summary) {
-      lines.push(`Other: ${summary}`);
+    if (typeLabel && summary) {
+      lines.push(`${typeLabel}: ${summary}`);
+    } else if (typeLabel) {
+      lines.push(`${typeLabel}:`);
     }
 
-    if (agency.notes && agency.notes.trim()) {
-      lines.push(`Notes: ${agency.notes.trim()}`);
+    if (notes) {
+      lines.push(`NOTES: ${notes}`);
     }
 
-    if (summary || (agency.notes && agency.notes.trim())) {
+    if ((typeLabel && summary) || typeLabel || notes) {
       lines.push("");
     }
   });
