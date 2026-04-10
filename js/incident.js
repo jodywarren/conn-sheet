@@ -336,20 +336,6 @@ export function renderOtherAgencies() {
         </div>
 
         <div class="grid agency-grid">
-          <label>
-            Agency
-            <select class="field-input editable-field agency-field ${agency.type ? "field-complete" : ""}" data-agency-id="${agency.id}" data-field="type">
-              <option value="">Select agency</option>
-              <option ${agency.type === "Police" ? "selected" : ""}>Police</option>
-              <option ${agency.type === "Ambulance" ? "selected" : ""}>Ambulance</option>
-              <option ${agency.type === "SES" ? "selected" : ""}>SES</option>
-              <option ${agency.type === "PowerCor" ? "selected" : ""}>Powercor</option>
-              <option ${agency.type === "Gas" ? "selected" : ""}>Gas</option>
-              <option ${agency.type === "Council" ? "selected" : ""}>Council</option>
-              <option ${agency.type === "Other" ? "selected" : ""}>Other</option>
-            </select>
-          </label>
-
           ${fields.map((field) => {
             const val = String(agency[field.key] || "");
             const inputType = field.mode === "tel" ? "tel" : "text";
@@ -380,6 +366,9 @@ export function renderOtherAgencies() {
     const hasAgencies = (state.incident.otherAgencies || []).length > 0;
     tabBtn.classList.toggle("complete", hasAgencies);
   }
+
+  bindRenderedOtherAgencyEvents();
+}
 
   bindRenderedOtherAgencyEvents();
 }
