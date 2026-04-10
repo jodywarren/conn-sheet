@@ -733,6 +733,38 @@ export function bindOcrEvents() {
     return;
   }
 
+const uploadBox = qs('pagerUploadBox');
+
+if (uploadBox && pagerUpload) {
+  uploadBox.addEventListener('click', () => {
+    pagerUpload.click();
+  });
+}
+
+const uploadBox = qs('pagerUploadBox');
+
+if (uploadBox && pagerUpload) {
+  uploadBox.addEventListener('click', () => {
+    pagerUpload.click();
+  });
+
+  // restore screenshot on load
+if (state.incident.pagerScreenshot) {
+  const img = qs('pagerPreview');
+  const box = qs('pagerUploadBox');
+
+  if (img) {
+    img.src = state.incident.pagerScreenshot;
+    img.classList.remove('hidden');
+  }
+
+  if (box) {
+    box.classList.remove('upload-empty');
+    box.classList.add('upload-loaded');
+  }
+}
+  }
+  
   pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
 
