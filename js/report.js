@@ -45,16 +45,20 @@ function getOtherAgencySummary(agency) {
   const parts = [];
 
   if (agency.type) parts.push(agency.type);
+
   if (agency.name) parts.push(agency.name);
+
   if (agency.station) parts.push(agency.station);
   if (agency.localHq) parts.push(agency.localHq);
   if (agency.office) parts.push(agency.office);
+
   if (agency.contactNumber) parts.push(agency.contactNumber);
 
   if (agency.badgeNumber) parts.push(`Badge ${agency.badgeNumber}`);
   if (agency.idNumber) parts.push(`ID ${agency.idNumber}`);
 
-  return parts.join(", ");
+  // 🔥 IMPORTANT: ignore empty or whitespace-only fields
+  return parts.filter(p => String(p).trim().length > 0).join(", ");
 }
 
 function hasAnyResponderInjury() {
