@@ -237,40 +237,51 @@ function getAgencyFieldConfig(type) {
         { key: "name", label: "Name", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
         { key: "badgeNumber", label: "Badge number", mode: "numeric" },
-        { key: "station", label: "Station", mode: "text" }
+        { key: "station", label: "Station", mode: "text" },
+        { key: "notes", label: "Notes", mode: "text" }
       ];
+
     case "Ambulance":
       return [
         { key: "name", label: "Name", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
         { key: "idNumber", label: "ID number", mode: "numeric" },
-        { key: "station", label: "Station", mode: "text" }
+        { key: "station", label: "Station", mode: "text" },
+        { key: "notes", label: "Notes", mode: "text" }
       ];
+
     case "SES":
       return [
         { key: "name", label: "Name", mode: "text" },
+        { key: "localHq", label: "LHQ", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
-        { key: "localHq", label: "Local HQ", mode: "text" }
+        { key: "notes", label: "Notes", mode: "text" }
       ];
-    case "Powercor":
+
+    case "PowerCor":
       return [
         { key: "name", label: "Name", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
-        { key: "office", label: "Depot / office", mode: "text" }
+        { key: "office", label: "Branch", mode: "text" },
+        { key: "poleId", label: "Pole ID", mode: "text" },
+        { key: "notes", label: "Notes", mode: "text" }
       ];
+
     case "Gas":
       return [
         { key: "name", label: "Name", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
-        { key: "office", label: "Depot / office", mode: "text" }
+        { key: "notes", label: "Notes", mode: "text" }
       ];
+
     case "Council":
       return [
         { key: "name", label: "Name", mode: "text" },
         { key: "contactNumber", label: "Contact number", mode: "tel" },
         { key: "office", label: "Office", mode: "text" },
-        { key: "notes", label: "Other notes", mode: "text" }
+        { key: "notes", label: "Notes", mode: "text" }
       ];
+
     case "Other":
       return [
         { key: "agencyName", label: "Agency name", mode: "text" },
@@ -278,6 +289,7 @@ function getAgencyFieldConfig(type) {
         { key: "contactNumber", label: "Contact number", mode: "tel" },
         { key: "notes", label: "Notes", mode: "text" }
       ];
+
     default:
       return [];
   }
