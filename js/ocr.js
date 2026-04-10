@@ -784,4 +784,4 @@ export function bindOcrEvents() {
     if (ocrBusy) return;
     await runPagerOcrIntoIncident(file);
   });
-}
+
