@@ -1103,4 +1103,24 @@ body.dark-mode .ops-chip.active.complete {
   background: #1f3a28 !important;
   border-color: #66bb6a !important;
   color: #e8f5e9 !important;
+  
+}
+.upload-box {
+  width: 100%;
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.upload-empty {
+  background: #b00020;
+  color: white;
+}
+
+.upload-loaded {
+  background: #1b5e20;
+  color: white;
 }
