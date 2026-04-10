@@ -183,6 +183,9 @@ export function renderSceneUnitChips() {
 
 function bindOtherAgencyControls() {
   const dropdown = document.getElementById("agencyDropdown");
+  const agencyPanel = document.getElementById("agencyPanel");
+  const agencyBtn = document.getElementById("tabAddAgency");
+
   if (!dropdown) return;
 
   dropdown.addEventListener("change", () => {
@@ -197,6 +200,14 @@ function bindOtherAgencyControls() {
 
     renderOtherAgencies();
     saveState();
+
+    if (agencyPanel) {
+      agencyPanel.classList.add("hidden");
+    }
+
+    if (agencyBtn) {
+      agencyBtn.classList.remove("active");
+    }
   });
 }
 
