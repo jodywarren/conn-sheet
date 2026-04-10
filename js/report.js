@@ -281,29 +281,23 @@ function getReportLines() {
     lines.push("");
   }
 
-  if (incident.otherAgencies?.length) {
-    const agenciesWithInfo = incident.otherAgencies.filter((agency) => {
-      return Boolean(
-        agency.type ||
-        agency.agencyName ||
-        agency.name ||
-        agency.contactNumber ||
-        agency.badgeNumber ||
-        agency.idNumber ||
-        agency.station ||
-        agency.localHq ||
-        agency.office ||
-        agency.notes
-      );
-    });
+ if (incident.otherAgencies?.length) {
+  incident.otherAgencies.forEach((agency) => {
+    const summary = getOtherAgencySummary(agency);
 
-    agenciesWithInfo.forEach((agency) => {
-      const summary = getOtherAgencySummary(agency);
-      if (summary) lines.push(`Other: ${summary}`);
-      if (agency.notes) lines.push(`Notes: ${agency.notes}`);
+    if (summary) {
+      lines.push(`Other: ${summary}`);
+    }
+
+    if (agency.notes && agency.notes.trim()) {
+      lines.push(`Notes: ${agency.notes.trim()}`);
+    }
+
+    if (summary || (agency.notes && agency.notes.trim())) {
       lines.push("");
-    });
-  }
+    }
+  });
+}
 
   if (hasAnyResponderInjury()) {
     if (responders.injuryNotes) {
