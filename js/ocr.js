@@ -727,43 +727,48 @@ export function buildIncidentPatchForPreview(extractionResult) {
 
 export function bindOcrEvents() {
   const pagerUpload = qs('pagerUpload');
+  const uploadBox = qs('pagerUploadBox');
 
   if (!pagerUpload) {
     console.warn('Pager upload control not found in DOM');
     return;
   }
 
-const uploadBox = qs('pagerUploadBox');
+  if (uploadBox) {
+    uploadBox.addEventListener('click', () => {
+      pagerUpload.click();
+    });
+  }
 
-if (uploadBox && pagerUpload) {
-  uploadBox.addEventListener('click', () => {
-    pagerUpload.click();
+  if (state.incident.pagerScreenshot) {
+    const img = qs('pagerPreview');
+
+    if (img) {
+      img.src = state.incident.pagerScreenshot;
+      img.classList.remove('hidden');
+    }
+
+    if (uploadBox) {
+      uploadBox.classList.remove('upload-empty');
+      uploadBox.classList.add('upload-loaded');
+    }
+  }
+
+  pagerUpload.addEventListener('change', async () => {
+    const file = pagerUpload.files && pagerUpload.files[0];
+
+    if (!file) {
+      setScanStatus('Waiting for screenshot', 'scan-idle');
+      return;
+    }
+
+    setPreviewFromFile(file);
+    setScanStatus('Screenshot loaded. Scanning...', 'scan-working');
+
+    if (ocrBusy) return;
+    await runPagerOcrIntoIncident(file);
   });
 }
-
-const uploadBox = qs('pagerUploadBox');
-
-if (uploadBox && pagerUpload) {
-  uploadBox.addEventListener('click', () => {
-    pagerUpload.click();
-  });
-
-  // restore screenshot on load
-if (state.incident.pagerScreenshot) {
-  const img = qs('pagerPreview');
-  const box = qs('pagerUploadBox');
-
-  if (img) {
-    img.src = state.incident.pagerScreenshot;
-    img.classList.remove('hidden');
-  }
-
-  if (box) {
-    box.classList.remove('upload-empty');
-    box.classList.add('upload-loaded');
-  }
-}
-  }
   
   pagerUpload.addEventListener('change', async () => {
     const file = pagerUpload.files && pagerUpload.files[0];
