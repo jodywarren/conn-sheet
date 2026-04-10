@@ -82,67 +82,89 @@
           </div>
 
           <div class="section">
-            <h2 class="section-title">Core Incident Details</h2>
+<div class="incident-layout">
 
-            <div class="grid">
-              <label>
-                Event Number
-                <input id="eventNumber" class="field-input editable-field" type="text" placeholder="FYYMM#####" />
-              </label>
+  <!-- LEFT: Screenshot -->
+  <div class="panel">
+    <div id="pagerUploadBox" class="upload-box upload-empty">
+      PUT SCREENSHOT HERE
+    </div>
 
-              <label>
-                Pager Date
-                <input id="pagerDate" class="field-input editable-field" type="date" />
-              </label>
+    <img id="pagerPreview" class="hidden" />
+  </div>
 
-              <label>
-                Pager Time
-                <input id="pagerTime" class="field-input editable-field" type="time" />
-              </label>
+  <!-- MIDDLE: Core Details -->
+  <div class="panel">
+    <div class="panel-title">Core Incident Details</div>
 
-              <label>
-                Alert Area Code
-                <input id="alertAreaCode" class="field-input editable-field" type="text" />
-              </label>
+    <label>Event Number</label>
+    <input id="eventNumber" />
 
-              <label>
-                Brigade Role
-                <input id="brigadeRole" class="field-input editable-field" type="text" />
-              </label>
+    <label>Pager Date</label>
+    <input id="pagerDate" type="date" />
 
-              <label>
-                Incident Type
-                <input id="incidentType" class="field-input editable-field" type="text" />
-              </label>
+    <label>Pager Time</label>
+    <input id="pagerTime" type="time" />
 
-              <label>
-                Response Code
-                <input id="responseCode" class="field-input editable-field" type="text" />
-              </label>
-            </div>
-          </div>
+    <label>Alert Area Code</label>
+    <input id="brigadeCode" />
 
-          <div class="section">
-            <label>
-              Pager Details
-              <textarea id="pagerDetails" class="field-input editable-field" rows="6"></textarea>
-            </label>
+    <label>Brigade Role</label>
+    <input id="brigadeRole" />
 
-            <label>
-              Scanned Address
-              <input id="scannedAddress" class="field-input editable-field" type="text" />
-            </label>
+    <label>Incident Type</label>
+    <input id="incidentType" />
 
-            <label>
-              Actual Address
-              <input id="actualAddress" class="field-input editable-field" type="text" />
-            </label>
+    <label>Response Code</label>
+    <input id="responseCode" />
 
-            <label>
-              Control Name
-              <input id="controlName" class="field-input editable-field" type="text" />
-            </label>
-          </div>
+    <label>Pager Details</label>
+    <textarea id="pagerDetails"></textarea>
+
+    <label>Scanned Address</label>
+    <input id="scannedAddress" />
+
+    <label>Actual Address</label>
+    <input id="actualLocation" />
+
+    <label>Control Name</label>
+    <input id="controlName" />
+  </div>
+
+  <!-- RIGHT: Operational -->
+  <div class="panel">
+    <div class="panel-title">Operational Details</div>
+
+    <div class="chip-group">
+      <!-- your chips stay here -->
+    </div>
+
+    <div class="action-row">
+      <button id="addApplianceBtn">ADD APPLIANCE</button>
+      <button id="addAgencyBtn">ADD AGENCY</button>
+    </div>
+
+    <select id="firstAgency">
+      <option value="">Select agency</option>
+    </select>
+
+    <select id="distanceToScene">
+      <option value="">Select distance</option>
+    </select>
+
+    <select id="weather1">
+      <option value="">Select weather</option>
+    </select>
+
+    <select id="weather2">
+      <option value="">Select condition</option>
+    </select>
+
+    <div id="sceneBrigadeChips"></div>
+  </div>
+
+</div>
+            
 
           <div class="section">
             <h2 class="section-title">Operational Details</h2>
