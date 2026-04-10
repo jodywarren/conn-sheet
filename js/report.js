@@ -44,21 +44,16 @@ function buildCrewLine(member) {
 function getOtherAgencySummary(agency) {
   const parts = [];
 
-  if (agency.type) parts.push(agency.type);
-
   if (agency.name) parts.push(agency.name);
-
+  if (agency.contactNumber) parts.push(agency.contactNumber);
+  if (agency.badgeNumber) parts.push(`Badge ${agency.badgeNumber}`);
+  if (agency.idNumber) parts.push(`ID ${agency.idNumber}`);
   if (agency.station) parts.push(agency.station);
   if (agency.localHq) parts.push(agency.localHq);
   if (agency.office) parts.push(agency.office);
+  if (agency.poleId) parts.push(`Pole ID ${agency.poleId}`);
 
-  if (agency.contactNumber) parts.push(agency.contactNumber);
-
-  if (agency.badgeNumber) parts.push(`Badge ${agency.badgeNumber}`);
-  if (agency.idNumber) parts.push(`ID ${agency.idNumber}`);
-
-  // 🔥 IMPORTANT: ignore empty or whitespace-only fields
-  return parts.filter(p => String(p).trim().length > 0).join(", ");
+  return parts.filter((part) => String(part).trim().length > 0).join(", ");
 }
 
 function hasAnyResponderInjury() {
