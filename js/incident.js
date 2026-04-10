@@ -182,11 +182,21 @@ export function renderSceneUnitChips() {
 }
 
 function bindOtherAgencyControls() {
-  const addBtn = document.getElementById("addAgencyBtn");
-  if (!addBtn) return;
+  const dropdown = document.getElementById("agencyDropdown");
+  if (!dropdown) return;
 
-  addBtn.addEventListener("click", () => {
-    addOtherAgency();
+  dropdown.addEventListener("change", () => {
+    const type = String(dropdown.value || "").trim();
+    if (!type) return;
+
+    const agency = createEmptyAgency();
+    agency.type = type;
+
+    state.incident.otherAgencies.push(agency);
+    dropdown.value = "";
+
+    renderOtherAgencies();
+    saveState();
   });
 }
 
