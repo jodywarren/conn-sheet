@@ -292,8 +292,8 @@ function isAgencyComplete(agency) {
 
 export function renderOtherAgencies() {
   const wrap = document.getElementById("otherAgencyList");
-  const addBtn = document.getElementById("addAgencyBtn");
-  if (!wrap || !addBtn) return;
+  const tabBtn = document.getElementById("tabAddAgency");
+  if (!wrap) return;
 
   wrap.innerHTML = "";
 
@@ -364,9 +364,10 @@ export function renderOtherAgencies() {
     wrap.appendChild(card);
   });
 
-  addBtn.textContent = state.incident.otherAgencies.length ? "Add another agency" : "Add Agency";
-  addBtn.classList.remove("has-complete", "needs-attention");
-  addBtn.classList.add("orange-btn");
+  if (tabBtn) {
+    const hasAgencies = (state.incident.otherAgencies || []).length > 0;
+    tabBtn.classList.toggle("complete", hasAgencies);
+  }
 
   bindRenderedOtherAgencyEvents();
 }
