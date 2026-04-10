@@ -110,7 +110,6 @@ function applyWeatherRules(changedId) {
       agencyBtn.classList.remove("active");
     }
   });
-}
 
 function addSceneUnitFromInput() {
   const input = document.getElementById("sceneUnitInput");
