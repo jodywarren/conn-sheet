@@ -86,33 +86,64 @@ function applyWeatherRules(changedId) {
   }
 }
 
-function bindSceneUnits() {
-  const dropdown = document.getElementById("applianceDropdown");
-  const appliancePanel = document.getElementById("appliancePanel");
+function bindPanelToggles() {
   const applianceBtn = document.getElementById("tabAddAppliance");
+  const agencyBtn = document.getElementById("tabAddAgency");
 
-  if (!dropdown) return;
+  const appliancePanel = document.getElementById("appliancePanel");
+  const agencyPanel = document.getElementById("agencyPanel");
+  const applianceDropdown = document.getElementById("applianceDropdown");
+  const agencyDropdown = document.getElementById("agencyDropdown");
 
-  dropdown.addEventListener("change", () => {
-    const raw = String(dropdown.value || "").trim().toUpperCase();
-    if (!raw) return;
+  if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
 
-    const code = normalizeSceneUnit(raw);
+  applianceBtn.addEventListener("click", () => {
+    const isHidden = appliancePanel.classList.contains("hidden");
 
-    if (!state.incident.sceneUnits.includes(code)) {
-      state.incident.sceneUnits.push(code);
-    }
+    agencyPanel.classList.add("hidden");
+    agencyBtn.classList.remove("active");
 
-    dropdown.value = "";
-    renderSceneUnitChips();
-    saveState();
+    if (isHidden) {
+      appliancePanel.classList.remove("hidden");
+      applianceBtn.classList.add("active");
 
-    if (appliancePanel) {
+      if (applianceDropdown) {
+        applianceDropdown.focus();
+
+        if (typeof applianceDropdown.showPicker === "function") {
+          applianceDropdown.showPicker();
+        } else {
+          applianceDropdown.click();
+        }
+      }
+    } else {
       appliancePanel.classList.add("hidden");
-    }
-
-    if (applianceBtn) {
       applianceBtn.classList.remove("active");
+    }
+  });
+
+  agencyBtn.addEventListener("click", () => {
+    const isHidden = agencyPanel.classList.contains("hidden");
+
+    appliancePanel.classList.add("hidden");
+    applianceBtn.classList.remove("active");
+
+    if (isHidden) {
+      agencyPanel.classList.remove("hidden");
+      agencyBtn.classList.add("active");
+
+      if (agencyDropdown) {
+        agencyDropdown.focus();
+
+        if (typeof agencyDropdown.showPicker === "function") {
+          agencyDropdown.showPicker();
+        } else {
+          agencyDropdown.click();
+        }
+      }
+    } else {
+      agencyPanel.classList.add("hidden");
+      agencyBtn.classList.remove("active");
     }
   });
 }
