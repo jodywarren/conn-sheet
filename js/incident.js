@@ -697,3 +697,32 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function bindPanelToggles() {
+  const applianceBtn = document.getElementById("tabAddAppliance");
+  const agencyBtn = document.getElementById("tabAddAgency");
+
+  const appliancePanel = document.getElementById("appliancePanel");
+  const agencyPanel = document.getElementById("agencyPanel");
+
+  if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
+
+  applianceBtn.addEventListener("click", () => {
+    const isActive = !appliancePanel.classList.contains("hidden");
+
+    appliancePanel.classList.toggle("hidden", isActive);
+    agencyPanel.classList.add("hidden");
+
+    applianceBtn.classList.toggle("active", !isActive);
+    agencyBtn.classList.remove("active");
+  });
+
+  agencyBtn.addEventListener("click", () => {
+    const isActive = !agencyPanel.classList.contains("hidden");
+
+    agencyPanel.classList.toggle("hidden", isActive);
+    appliancePanel.classList.add("hidden");
+
+    agencyBtn.classList.toggle("active", !isActive);
+    applianceBtn.classList.remove("active");
+  });
+}
