@@ -32,22 +32,23 @@ function bindTextInputs() {
     "responseCode",
     "pagerDetails",
     "scannedAddress",
-    "controlName",
     "actualAddress",
+    "controlName",
     "injuryNotes",
     "signalNotes"
   ];
 
   plainFields.forEach((id) => {
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el || el.dataset.boundInput === "1") return;
 
+    el.dataset.boundInput = "1";
     el.addEventListener("input", () => {
       if (id === "actualAddress") {
         state.incident.actualAddressEdited = true;
       }
 
-      state.incident[id] = el.value.trim();
+      state.incident[id] = String(el.value || "").trim();
       saveState();
       applyFieldCompletionStates();
     });
@@ -56,8 +57,9 @@ function bindTextInputs() {
 
 function bindSelect(id) {
   const el = document.getElementById(id);
-  if (!el) return;
+  if (!el || el.dataset.boundChange === "1") return;
 
+  el.dataset.boundChange = "1";
   el.addEventListener("change", () => {
     state.incident[id] = el.value;
     applyWeatherRules(id);
@@ -86,48 +88,43 @@ function applyWeatherRules(changedId) {
   }
 }
 
-  agencyBtn.addEventListener("click", () => {
-    const isHidden = agencyPanel.classList.contains("hidden");
+function bindSceneUnits() {
+  const dropdown = document.getElementById("applianceDropdown");
+  const appliancePanel = document.getElementById("appliancePanel");
+  const applianceBtn = document.getElementById("tabAddAppliance");
 
-    appliancePanel.classList.add("hidden");
-    applianceBtn.classList.remove("active");
+  if (!dropdown || dropdown.dataset.boundChange === "1") return;
 
-    if (isHidden) {
-      agencyPanel.classList.remove("hidden");
-      agencyBtn.classList.add("active");
+  dropdown.dataset.boundChange = "1";
+  dropdown.addEventListener("change", () => {
+    const raw = String(dropdown.value || "").trim().toUpperCase();
+    if (!raw) return;
 
-      if (agencyDropdown) {
-        agencyDropdown.focus();
+    const code = normalizeSceneUnit(raw);
 
-        if (typeof agencyDropdown.showPicker === "function") {
-          agencyDropdown.showPicker();
-        } else {
-          agencyDropdown.click();
-        }
-      }
-    } else {
-      agencyPanel.classList.add("hidden");
-      agencyBtn.classList.remove("active");
+    if (!Array.isArray(state.incident.sceneUnits)) {
+      state.incident.sceneUnits = [];
+    }
+    if (!Array.isArray(state.incident.pagedSceneUnits)) {
+      state.incident.pagedSceneUnits = [];
+    }
+
+    if (!state.incident.sceneUnits.includes(code)) {
+      state.incident.sceneUnits.push(code);
+    }
+
+    dropdown.value = "";
+    renderSceneUnitChips();
+    saveState();
+
+    if (appliancePanel) {
+      appliancePanel.classList.add("hidden");
+    }
+
+    if (applianceBtn) {
+      applianceBtn.classList.remove("active");
     }
   });
-
-function addSceneUnitFromInput() {
-  const input = document.getElementById("sceneUnitInput");
-  if (!input) return;
-
-  const raw = String(input.value || "").trim().toUpperCase();
-  if (!raw) return;
-
-  const code = normalizeSceneUnit(raw);
-
-  if (!state.incident.sceneUnits.includes(code)) {
-    state.incident.sceneUnits.push(code);
-  }
-
-  input.value = "";
-  renderSceneUnitChips();
-  saveState();
-  input.focus();
 }
 
 export function setPagedSceneUnits(codes = []) {
@@ -174,8 +171,8 @@ export function renderSceneUnitChips() {
     removeBtn.type = "button";
     removeBtn.textContent = "✕";
     removeBtn.addEventListener("click", () => {
-      state.incident.sceneUnits = state.incident.sceneUnits.filter((x) => x !== code);
-      state.incident.pagedSceneUnits = state.incident.pagedSceneUnits.filter((x) => x !== code);
+      state.incident.sceneUnits = (state.incident.sceneUnits || []).filter((x) => x !== code);
+      state.incident.pagedSceneUnits = (state.incident.pagedSceneUnits || []).filter((x) => x !== code);
       renderSceneUnitChips();
       saveState();
     });
@@ -184,12 +181,46 @@ export function renderSceneUnitChips() {
     chip.appendChild(removeBtn);
     wrap.appendChild(chip);
   });
+
+  const applianceBtn = document.getElementById("tabAddAppliance");
+  if (applianceBtn) {
+    applianceBtn.classList.toggle("complete", (state.incident.sceneUnits || []).length > 0);
+  }
 }
 
-function addOtherAgency() {
-  state.incident.otherAgencies.push(createEmptyAgency());
-  renderOtherAgencies();
-  saveState();
+function bindOtherAgencyControls() {
+  const dropdown = document.getElementById("agencyDropdown");
+  const agencyPanel = document.getElementById("agencyPanel");
+  const agencyBtn = document.getElementById("tabAddAgency");
+
+  if (!dropdown || dropdown.dataset.boundChange === "1") return;
+
+  dropdown.dataset.boundChange = "1";
+  dropdown.addEventListener("change", () => {
+    const type = String(dropdown.value || "").trim();
+    if (!type) return;
+
+    if (!Array.isArray(state.incident.otherAgencies)) {
+      state.incident.otherAgencies = [];
+    }
+
+    const agency = createEmptyAgency();
+    agency.type = type;
+
+    state.incident.otherAgencies.push(agency);
+    dropdown.value = "";
+
+    renderOtherAgencies();
+    saveState();
+
+    if (agencyPanel) {
+      agencyPanel.classList.add("hidden");
+    }
+
+    if (agencyBtn) {
+      agencyBtn.classList.remove("active");
+    }
+  });
 }
 
 function createEmptyAgency() {
@@ -204,6 +235,7 @@ function createEmptyAgency() {
     station: "",
     localHq: "",
     office: "",
+    poleId: "",
     notes: "",
     expanded: true
   };
@@ -322,25 +354,28 @@ export function renderOtherAgencies() {
         </div>
 
         <div class="grid agency-grid">
-          ${fields.map((field) => {
-            const val = String(agency[field.key] || "");
-            const inputType = field.mode === "tel" ? "tel" : "text";
-            const inputMode = field.mode === "numeric" ? "numeric" : field.mode === "tel" ? "tel" : "text";
+          ${fields
+            .map((field) => {
+              const val = String(agency[field.key] || "");
+              const inputType = field.mode === "tel" ? "tel" : "text";
+              const inputMode =
+                field.mode === "numeric" ? "numeric" : field.mode === "tel" ? "tel" : "text";
 
-            return `
-              <label>
-                ${field.label}
-                <input
-                  class="field-input editable-field agency-field ${val.trim() ? "field-complete" : ""}"
-                  type="${inputType}"
-                  inputmode="${inputMode}"
-                  value="${escapeHtml(val)}"
-                  data-agency-id="${agency.id}"
-                  data-field="${field.key}"
-                />
-              </label>
-            `;
-          }).join("")}
+              return `
+                <label>
+                  ${field.label}
+                  <input
+                    class="field-input editable-field agency-field ${val.trim() ? "field-complete" : ""}"
+                    type="${inputType}"
+                    inputmode="${inputMode}"
+                    value="${escapeHtml(val)}"
+                    data-agency-id="${agency.id}"
+                    data-field="${field.key}"
+                  />
+                </label>
+              `;
+            })
+            .join("")}
         </div>
       `;
     }
@@ -360,7 +395,9 @@ function bindRenderedOtherAgencyEvents() {
   document.querySelectorAll("[data-remove-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.removeAgency;
-      state.incident.otherAgencies = state.incident.otherAgencies.filter((agency) => agency.id !== id);
+      state.incident.otherAgencies = (state.incident.otherAgencies || []).filter(
+        (agency) => agency.id !== id
+      );
       renderOtherAgencies();
       saveState();
     });
@@ -368,7 +405,9 @@ function bindRenderedOtherAgencyEvents() {
 
   document.querySelectorAll("[data-edit-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const agency = state.incident.otherAgencies.find((item) => item.id === btn.dataset.editAgency);
+      const agency = (state.incident.otherAgencies || []).find(
+        (item) => item.id === btn.dataset.editAgency
+      );
       if (!agency) return;
       agency.expanded = true;
       renderOtherAgencies();
@@ -378,7 +417,9 @@ function bindRenderedOtherAgencyEvents() {
 
   document.querySelectorAll("[data-save-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const agency = state.incident.otherAgencies.find((item) => item.id === btn.dataset.saveAgency);
+      const agency = (state.incident.otherAgencies || []).find(
+        (item) => item.id === btn.dataset.saveAgency
+      );
       if (!agency) return;
       if (isAgencyComplete(agency)) {
         agency.expanded = false;
@@ -391,19 +432,19 @@ function bindRenderedOtherAgencyEvents() {
   document.querySelectorAll(".agency-field").forEach((el) => {
     const eventName = el.tagName === "SELECT" ? "change" : "input";
 
+    if (el.dataset.boundAgencyField === "1") return;
+    el.dataset.boundAgencyField = "1";
+
     el.addEventListener(eventName, () => {
-      const agency = state.incident.otherAgencies.find((item) => item.id === el.dataset.agencyId);
+      const agency = (state.incident.otherAgencies || []).find(
+        (item) => item.id === el.dataset.agencyId
+      );
       if (!agency) return;
 
       agency[el.dataset.field] = String(el.value || "").trim();
 
-      if (el.dataset.field === "type") {
-        renderOtherAgencies();
-        saveState();
-      } else {
-        el.classList.toggle("field-complete", String(el.value || "").trim().length > 0);
-        saveState();
-      }
+      el.classList.toggle("field-complete", String(el.value || "").trim().length > 0);
+      saveState();
     });
   });
 }
@@ -415,21 +456,22 @@ function bindOperationalChips() {
   bindFlagChip("injuryChip", "injury");
 
   const signalChip = document.getElementById("signalChip");
-  if (signalChip) {
-    signalChip.addEventListener("click", () => {
-      const active = signalChip.classList.toggle("active");
+  if (!signalChip || signalChip.dataset.boundClick === "1") return;
 
-      if (!active) {
-        state.incident.signalCode = "";
-        state.incident.signalNotes = "";
-      }
+  signalChip.dataset.boundClick = "1";
+  signalChip.addEventListener("click", () => {
+    const active = signalChip.classList.toggle("active");
 
-      toggleSignalNotes();
-      renderSignalChips();
-      saveState();
-      applyFieldCompletionStates();
-    });
-  }
+    if (!active) {
+      state.incident.signalCode = "";
+      state.incident.signalNotes = "";
+    }
+
+    toggleSignalNotes();
+    renderSignalChips();
+    saveState();
+    applyFieldCompletionStates();
+  });
 }
 
 function bindSignalChips() {
@@ -477,9 +519,14 @@ function renderSignalChips() {
 
 function bindFlagChip(chipId, flagKey) {
   const chip = document.getElementById(chipId);
-  if (!chip) return;
+  if (!chip || chip.dataset.boundClick === "1") return;
 
+  chip.dataset.boundClick = "1";
   chip.addEventListener("click", () => {
+    if (!state.incident.flags) {
+      state.incident.flags = {};
+    }
+
     state.incident.flags[flagKey] = !state.incident.flags[flagKey];
 
     if (flagKey === "injury" && !state.incident.flags[flagKey]) {
@@ -495,6 +542,9 @@ function bindFlagChip(chipId, flagKey) {
 
 function bindDetailTabs() {
   document.querySelectorAll("[data-detail-tab]").forEach((btn) => {
+    if (btn.dataset.boundClick === "1") return;
+    btn.dataset.boundClick = "1";
+
     btn.addEventListener("click", () => {
       const tab = String(btn.dataset.detailTab || "").trim().toLowerCase();
       if (!DETAIL_TABS.includes(tab)) return;
@@ -584,10 +634,10 @@ export function loadIncidentIntoInputs() {
 }
 
 function applyOperationalChipStates() {
-  setChipState("membersBeforeChip", state.incident.flags.membersBefore);
-  setChipState("hotDebriefChip", state.incident.flags.hotDebrief);
-  setChipState("aarRequiredChip", state.incident.flags.aarRequired);
-  setChipState("injuryChip", state.incident.flags.injury);
+  setChipState("membersBeforeChip", state.incident.flags?.membersBefore);
+  setChipState("hotDebriefChip", state.incident.flags?.hotDebrief);
+  setChipState("aarRequiredChip", state.incident.flags?.aarRequired);
+  setChipState("injuryChip", state.incident.flags?.injury);
   setChipState(
     "signalChip",
     Boolean(state.incident.signalCode) || document.getElementById("signalChip")?.classList.contains("active")
@@ -656,36 +706,6 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function bindOtherAgencyControls() {
-  const dropdown = document.getElementById("agencyDropdown");
-  const agencyPanel = document.getElementById("agencyPanel");
-  const agencyBtn = document.getElementById("tabAddAgency");
-
-  if (!dropdown) return;
-
-  dropdown.addEventListener("change", () => {
-    const type = String(dropdown.value || "").trim();
-    if (!type) return;
-
-    const agency = createEmptyAgency();
-    agency.type = type;
-
-    state.incident.otherAgencies.push(agency);
-    dropdown.value = "";
-
-    renderOtherAgencies();
-    saveState();
-
-    if (agencyPanel) {
-      agencyPanel.classList.add("hidden");
-    }
-
-    if (agencyBtn) {
-      agencyBtn.classList.remove("active");
-    }
-  });
-}
-
 function bindPanelToggles() {
   const applianceBtn = document.getElementById("tabAddAppliance");
   const agencyBtn = document.getElementById("tabAddAgency");
@@ -697,53 +717,61 @@ function bindPanelToggles() {
 
   if (!applianceBtn || !agencyBtn || !appliancePanel || !agencyPanel) return;
 
-  applianceBtn.addEventListener("click", () => {
-    const isHidden = appliancePanel.classList.contains("hidden");
+  if (applianceBtn.dataset.boundClick !== "1") {
+    applianceBtn.dataset.boundClick = "1";
 
-    agencyPanel.classList.add("hidden");
-    agencyBtn.classList.remove("active");
+    applianceBtn.addEventListener("click", () => {
+      const isHidden = appliancePanel.classList.contains("hidden");
 
-    if (isHidden) {
-      appliancePanel.classList.remove("hidden");
-      applianceBtn.classList.add("active");
-
-      if (applianceDropdown) {
-        applianceDropdown.focus();
-
-        if (typeof applianceDropdown.showPicker === "function") {
-          applianceDropdown.showPicker();
-        } else {
-          applianceDropdown.click();
-        }
-      }
-    } else {
-      appliancePanel.classList.add("hidden");
-      applianceBtn.classList.remove("active");
-    }
-  });
-
-  agencyBtn.addEventListener("click", () => {
-    const isHidden = agencyPanel.classList.contains("hidden");
-
-    appliancePanel.classList.add("hidden");
-    applianceBtn.classList.remove("active");
-
-    if (isHidden) {
-      agencyPanel.classList.remove("hidden");
-      agencyBtn.classList.add("active");
-
-      if (agencyDropdown) {
-        agencyDropdown.focus();
-
-        if (typeof agencyDropdown.showPicker === "function") {
-          agencyDropdown.showPicker();
-        } else {
-          agencyDropdown.click();
-        }
-      }
-    } else {
       agencyPanel.classList.add("hidden");
       agencyBtn.classList.remove("active");
-    }
-  });
+
+      if (isHidden) {
+        appliancePanel.classList.remove("hidden");
+        applianceBtn.classList.add("active");
+
+        if (applianceDropdown) {
+          applianceDropdown.focus();
+
+          if (typeof applianceDropdown.showPicker === "function") {
+            applianceDropdown.showPicker();
+          } else {
+            applianceDropdown.click();
+          }
+        }
+      } else {
+        appliancePanel.classList.add("hidden");
+        applianceBtn.classList.remove("active");
+      }
+    });
+  }
+
+  if (agencyBtn.dataset.boundClick !== "1") {
+    agencyBtn.dataset.boundClick = "1";
+
+    agencyBtn.addEventListener("click", () => {
+      const isHidden = agencyPanel.classList.contains("hidden");
+
+      appliancePanel.classList.add("hidden");
+      applianceBtn.classList.remove("active");
+
+      if (isHidden) {
+        agencyPanel.classList.remove("hidden");
+        agencyBtn.classList.add("active");
+
+        if (agencyDropdown) {
+          agencyDropdown.focus();
+
+          if (typeof agencyDropdown.showPicker === "function") {
+            agencyDropdown.showPicker();
+          } else {
+            agencyDropdown.click();
+          }
+        }
+      } else {
+        agencyPanel.classList.add("hidden");
+        agencyBtn.classList.remove("active");
+      }
+    });
+  }
 }
