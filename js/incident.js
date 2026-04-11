@@ -473,9 +473,10 @@ function bindStructureInputs() {
         state.incident.structure[section] = {};
       }
 
-      state.incident.structure[section][key] = String(el.value || "").trim();
-      saveState();
-      applyStructureSectionStates();
+state.incident.structure[section][key] = String(el.value || "").trim();
+applyStructureEquipmentToggles();
+saveState();     
+applyStructureSectionStates();
     });
   });
 }
@@ -560,6 +561,7 @@ function applyStructureEquipmentToggles() {
     el.value = state.incident.structure?.[section]?.[key] || "";
   });
 
+  applyStructureEquipmentToggles();
   applyStructureSectionStates();
 }
 
