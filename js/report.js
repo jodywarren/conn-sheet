@@ -275,6 +275,12 @@ function getReportLines() {
     lines.push(`Comments: ${incident.comments}`);
   }
 
+const structureLines = buildStructureReportLines();
+if (structureLines.length) {
+  lines.push("");
+  lines.push(...structureLines);
+}
+  
   lines.push("");
   lines.push("MEMBERS RESPONDING");
   lines.push("");
