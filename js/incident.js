@@ -408,6 +408,147 @@ function bindStructurePanels() {
   });
 }
 
+function bindStructureInputs() {
+  const fieldMap = {
+    struct_type: ["quick", "type"],
+    struct_construction: ["quick", "construction"],
+    struct_levels: ["quick", "levels"],
+    struct_roof: ["quick", "roof"],
+    struct_involved: ["quick", "involved"],
+    struct_saved: ["quick", "saved"],
+
+    struct_area_use: ["fireArea", "areaUse"],
+    struct_dimensions: ["fireArea", "dimensions"],
+    struct_ceiling: ["fireArea", "ceiling"],
+    struct_wall: ["fireArea", "wall"],
+
+    struct_smoke_material: ["behaviour", "smokeMaterial"],
+    struct_fire_material: ["behaviour", "fireMaterial"],
+    struct_smoke_travel: ["behaviour", "smokeTravel"],
+    struct_spread: ["behaviour", "spread"],
+    struct_smoke_damage: ["behaviour", "smokeDamage"],
+    struct_water_damage: ["behaviour", "waterDamage"],
+
+    struct_alarm: ["detection", "alarm"],
+    struct_alarm_status: ["detection", "alarmStatus"],
+    struct_alarm_power: ["detection", "alarmPower"],
+    struct_alarm_notes: ["detection", "notes"],
+
+    struct_sprinklers: ["suppression", "sprinklers"],
+    struct_heads: ["suppression", "heads"],
+    struct_perf: ["suppression", "performance"],
+    struct_sprinkler_notes: ["suppression", "notes"],
+
+    struct_ext: ["equipment", "extinguishers"],
+    struct_hose: ["equipment", "hoseReels"],
+    struct_hydrant: ["equipment", "hydrants"]
+  };
+
+  Object.entries(fieldMap).forEach(([id, [section, key]]) => {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.boundStruct === "1") return;
+
+    el.dataset.boundStruct = "1";
+    const eventName = el.tagName === "SELECT" ? "change" : "input";
+
+    el.addEventListener(eventName, () => {
+      if (!state.incident.structure) {
+        state.incident.structure = {
+          quick: {},
+          fireArea: {},
+          behaviour: {},
+          detection: {},
+          suppression: {},
+          equipment: {}
+        };
+      }
+
+      if (!state.incident.structure[section]) {
+        state.incident.structure[section] = {};
+      }
+
+      state.incident.structure[section][key] = String(el.value || "").trim();
+      saveState();
+      applyStructureSectionStates();
+    });
+  });
+}
+
+function loadStructureIntoInputs() {
+  const fieldMap = {
+    struct_type: ["quick", "type"],
+    struct_construction: ["quick", "construction"],
+    struct_levels: ["quick", "levels"],
+    struct_roof: ["quick", "roof"],
+    struct_involved: ["quick", "involved"],
+    struct_saved: ["quick", "saved"],
+
+    struct_area_use: ["fireArea", "areaUse"],
+    struct_dimensions: ["fireArea", "dimensions"],
+    struct_ceiling: ["fireArea", "ceiling"],
+    struct_wall: ["fireArea", "wall"],
+
+    struct_smoke_material: ["behaviour", "smokeMaterial"],
+    struct_fire_material: ["behaviour", "fireMaterial"],
+    struct_smoke_travel: ["behaviour", "smokeTravel"],
+    struct_spread: ["behaviour", "spread"],
+    struct_smoke_damage: ["behaviour", "smokeDamage"],
+    struct_water_damage: ["behaviour", "waterDamage"],
+
+    struct_alarm: ["detection", "alarm"],
+    struct_alarm_status: ["detection", "alarmStatus"],
+    struct_alarm_power: ["detection", "alarmPower"],
+    struct_alarm_notes: ["detection", "notes"],
+
+    struct_sprinklers: ["suppression", "sprinklers"],
+    struct_heads: ["suppression", "heads"],
+    struct_perf: ["suppression", "performance"],
+    struct_sprinkler_notes: ["suppression", "notes"],
+
+    struct_ext: ["equipment", "extinguishers"],
+    struct_hose: ["equipment", "hoseReels"],
+    struct_hydrant: ["equipment", "hydrants"]
+  };
+
+  Object.entries(fieldMap).forEach(([id, [section, key]]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.value = state.incident.structure?.[section]?.[key] || "";
+  });
+
+  applyStructureSectionStates();
+}
+
+function sectionHasAnyValue(sectionName) {
+  const section = state.incident.structure?.[sectionName];
+  if (!section) return false;
+
+  return Object.values(section).some((value) => String(value || "").trim().length > 0);
+}
+
+function applyStructureSectionStates() {
+  const map = {
+    quick: "Quick Info",
+    fireArea: "Fire Area",
+    behaviour: "Fire Behaviour",
+    detection: "Detection",
+    suppression: "Suppression",
+    equipment: "Equipment"
+  };
+
+  document.querySelectorAll("[data-struct]").forEach((btn) => {
+    const key = btn.dataset.struct;
+    const complete = sectionHasAnyValue(key);
+
+    btn.classList.toggle("complete", complete);
+    btn.classList.toggle("needs-attention", !complete);
+
+    const label = map[key] || key;
+    btn.textContent = label;
+  });
+}
+
 function bindRenderedOtherAgencyEvents() {
   document.querySelectorAll("[data-remove-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
