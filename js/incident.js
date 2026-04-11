@@ -789,6 +789,7 @@ export function loadIncidentIntoInputs() {
   toggleSignalNotes();
   applyDetailTabState();
   applyFieldCompletionStates();
+  loadStructureIntoInputs();
 
   document.dispatchEvent(new Event("incident:loaded"));
 }
