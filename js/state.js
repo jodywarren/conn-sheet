@@ -36,6 +36,13 @@ function createDefaultState() {
       firsCode: "",
       pagerScreenshot: "",
 
+mva: {
+  vehicles: [],
+  hazards: [],
+  outcome: "",
+  notes: ""
+}
+      
       sceneUnits: [],
       pagedSceneUnits: [],
 
