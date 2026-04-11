@@ -360,6 +360,12 @@ if (mvaLines.length) {
   lines.push(...mvaLines);
 }
   
+const mvaLines = buildMvaReportLines();
+if (mvaLines.length) {
+  lines.push("");
+  lines.push(...mvaLines);
+}
+  
   lines.push("");
   lines.push("MEMBERS RESPONDING");
   lines.push("");
