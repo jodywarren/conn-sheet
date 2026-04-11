@@ -56,6 +56,46 @@ function getOtherAgencySummary(agency) {
   return parts.filter((part) => String(part).trim().length > 0).join(", ");
 }
 
+function buildStructureReportLines() {
+  const s = state.incident.structure;
+  if (!s) return [];
+
+  const lines = [];
+
+  function formatKey(key) {
+    return key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (c) => c.toUpperCase());
+  }
+
+  function addSection(title, obj) {
+    if (!obj) return;
+
+    const entries = Object.entries(obj).filter(([_, value]) => {
+      return String(value || "").trim().length > 0;
+    });
+
+    if (!entries.length) return;
+
+    lines.push(title.toUpperCase());
+
+    entries.forEach(([key, value]) => {
+      lines.push(`${formatKey(key)}: ${value}`);
+    });
+
+    lines.push("");
+  }
+
+  addSection("Structure - Quick Info", s.quick);
+  addSection("Structure - Fire Area", s.fireArea);
+  addSection("Structure - Fire Behaviour", s.behaviour);
+  addSection("Structure - Detection", s.detection);
+  addSection("Structure - Suppression", s.suppression);
+  addSection("Structure - Equipment", s.equipment);
+
+  return lines;
+}
+
 function hasAnyResponderInjury() {
   const applianceInjury = Object.values(state.responders.appliances || {}).some((appliance) =>
     (appliance.crew || []).some((member) => member.isInjured)
