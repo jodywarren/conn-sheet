@@ -25,6 +25,206 @@ export function bindIncidentInputs() {
 applyStructureSectionStates();
 }
 
+function ensureMva() {
+  if (!state.incident.mva) {
+    state.incident.mva = {
+      vehicles: [],
+      hazards: [],
+      outcome: "",
+      notes: ""
+    };
+  }
+}
+
+function createEmptyVehicle() {
+  return {
+    name: "",
+    phone: "",
+    make: "",
+    model: "",
+    rego: "",
+    state: "",
+    notes: "",
+    flags: []
+  };
+}
+
+function renderMvaVehicles() {
+  ensureMva();
+
+  const wrap = document.getElementById("mvaVehicleList");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  state.incident.mva.vehicles.forEach((v, index) => {
+    const div = document.createElement("div");
+    div.className = "agency-card";
+
+    div.innerHTML = `
+      <strong>Vehicle ${index + 1}</strong>
+
+      <input data-v="${index}" data-k="name" placeholder="Contact name" value="${v.name || ""}" />
+      <input data-v="${index}" data-k="phone" placeholder="Contact number" inputmode="numeric" value="${v.phone || ""}" />
+
+      <input list="vehicleMakes" data-v="${index}" data-k="make" placeholder="Vehicle make" value="${v.make || ""}" />
+      <datalist id="vehicleMakes">
+        <option>Holden</option>
+        <option>Toyota</option>
+        <option>Ford</option>
+        <option>Mazda</option>
+        <option>Hyundai</option>
+        <option>Nissan</option>
+        <option>Kia</option>
+        <option>Subaru</option>
+        <option>Mitsubishi</option>
+        <option>Volkswagen</option>
+        <option>BMW</option>
+        <option>LDV</option>
+        <option>Tesla</option>
+        <option>BYD</option>
+        <option>Volvo</option>
+        <option>Hino</option>
+        <option>Scania</option>
+        <option>Fiat</option>
+        <option>Isuzu</option>
+        <option>Suzuki</option>
+        <option>MG</option>
+        <option>GWM</option>
+        <option>Chery</option>
+        <option>Polestar</option>
+        <option>Audi</option>
+        <option>Land Rover</option>
+        <option>Range Rover</option>
+        <option>Lexus</option>
+        <option>Skoda</option>
+        <option>Peugeot</option>
+        <option>Renault</option>
+        <option>Jaguar</option>
+        <option>Porsche</option>
+        <option>Maserati</option>
+        <option>Mini</option>
+        <option>RAM</option>
+        <option>Chevrolet</option>
+        <option>Jaecoo</option>
+      </datalist>
+
+      <input data-v="${index}" data-k="model" placeholder="Model" value="${v.model || ""}" />
+      <input data-v="${index}" data-k="rego" placeholder="Registration" value="${v.rego || ""}" />
+
+      <select data-v="${index}" data-k="state">
+        <option value="">State</option>
+        <option ${v.state==="VIC"?"selected":""}>VIC</option>
+        <option ${v.state==="NSW"?"selected":""}>NSW</option>
+        <option ${v.state==="ACT"?"selected":""}>ACT</option>
+        <option ${v.state==="TAS"?"selected":""}>TAS</option>
+        <option ${v.state==="SA"?"selected":""}>SA</option>
+        <option ${v.state==="QLD"?"selected":""}>QLD</option>
+        <option ${v.state==="NT"?"selected":""}>NT</option>
+        <option ${v.state==="WA"?"selected":""}>WA</option>
+      </select>
+
+      <input data-v="${index}" data-k="notes" placeholder="Notes" value="${v.notes || ""}" />
+
+      <div class="chips">
+        ${["Airbags","Roll over","Battery disconnected","High speed","Entrapment"].map(flag => `
+          <button type="button" class="chip-btn ${v.flags.includes(flag)?"active":""}" data-flag="${flag}" data-v="${index}">
+            ${flag}
+          </button>
+        `).join("")}
+      </div>
+
+      <button data-remove="${index}" class="tiny-btn">Remove</button>
+    `;
+
+    wrap.appendChild(div);
+  });
+}
+
+function bindMva() {
+  ensureMva();
+
+  const addBtn = document.getElementById("addVehicleBtn");
+  if (addBtn) {
+    addBtn.onclick = () => {
+      state.incident.mva.vehicles.push(createEmptyVehicle());
+      saveState();
+      renderMvaVehicles();
+    };
+  }
+
+  document.addEventListener("input", (e) => {
+    const v = e.target.dataset.v;
+    const k = e.target.dataset.k;
+    if (v === undefined || !k) return;
+
+    state.incident.mva.vehicles[v][k] = e.target.value;
+    saveState();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.dataset.flag !== undefined) {
+      const v = e.target.dataset.v;
+      const flag = e.target.dataset.flag;
+
+      const arr = state.incident.mva.vehicles[v].flags;
+
+      if (arr.includes(flag)) {
+        state.incident.mva.vehicles[v].flags = arr.filter(f => f !== flag);
+      } else {
+        arr.push(flag);
+      }
+
+      saveState();
+      renderMvaVehicles();
+    }
+
+    if (e.target.dataset.remove !== undefined) {
+      const i = e.target.dataset.remove;
+      state.incident.mva.vehicles.splice(i, 1);
+      saveState();
+      renderMvaVehicles();
+    }
+  });
+
+  const hazardWrap = document.getElementById("mvaHazards");
+  if (hazardWrap) {
+    hazardWrap.addEventListener("click", (e) => {
+      const h = e.target.dataset.hazard;
+      if (!h) return;
+
+      const arr = state.incident.mva.hazards;
+
+      if (arr.includes(h)) {
+        state.incident.mva.hazards = arr.filter(x => x !== h);
+      } else {
+        arr.push(h);
+      }
+
+      e.target.classList.toggle("active");
+      saveState();
+    });
+  }
+
+  const outcome = document.getElementById("mvaOutcome");
+  if (outcome) {
+    outcome.value = state.incident.mva.outcome || "";
+    outcome.onchange = () => {
+      state.incident.mva.outcome = outcome.value;
+      saveState();
+    };
+  }
+
+  const notes = document.getElementById("mvaNotes");
+  if (notes) {
+    notes.value = state.incident.mva.notes || "";
+    notes.oninput = () => {
+      state.incident.mva.notes = notes.value;
+      saveState();
+    };
+  }
+}
+
 function bindTextInputs() {
   const plainFields = [
     "eventNumber",
