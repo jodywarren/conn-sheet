@@ -22,7 +22,9 @@ export function bindIncidentInputs() {
   bindStructurePanels();
   bindStructureInputs();
   applyStructureEquipmentToggles();
-applyStructureSectionStates();
+  applyStructureSectionStates();
+  bindMva();
+  renderMvaVehicles();
 }
 
 function ensureMva() {
