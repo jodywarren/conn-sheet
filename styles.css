@@ -1162,3 +1162,27 @@ body.dark-mode .ops-chip.active.complete {
     grid-template-columns: 1fr;
   }
 }
+
+.section-toggle {
+  display: block;
+  width: 100%;
+  margin: 10px 0 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d47474;
+  background: #f7d7d7;
+  color: #8a1717;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.section-toggle.complete {
+  background: #edf8ef;
+  border: 1px solid #63a978;
+  color: #1c6b3a;
+}
+
+.section-panel {
+  padding: 10px 0 6px;
+}
