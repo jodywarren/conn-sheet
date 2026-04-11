@@ -60,7 +60,16 @@ function createDefaultState() {
       comments: "",
       hosesUsed: "",
 
-      activeDetailTab: ""
+      activeDetailTab: "",
+
+structure: {
+  quick: {},
+  fireArea: {},
+  behaviour: {},
+  detection: {},
+  suppression: {},
+  equipment: {}
+}
     },
 
     responders: {
