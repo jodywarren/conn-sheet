@@ -146,6 +146,91 @@ function renderMvaVehicles() {
 function bindMva() {
   ensureMva();
 
+  if (state.incident.mva.vehicles.length === 0) {
+    state.incident.mva.vehicles.push(createEmptyVehicle());
+  }
+
+  const addBtn = document.getElementById("addVehicleBtn");
+  if (addBtn) {
+    addBtn.onclick = () => {
+      state.incident.mva.vehicles.push(createEmptyVehicle());
+      saveState();
+      renderMvaVehicles();
+    };
+  }
+
+  document.addEventListener("input", (e) => {
+    const v = e.target.dataset.v;
+    const k = e.target.dataset.k;
+    if (v === undefined || !k) return;
+
+    state.incident.mva.vehicles[v][k] = e.target.value;
+    saveState();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.dataset.flag !== undefined) {
+      const v = e.target.dataset.v;
+      const flag = e.target.dataset.flag;
+
+      const arr = state.incident.mva.vehicles[v].flags;
+
+      if (arr.includes(flag)) {
+        state.incident.mva.vehicles[v].flags = arr.filter((f) => f !== flag);
+      } else {
+        arr.push(flag);
+      }
+
+      saveState();
+      renderMvaVehicles();
+    }
+
+    if (e.target.dataset.remove !== undefined) {
+      const i = e.target.dataset.remove;
+      state.incident.mva.vehicles.splice(i, 1);
+      saveState();
+      renderMvaVehicles();
+    }
+  });
+
+  const hazardWrap = document.getElementById("mvaHazards");
+  if (hazardWrap) {
+    hazardWrap.addEventListener("click", (e) => {
+      const h = e.target.dataset.hazard;
+      if (!h) return;
+
+      const arr = state.incident.mva.hazards;
+
+      if (arr.includes(h)) {
+        state.incident.mva.hazards = arr.filter((x) => x !== h);
+      } else {
+        arr.push(h);
+      }
+
+      e.target.classList.toggle("active");
+      saveState();
+    });
+  }
+
+  const outcome = document.getElementById("mvaOutcome");
+  if (outcome) {
+    outcome.value = state.incident.mva.outcome || "";
+    outcome.onchange = () => {
+      state.incident.mva.outcome = outcome.value;
+      saveState();
+    };
+  }
+
+  const notes = document.getElementById("mvaNotes");
+  if (notes) {
+    notes.value = state.incident.mva.notes || "";
+    notes.oninput = () => {
+      state.incident.mva.notes = notes.value;
+      saveState();
+    };
+  }
+}
+
   const addBtn = document.getElementById("addVehicleBtn");
   if (addBtn) {
     addBtn.onclick = () => {
