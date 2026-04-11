@@ -173,49 +173,79 @@
 
 <div id="detailTabPanel-structure" class="placeholder-panel hidden">
 
-  <!-- QUICK INFO -->
-  <button class="section-toggle" data-struct="quick">Quick Info</button>
-  <div class="section-panel hidden" data-struct-panel="quick">
-    <select id="struct_type">
-      <option value="">Structure type</option>
-      <option>Residential</option>
-      <option>Commercial</option>
-      <option>Industrial</option>
-      <option>Other</option>
-    </select>
+<!-- QUICK INFO -->
+<button class="section-toggle" data-struct="quick">Quick Info</button>
+<div class="section-panel hidden" data-struct-panel="quick">
+  <select id="struct_type">
+    <option value="">STRUCTURE TYPE</option>
+    <option value="Residential">STRUCTURE TYPE: Residential</option>
+    <option value="Commercial">STRUCTURE TYPE: Commercial</option>
+    <option value="Industrial">STRUCTURE TYPE: Industrial</option>
+    <option value="Other">STRUCTURE TYPE: Other</option>
+  </select>
 
-    <select id="struct_construction">
-      <option value="">Construction</option>
-      <option>Brick</option>
-      <option>Timber</option>
-      <option>Steel</option>
-      <option>Concrete</option>
-      <option>Mixed</option>
-    </select>
+  <select id="struct_construction">
+    <option value="">CONSTRUCTION TYPE</option>
+    <option value="Brick">CONSTRUCTION TYPE: Brick</option>
+    <option value="Timber">CONSTRUCTION TYPE: Timber</option>
+    <option value="Steel">CONSTRUCTION TYPE: Steel</option>
+    <option value="Concrete">CONSTRUCTION TYPE: Concrete</option>
+    <option value="Mixed">CONSTRUCTION TYPE: Mixed</option>
+    <option value="Other">CONSTRUCTION TYPE: Other</option>
+  </select>
 
   <select id="struct_levels">
-  <option value="">Levels</option>
-  <option>1</option>
-  <option>2</option>
-  <option>3</option>
-  <option>4</option>
-  <option>5</option>
-  <option>6</option>
-  <option>Other</option>
-</select>
-    <input id="struct_roof" placeholder="Roof type" />
-<input id="struct_involved" placeholder="% involved" inputmode="numeric" />
-<input id="struct_saved" placeholder="% saved" inputmode="numeric" />
-  </div>
+    <option value="">LEVELS</option>
+    <option value="1">LEVELS: 1</option>
+    <option value="2">LEVELS: 2</option>
+    <option value="3">LEVELS: 3</option>
+    <option value="4">LEVELS: 4</option>
+    <option value="5">LEVELS: 5</option>
+    <option value="6">LEVELS: 6</option>
+    <option value="Other">LEVELS: Other</option>
+  </select>
 
-  <!-- FIRE AREA -->
-  <button class="section-toggle" data-struct="area">Fire Area</button>
-  <div class="section-panel hidden" data-struct-panel="area">
-    <input id="struct_area_use" placeholder="Area use" />
-    <input id="struct_dimensions" placeholder="Dimensions" />
-    <input id="struct_ceiling" placeholder="Ceiling lining" />
-    <input id="struct_wall" placeholder="Wall lining" />
-  </div>
+  <select id="struct_roof">
+    <option value="">ROOF MATERIAL</option>
+    <option value="Colorbond">ROOF MATERIAL: Colorbond</option>
+    <option value="Tiles">ROOF MATERIAL: Tiles</option>
+    <option value="Concrete">ROOF MATERIAL: Concrete</option>
+    <option value="Timber">ROOF MATERIAL: Timber</option>
+    <option value="Steel">ROOF MATERIAL: Steel</option>
+    <option value="Mixed">ROOF MATERIAL: Mixed</option>
+    <option value="Other">ROOF MATERIAL: Other</option>
+  </select>
+
+  <input id="struct_involved" placeholder="% involved" inputmode="numeric" />
+  <input id="struct_saved" placeholder="% saved" inputmode="numeric" />
+</div>
+  
+<!-- FIRE AREA -->
+<button class="section-toggle" data-struct="fireArea">Fire Area</button>
+<div class="section-panel hidden" data-struct-panel="fireArea">
+  <input id="struct_area_use" placeholder="AREA USE" />
+  <input id="struct_dimensions" placeholder="DIMENSIONS" />
+
+  <select id="struct_ceiling">
+    <option value="">CEILING LINING</option>
+    <option value="Plaster">CEILING LINING: Plaster</option>
+    <option value="Chipboard">CEILING LINING: Chipboard</option>
+    <option value="Concrete">CEILING LINING: Concrete</option>
+    <option value="Timber">CEILING LINING: Timber</option>
+    <option value="Mixed">CEILING LINING: Mixed</option>
+    <option value="Other">CEILING LINING: Other</option>
+  </select>
+
+  <select id="struct_wall">
+    <option value="">WALL LINING</option>
+    <option value="Plaster">WALL LINING: Plaster</option>
+    <option value="Chipboard">WALL LINING: Chipboard</option>
+    <option value="Concrete">WALL LINING: Concrete</option>
+    <option value="Timber">WALL LINING: Timber</option>
+    <option value="Mixed">WALL LINING: Mixed</option>
+    <option value="Other">WALL LINING: Other</option>
+  </select>
+</div>
 
   <!-- FIRE BEHAVIOUR -->
   <button class="section-toggle" data-struct="behaviour">Fire Behaviour</button>
@@ -273,13 +303,30 @@
     <input id="struct_sprinkler_notes" placeholder="Notes" />
   </div>
 
-  <!-- EQUIPMENT -->
-  <button class="section-toggle" data-struct="equipment">Equipment</button>
-  <div class="section-panel hidden" data-struct-panel="equipment">
-    <input id="struct_ext" placeholder="Extinguishers used" />
-    <input id="struct_hose" placeholder="Hose reels used" />
-    <input id="struct_hydrant" placeholder="Hydrants used" />
-  </div>
+<!-- EQUIPMENT -->
+<button class="section-toggle" data-struct="equipment">Equipment</button>
+<div class="section-panel hidden" data-struct-panel="equipment">
+
+  <select id="struct_ext">
+    <option value="">EXTINGUISHERS USED</option>
+    <option value="Y">EXTINGUISHERS USED: Y</option>
+    <option value="N">EXTINGUISHERS USED: N</option>
+  </select>
+  <input id="struct_ext_count" class="hidden" placeholder="Number used" inputmode="numeric" />
+
+  <select id="struct_hose">
+    <option value="">HOSE REELS USED</option>
+    <option value="Y">HOSE REELS USED: Y</option>
+    <option value="N">HOSE REELS USED: N</option>
+  </select>
+  <input id="struct_hose_count" class="hidden" placeholder="Number used" inputmode="numeric" />
+
+  <select id="struct_hydrant">
+    <option value="">HYDRANTS USED</option>
+    <option value="Y">HYDRANTS USED: Y</option>
+    <option value="N">HYDRANTS USED: N</option>
+  </select>
+  <input id="struct_hydrant_count" class="hidden" placeholder="Number used" inputmode="numeric" />
 
 </div>
 
