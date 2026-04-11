@@ -36,6 +36,14 @@ function ensureMva() {
       notes: ""
     };
   }
+
+  if (!Array.isArray(state.incident.mva.vehicles)) {
+    state.incident.mva.vehicles = [];
+  }
+
+  if (!Array.isArray(state.incident.mva.hazards)) {
+    state.incident.mva.hazards = [];
+  }
 }
 
 function createEmptyVehicle() {
@@ -60,8 +68,10 @@ function renderMvaVehicles() {
   wrap.innerHTML = "";
 
   state.incident.mva.vehicles.forEach((v, index) => {
+    const safeFlags = Array.isArray(v.flags) ? v.flags : [];
+
     const div = document.createElement("div");
-    div.className = "agency-card";
+    div.className = "agency-card mva-card";
 
     div.innerHTML = `
       <strong>Vehicle ${index + 1}</strong>
@@ -116,31 +126,58 @@ function renderMvaVehicles() {
 
       <select data-v="${index}" data-k="state">
         <option value="">State</option>
-        <option ${v.state==="VIC"?"selected":""}>VIC</option>
-        <option ${v.state==="NSW"?"selected":""}>NSW</option>
-        <option ${v.state==="ACT"?"selected":""}>ACT</option>
-        <option ${v.state==="TAS"?"selected":""}>TAS</option>
-        <option ${v.state==="SA"?"selected":""}>SA</option>
-        <option ${v.state==="QLD"?"selected":""}>QLD</option>
-        <option ${v.state==="NT"?"selected":""}>NT</option>
-        <option ${v.state==="WA"?"selected":""}>WA</option>
+        <option ${v.state === "VIC" ? "selected" : ""}>VIC</option>
+        <option ${v.state === "NSW" ? "selected" : ""}>NSW</option>
+        <option ${v.state === "ACT" ? "selected" : ""}>ACT</option>
+        <option ${v.state === "TAS" ? "selected" : ""}>TAS</option>
+        <option ${v.state === "SA" ? "selected" : ""}>SA</option>
+        <option ${v.state === "QLD" ? "selected" : ""}>QLD</option>
+        <option ${v.state === "NT" ? "selected" : ""}>NT</option>
+        <option ${v.state === "WA" ? "selected" : ""}>WA</option>
       </select>
 
       <input data-v="${index}" data-k="notes" placeholder="Notes" value="${v.notes || ""}" />
 
       <div class="chips">
-        ${["Airbags","Roll over","Battery disconnected","High speed","Entrapment"].map(flag => `
-          <button type="button" class="chip-btn ${v.flags.includes(flag)?"active":""}" data-flag="${flag}" data-v="${index}">
-            ${flag}
-          </button>
-        `).join("")}
+        ${["Airbags", "Roll over", "Battery disconnected", "High speed", "Entrapment"]
+          .map(
+            (flag) => `
+            <button
+              type="button"
+              class="chip-btn ${safeFlags.includes(flag) ? "active" : ""}"
+              data-flag="${flag}"
+              data-v="${index}"
+            >
+              ${flag}
+            </button>
+          `
+          )
+          .join("")}
       </div>
 
-      <button data-remove="${index}" class="tiny-btn">Remove</button>
+      <button type="button" data-remove="${index}" class="tiny-btn">Remove</button>
     `;
 
     wrap.appendChild(div);
   });
+
+  const hazardWrap = document.getElementById("mvaHazards");
+  if (hazardWrap) {
+    hazardWrap.querySelectorAll("[data-hazard]").forEach((btn) => {
+      const hazard = btn.dataset.hazard;
+      btn.classList.toggle("active", state.incident.mva.hazards.includes(hazard));
+    });
+  }
+
+  const outcome = document.getElementById("mvaOutcome");
+  if (outcome) {
+    outcome.value = state.incident.mva.outcome || "";
+  }
+
+  const notes = document.getElementById("mvaNotes");
+  if (notes) {
+    notes.value = state.incident.mva.notes || "";
+  }
 }
 
 function bindMva() {
@@ -148,17 +185,18 @@ function bindMva() {
 
   if (state.incident.mva.vehicles.length === 0) {
     state.incident.mva.vehicles.push(createEmptyVehicle());
+    saveState();
   }
 
   const addBtn = document.getElementById("addVehicleBtn");
   if (addBtn && addBtn.dataset.boundClick !== "1") {
     addBtn.dataset.boundClick = "1";
 
-    addBtn.onclick = () => {
+    addBtn.addEventListener("click", () => {
       state.incident.mva.vehicles.push(createEmptyVehicle());
       saveState();
       renderMvaVehicles();
-    };
+    });
   }
 
   const wrap = document.getElementById("mvaVehicleList");
@@ -166,49 +204,53 @@ function bindMva() {
     wrap.dataset.boundMva = "1";
 
     wrap.addEventListener("input", (e) => {
-      const target = e.target;
-      const v = target.dataset.v;
-      const k = target.dataset.k;
+      const target = e.target.closest("input[data-v][data-k]");
+      if (!target) return;
 
-      if (v === undefined || !k) return;
-      if (!state.incident.mva?.vehicles?.[v]) return;
+      const v = Number.parseInt(target.dataset.v, 10);
+      const k = String(target.dataset.k || "").trim();
 
-      state.incident.mva.vehicles[v][k] = target.value;
+      if (!Number.isInteger(v) || !k) return;
+      if (!state.incident.mva.vehicles[v]) return;
+
+      state.incident.mva.vehicles[v][k] = String(target.value || "").trim();
       saveState();
     });
 
     wrap.addEventListener("change", (e) => {
-      const target = e.target;
-      const v = target.dataset.v;
-      const k = target.dataset.k;
+      const target = e.target.closest("select[data-v][data-k]");
+      if (!target) return;
 
-      if (v === undefined || !k) return;
-      if (!state.incident.mva?.vehicles?.[v]) return;
+      const v = Number.parseInt(target.dataset.v, 10);
+      const k = String(target.dataset.k || "").trim();
 
-      state.incident.mva.vehicles[v][k] = target.value;
+      if (!Number.isInteger(v) || !k) return;
+      if (!state.incident.mva.vehicles[v]) return;
+
+      state.incident.mva.vehicles[v][k] = String(target.value || "").trim();
       saveState();
     });
 
     wrap.addEventListener("click", (e) => {
-      const flagBtn = e.target.closest("[data-flag]");
+      const flagBtn = e.target.closest("[data-flag][data-v]");
       if (flagBtn) {
-        const v = flagBtn.dataset.v;
-        const flag = flagBtn.dataset.flag;
+        const v = Number.parseInt(flagBtn.dataset.v, 10);
+        const flag = String(flagBtn.dataset.flag || "").trim();
 
-        if (v === undefined || !flag) return;
-        if (!state.incident.mva?.vehicles?.[v]) return;
+        if (!Number.isInteger(v) || !flag) return;
+        if (!state.incident.mva.vehicles[v]) return;
 
-       if (!state.incident.mva.vehicles[v].flags) {
-  state.incident.mva.vehicles[v].flags = [];
-}
+        if (!Array.isArray(state.incident.mva.vehicles[v].flags)) {
+          state.incident.mva.vehicles[v].flags = [];
+        }
 
-const arr = state.incident.mva.vehicles[v].flags;
+        const arr = state.incident.mva.vehicles[v].flags;
 
-if (arr.includes(flag)) {
-  state.incident.mva.vehicles[v].flags = arr.filter((f) => f !== flag);
-} else {
-  arr.push(flag);
-}
+        if (arr.includes(flag)) {
+          state.incident.mva.vehicles[v].flags = arr.filter((f) => f !== flag);
+        } else {
+          arr.push(flag);
+        }
 
         saveState();
         renderMvaVehicles();
@@ -217,10 +259,10 @@ if (arr.includes(flag)) {
 
       const removeBtn = e.target.closest("[data-remove]");
       if (removeBtn) {
-        const i = removeBtn.dataset.remove;
+        const i = Number.parseInt(removeBtn.dataset.remove, 10);
 
-        if (i === undefined) return;
-        if (!state.incident.mva?.vehicles?.[i]) return;
+        if (!Number.isInteger(i)) return;
+        if (!state.incident.mva.vehicles[i]) return;
 
         state.incident.mva.vehicles.splice(i, 1);
 
@@ -233,6 +275,49 @@ if (arr.includes(flag)) {
       }
     });
   }
+
+  const hazardWrap = document.getElementById("mvaHazards");
+  if (hazardWrap && hazardWrap.dataset.boundClick !== "1") {
+    hazardWrap.dataset.boundClick = "1";
+
+    hazardWrap.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-hazard]");
+      if (!btn) return;
+
+      const hazard = String(btn.dataset.hazard || "").trim();
+      if (!hazard) return;
+
+      if (state.incident.mva.hazards.includes(hazard)) {
+        state.incident.mva.hazards = state.incident.mva.hazards.filter((x) => x !== hazard);
+      } else {
+        state.incident.mva.hazards.push(hazard);
+      }
+
+      saveState();
+      renderMvaVehicles();
+    });
+  }
+
+  const outcome = document.getElementById("mvaOutcome");
+  if (outcome && outcome.dataset.boundChange !== "1") {
+    outcome.dataset.boundChange = "1";
+
+    outcome.addEventListener("change", () => {
+      state.incident.mva.outcome = outcome.value;
+      saveState();
+    });
+  }
+
+  const notes = document.getElementById("mvaNotes");
+  if (notes && notes.dataset.boundInput !== "1") {
+    notes.dataset.boundInput = "1";
+
+    notes.addEventListener("input", () => {
+      state.incident.mva.notes = notes.value;
+      saveState();
+    });
+  }
+}
 
   const hazardWrap = document.getElementById("mvaHazards");
   if (hazardWrap && hazardWrap.dataset.boundClick !== "1") {
