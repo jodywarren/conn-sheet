@@ -482,113 +482,44 @@ applyStructureSectionStates();
 }
 
 function loadStructureIntoInputs() {
- const fieldMap = {
-  struct_type: ["quick", "type"],
-  struct_construction: ["quick", "construction"],
-  struct_levels: ["quick", "levels"],
-  struct_roof: ["quick", "roof"],
-  struct_involved: ["quick", "involved"],
-  struct_saved: ["quick", "saved"],
+  const fieldMap = {
+    struct_type: ["quick", "type"],
+    struct_construction: ["quick", "construction"],
+    struct_levels: ["quick", "levels"],
+    struct_roof: ["quick", "roof"],
+    struct_involved: ["quick", "involved"],
+    struct_saved: ["quick", "saved"],
 
-  struct_area_use: ["fireArea", "areaUse"],
-  struct_dimensions: ["fireArea", "dimensions"],
-  struct_ceiling: ["fireArea", "ceiling"],
-  struct_wall: ["fireArea", "wall"],
+    struct_area_use: ["fireArea", "areaUse"],
+    struct_dimensions: ["fireArea", "dimensions"],
+    struct_ceiling: ["fireArea", "ceiling"],
+    struct_wall: ["fireArea", "wall"],
 
-  struct_smoke_material: ["behaviour", "smokeMaterial"],
-  struct_fire_material: ["behaviour", "fireMaterial"],
-  struct_smoke_travel: ["behaviour", "smokeTravel"],
-  struct_spread: ["behaviour", "spread"],
-  struct_smoke_damage: ["behaviour", "smokeDamage"],
-  struct_water_damage: ["behaviour", "waterDamage"],
+    struct_smoke_material: ["behaviour", "smokeMaterial"],
+    struct_fire_material: ["behaviour", "fireMaterial"],
+    struct_smoke_travel: ["behaviour", "smokeTravel"],
+    struct_spread: ["behaviour", "spread"],
+    struct_smoke_damage: ["behaviour", "smokeDamage"],
+    struct_water_damage: ["behaviour", "waterDamage"],
 
-  struct_alarm: ["detection", "alarm"],
-  struct_alarm_status: ["detection", "alarmStatus"],
-  struct_alarm_power: ["detection", "alarmPower"],
-  struct_alarm_notes: ["detection", "notes"],
+    struct_alarm: ["detection", "alarm"],
+    struct_alarm_status: ["detection", "alarmStatus"],
+    struct_alarm_power: ["detection", "alarmPower"],
+    struct_alarm_notes: ["detection", "notes"],
 
-  struct_sprinklers: ["suppression", "sprinklers"],
-  struct_heads: ["suppression", "heads"],
-  struct_perf: ["suppression", "performance"],
-  struct_sprinkler_notes: ["suppression", "notes"],
+    struct_sprinklers: ["suppression", "sprinklers"],
+    struct_heads: ["suppression", "heads"],
+    struct_perf: ["suppression", "performance"],
+    struct_sprinkler_notes: ["suppression", "notes"],
 
-  struct_ext: ["equipment", "extinguishersUsed"],
-  struct_ext_count: ["equipment", "extinguishersCount"],
-  struct_hose: ["equipment", "hoseReelsUsed"],
-  struct_hose_count: ["equipment", "hoseReelsCount"],
-  struct_hydrant: ["equipment", "hydrantsUsed"],
-  struct_hydrant_count: ["equipment", "hydrantsCount"]
-};
+    struct_ext: ["equipment", "extinguishersUsed"],
+    struct_ext_count: ["equipment", "extinguishersCount"],
+    struct_hose: ["equipment", "hoseReelsUsed"],
+    struct_hose_count: ["equipment", "hoseReelsCount"],
+    struct_hydrant: ["equipment", "hydrantsUsed"],
+    struct_hydrant_count: ["equipment", "hydrantsCount"]
+  };
 
-function applyStructureEquipmentToggles() {
-  const pairs = [
-    ["struct_ext", "struct_ext_count"],
-    ["struct_hose", "struct_hose_count"],
-    ["struct_hydrant", "struct_hydrant_count"]
-  ];
-
-  pairs.forEach(([selectId, inputId]) => {
-    const selectEl = document.getElementById(selectId);
-    const inputEl = document.getElementById(inputId);
-    if (!selectEl || !inputEl) return;
-
-    const showCount = selectEl.value === "Y";
-    inputEl.classList.toggle("hidden", !showCount);
-
-    if (!showCount) {
-      inputEl.value = "";
-
-      const fieldMap = {
-        struct_ext_count: ["equipment", "extinguishersCount"],
-        struct_hose_count: ["equipment", "hoseReelsCount"],
-        struct_hydrant_count: ["equipment", "hydrantsCount"]
-      };
-
-      const mapping = fieldMap[inputId];
-      if (mapping) {
-        const [section, key] = mapping;
-        if (state.incident.structure?.[section]) {
-          state.incident.structure[section][key] = "";
-        }
-      }
-    }
-  });
-}
-  
-function applyStructureEquipmentToggles() {
-  const pairs = [
-    ["struct_ext", "struct_ext_count"],
-    ["struct_hose", "struct_hose_count"],
-    ["struct_hydrant", "struct_hydrant_count"]
-  ];
-
-  pairs.forEach(([selectId, inputId]) => {
-    const selectEl = document.getElementById(selectId);
-    const inputEl = document.getElementById(inputId);
-    if (!selectEl || !inputEl) return;
-
-    const showCount = selectEl.value === "Y";
-    inputEl.classList.toggle("hidden", !showCount);
-
-    if (!showCount) {
-      inputEl.value = "";
-      const fieldMap = {
-        struct_ext_count: ["equipment", "extinguishersCount"],
-        struct_hose_count: ["equipment", "hoseReelsCount"],
-        struct_hydrant_count: ["equipment", "hydrantsCount"]
-      };
-
-      const mapping = fieldMap[inputId];
-      if (mapping) {
-        const [section, key] = mapping;
-        if (state.incident.structure?.[section]) {
-          state.incident.structure[section][key] = "";
-        }
-      }
-    }
-  });
-}
-  
   Object.entries(fieldMap).forEach(([id, [section, key]]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -598,6 +529,41 @@ function applyStructureEquipmentToggles() {
 
   applyStructureEquipmentToggles();
   applyStructureSectionStates();
+}
+
+function applyStructureEquipmentToggles() {
+  const pairs = [
+    ["struct_ext", "struct_ext_count"],
+    ["struct_hose", "struct_hose_count"],
+    ["struct_hydrant", "struct_hydrant_count"]
+  ];
+
+  pairs.forEach(([selectId, inputId]) => {
+    const selectEl = document.getElementById(selectId);
+    const inputEl = document.getElementById(inputId);
+    if (!selectEl || !inputEl) return;
+
+    const showCount = selectEl.value === "Y";
+    inputEl.classList.toggle("hidden", !showCount);
+
+    if (!showCount) {
+      inputEl.value = "";
+
+      const fieldMap = {
+        struct_ext_count: ["equipment", "extinguishersCount"],
+        struct_hose_count: ["equipment", "hoseReelsCount"],
+        struct_hydrant_count: ["equipment", "hydrantsCount"]
+      };
+
+      const mapping = fieldMap[inputId];
+      if (mapping) {
+        const [section, key] = mapping;
+        if (state.incident.structure?.[section]) {
+          state.incident.structure[section][key] = "";
+        }
+      }
+    }
+  });
 }
 
 function sectionHasAnyValue(sectionName) {
