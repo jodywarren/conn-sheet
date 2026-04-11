@@ -310,7 +310,6 @@ function bindMva() {
       saveState();
     };
   }
-}
 
 function bindTextInputs() {
   const plainFields = [
