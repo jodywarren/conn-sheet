@@ -166,10 +166,43 @@
                 <button type="button" class="chip-btn ops-chip" data-detail-tab="alarm">Alarm</button>
               </div>
 
-              <div id="detailTabPanel-mva" class="placeholder-panel hidden">
-                <strong>MVA</strong><br />
-                Vehicle and occupant details coming soon.
-              </div>
+          <div id="detailTabPanel-mva" class="placeholder-panel hidden">
+
+  <!-- VEHICLES -->
+  <div id="mvaVehicleList"></div>
+
+  <button type="button" id="addVehicleBtn" class="chip-btn">ADD VEHICLE</button>
+
+  <!-- INCIDENT LEVEL -->
+  <div class="section" style="margin-top:12px;">
+    <strong>MVA SUMMARY</strong>
+
+    <div class="chips" id="mvaHazards">
+      <button type="button" class="chip-btn" data-hazard="Fuel leak">Fuel leak</button>
+      <button type="button" class="chip-btn" data-hazard="Fire">Fire</button>
+      <button type="button" class="chip-btn" data-hazard="Electrical">Electrical</button>
+      <button type="button" class="chip-btn" data-hazard="Traffic hazard">Traffic hazard</button>
+      <button type="button" class="chip-btn" data-hazard="Debris">Debris</button>
+      <button type="button" class="chip-btn" data-hazard="Other">Other</button>
+    </div>
+
+    <select id="mvaOutcome">
+      <option value="">Select outcome</option>
+      <option>Scene made safe</option>
+      <option>Handed to Police</option>
+      <option>Handed to Ambulance</option>
+      <option>Handed to SES</option>
+      <option>Handed to Tow</option>
+      <option>Road cleared</option>
+      <option>Vehicle moved</option>
+      <option>Traffic control in place</option>
+      <option>Other</option>
+    </select>
+
+    <input id="mvaNotes" placeholder="Notes" />
+
+  </div>
+</div>
 
 <div id="detailTabPanel-structure" class="placeholder-panel hidden">
 
