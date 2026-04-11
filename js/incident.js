@@ -537,6 +537,41 @@ function applyStructureEquipmentToggles() {
 
     if (!showCount) {
       inputEl.value = "";
+
+      const fieldMap = {
+        struct_ext_count: ["equipment", "extinguishersCount"],
+        struct_hose_count: ["equipment", "hoseReelsCount"],
+        struct_hydrant_count: ["equipment", "hydrantsCount"]
+      };
+
+      const mapping = fieldMap[inputId];
+      if (mapping) {
+        const [section, key] = mapping;
+        if (state.incident.structure?.[section]) {
+          state.incident.structure[section][key] = "";
+        }
+      }
+    }
+  });
+}
+  
+function applyStructureEquipmentToggles() {
+  const pairs = [
+    ["struct_ext", "struct_ext_count"],
+    ["struct_hose", "struct_hose_count"],
+    ["struct_hydrant", "struct_hydrant_count"]
+  ];
+
+  pairs.forEach(([selectId, inputId]) => {
+    const selectEl = document.getElementById(selectId);
+    const inputEl = document.getElementById(inputId);
+    if (!selectEl || !inputEl) return;
+
+    const showCount = selectEl.value === "Y";
+    inputEl.classList.toggle("hidden", !showCount);
+
+    if (!showCount) {
+      inputEl.value = "";
       const fieldMap = {
         struct_ext_count: ["equipment", "extinguishersCount"],
         struct_hose_count: ["equipment", "hoseReelsCount"],
