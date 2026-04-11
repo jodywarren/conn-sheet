@@ -62,45 +62,109 @@ function buildStructureReportLines() {
 
   const lines = [];
 
-  function formatKey(key) {
-    return key
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (c) => c.toUpperCase());
-  }
-
-  function addSection(title, obj) {
-    if (!obj) return;
-
-    const entries = Object.entries(obj).filter(([_, value]) => {
-      return String(value || "").trim().length > 0;
-    });
-
-    if (!entries.length) return;
+  function addSection(title, entries) {
+    const validEntries = entries.filter((entry) => String(entry.value || "").trim().length > 0);
+    if (!validEntries.length) return;
 
     lines.push(title.toUpperCase());
 
-   entries.forEach(([key, value]) => {
-  let displayValue = value;
-
-  if (
-    (key === "involved" || key === "saved") &&
-    String(value).trim().length > 0
-  ) {
-    displayValue = `${String(value).trim()}%`;
-  }
-
-  lines.push(`${formatKey(key)}: ${displayValue}`);
-});
+    validEntries.forEach((entry) => {
+      lines.push(`${entry.label}: ${entry.value}`);
+    });
 
     lines.push("");
   }
 
-  addSection("Structure - Quick Info", s.quick);
-  addSection("Structure - Fire Area", s.fireArea);
-  addSection("Structure - Fire Behaviour", s.behaviour);
-  addSection("Structure - Detection", s.detection);
-  addSection("Structure - Suppression", s.suppression);
-  addSection("Structure - Equipment", s.equipment);
+  addSection("Structure - Quick Info", [
+    { label: "Structure type", value: s.quick?.type || "" },
+    { label: "Construction type", value: s.quick?.construction || "" },
+    { label: "Levels", value: s.quick?.levels || "" },
+    { label: "Roof material", value: s.quick?.roof || "" },
+    {
+      label: "% Involved",
+      value: s.quick?.involved ? `${String(s.quick.involved).trim()}%` : ""
+    },
+    {
+      label: "% Saved",
+      value: s.quick?.saved ? `${String(s.quick.saved).trim()}%` : ""
+    }
+  ]);
+
+  addSection("Structure - Fire Area", [
+    { label: "Area use", value: s.fireArea?.areaUse || "" },
+    { label: "Dimensions", value: s.fireArea?.dimensions || "" },
+    { label: "Ceiling lining", value: s.fireArea?.ceiling || "" },
+    { label: "Wall lining", value: s.fireArea?.wall || "" }
+  ]);
+
+  addSection("Structure - Fire Behaviour", [
+    { label: "Smoke material", value: s.behaviour?.smokeMaterial || "" },
+    { label: "Fire material", value: s.behaviour?.fireMaterial || "" },
+    { label: "Smoke travel", value: s.behaviour?.smokeTravel || "" },
+    { label: "Flame spread factors", value: s.behaviour?.spread || "" },
+    { label: "Smoke damage", value: s.behaviour?.smokeDamage || "" },
+    { label: "Water damage", value: s.behaviour?.waterDamage || "" }
+  ]);
+
+  addSection("Structure - Detection", [
+    { label: "Smoke alarms", value: s.detection?.alarm || "" },
+    { label: "Operation", value: s.detection?.alarmStatus || "" },
+    { label: "Power", value: s.detection?.alarmPower || "" },
+    { label: "Notes", value: s.detection?.notes || "" }
+  ]);
+
+  addSection("Structure - Suppression", [
+    { label: "Sprinklers", value: s.suppression?.sprinklers || "" },
+    { label: "Heads activated", value: s.suppression?.heads || "" },
+    { label: "Performance", value: s.suppression?.performance || "" },
+    { label: "Notes", value: s.suppression?.notes || "" }
+  ]);
+
+  const equipmentEntries = [];
+
+  if (s.equipment?.extinguishersUsed === "Y") {
+    equipmentEntries.push({
+      label: "Extinguishers used",
+      value: s.equipment?.extinguishersCount
+        ? `Y, ${s.equipment.extinguishersCount}`
+        : "Y"
+    });
+  } else if (s.equipment?.extinguishersUsed === "N") {
+    equipmentEntries.push({
+      label: "Extinguishers used",
+      value: "N"
+    });
+  }
+
+  if (s.equipment?.hoseReelsUsed === "Y") {
+    equipmentEntries.push({
+      label: "Hose reels used",
+      value: s.equipment?.hoseReelsCount
+        ? `Y, ${s.equipment.hoseReelsCount}`
+        : "Y"
+    });
+  } else if (s.equipment?.hoseReelsUsed === "N") {
+    equipmentEntries.push({
+      label: "Hose reels used",
+      value: "N"
+    });
+  }
+
+  if (s.equipment?.hydrantsUsed === "Y") {
+    equipmentEntries.push({
+      label: "Hydrants used",
+      value: s.equipment?.hydrantsCount
+        ? `Y, ${s.equipment.hydrantsCount}`
+        : "Y"
+    });
+  } else if (s.equipment?.hydrantsUsed === "N") {
+    equipmentEntries.push({
+      label: "Hydrants used",
+      value: "N"
+    });
+  }
+
+  addSection("Structure - Equipment", equipmentEntries);
 
   return lines;
 }
