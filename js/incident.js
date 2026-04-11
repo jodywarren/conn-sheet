@@ -21,6 +21,7 @@ export function bindIncidentInputs() {
   bindPanelToggles();
   bindStructurePanels();
   bindStructureInputs();
+  applyStructureEquipmentToggles();
 applyStructureSectionStates();
 }
 
@@ -53,7 +54,7 @@ function bindTextInputs() {
 
       state.incident[id] = String(el.value || "").trim();
       saveState();
-      applyFieldCompletionStates();
+            applyFieldCompletionStates();
     });
   });
 }
