@@ -391,6 +391,22 @@ export function renderOtherAgencies() {
   bindRenderedOtherAgencyEvents();
 }
 
+function bindStructurePanels() {
+  const buttons = document.querySelectorAll('[data-struct]');
+  const panels = document.querySelectorAll('[data-struct-panel]');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.struct;
+
+      panels.forEach(p => p.classList.add('hidden'));
+
+      const panel = document.querySelector(`[data-struct-panel="${key}"]`);
+      if (panel) panel.classList.remove('hidden');
+    });
+  });
+}
+
 function bindRenderedOtherAgencyEvents() {
   document.querySelectorAll("[data-remove-agency]").forEach((btn) => {
     btn.addEventListener("click", () => {
