@@ -20,6 +20,8 @@ export function bindIncidentInputs() {
   bindDetailTabs();
   bindPanelToggles();
   bindStructurePanels();
+  bindStructureInputs();
+applyStructureSectionStates();
 }
 
 function bindTextInputs() {
