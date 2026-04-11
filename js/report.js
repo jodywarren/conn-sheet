@@ -353,12 +353,6 @@ if (structureLines.length) {
   lines.push("");
   lines.push(...structureLines);
 }
-
-const mvaLines = buildMvaReportLines();
-if (mvaLines.length) {
-  lines.push("");
-  lines.push(...mvaLines);
-}
   
 const mvaLines = buildMvaReportLines();
 if (mvaLines.length) {
