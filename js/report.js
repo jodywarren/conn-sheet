@@ -79,9 +79,18 @@ function buildStructureReportLines() {
 
     lines.push(title.toUpperCase());
 
-    entries.forEach(([key, value]) => {
-      lines.push(`${formatKey(key)}: ${value}`);
-    });
+   entries.forEach(([key, value]) => {
+  let displayValue = value;
+
+  if (
+    (key === "involved" || key === "saved") &&
+    String(value).trim().length > 0
+  ) {
+    displayValue = `${String(value).trim()}%`;
+  }
+
+  lines.push(`${formatKey(key)}: ${displayValue}`);
+});
 
     lines.push("");
   }
