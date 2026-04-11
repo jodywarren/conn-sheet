@@ -365,7 +365,6 @@ function bindMva() {
       saveState();
     };
   }
-}
 
   const addBtn = document.getElementById("addVehicleBtn");
   if (addBtn) {
