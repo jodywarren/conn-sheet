@@ -293,15 +293,6 @@ function bindMva() {
     });
   }
 
-  const outcome = document.getElementById("mvaOutcome");
-  if (outcome) {
-    outcome.value = state.incident.mva.outcome || "";
-    outcome.onchange = () => {
-      state.incident.mva.outcome = outcome.value;
-      saveState();
-    };
-  }
-
   const notes = document.getElementById("mvaNotes");
   if (notes) {
     notes.value = state.incident.mva.notes || "";
