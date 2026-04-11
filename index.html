@@ -171,10 +171,108 @@
                 Vehicle and occupant details coming soon.
               </div>
 
-              <div id="detailTabPanel-structure" class="placeholder-panel hidden">
-                <strong>Structure</strong><br />
-                Structure fire fields coming soon.
-              </div>
+<div id="detailTabPanel-structure" class="placeholder-panel hidden">
+
+  <!-- QUICK INFO -->
+  <button class="section-toggle" data-struct="quick">Quick Info</button>
+  <div class="section-panel hidden" data-struct-panel="quick">
+    <select id="struct_type">
+      <option value="">Structure type</option>
+      <option>Residential</option>
+      <option>Commercial</option>
+      <option>Industrial</option>
+      <option>Other</option>
+    </select>
+
+    <select id="struct_construction">
+      <option value="">Construction</option>
+      <option>Brick</option>
+      <option>Timber</option>
+      <option>Steel</option>
+      <option>Concrete</option>
+      <option>Mixed</option>
+    </select>
+
+    <input id="struct_levels" placeholder="Levels" />
+    <input id="struct_roof" placeholder="Roof type" />
+    <input id="struct_involved" placeholder="% involved" />
+    <input id="struct_saved" placeholder="% saved" />
+  </div>
+
+  <!-- FIRE AREA -->
+  <button class="section-toggle" data-struct="area">Fire Area</button>
+  <div class="section-panel hidden" data-struct-panel="area">
+    <input id="struct_area_use" placeholder="Area use" />
+    <input id="struct_dimensions" placeholder="Dimensions" />
+    <input id="struct_ceiling" placeholder="Ceiling lining" />
+    <input id="struct_wall" placeholder="Wall lining" />
+  </div>
+
+  <!-- FIRE BEHAVIOUR -->
+  <button class="section-toggle" data-struct="behaviour">Fire Behaviour</button>
+  <div class="section-panel hidden" data-struct-panel="behaviour">
+    <input id="struct_smoke_material" placeholder="Smoke material" />
+    <input id="struct_fire_material" placeholder="Fire material" />
+    <input id="struct_smoke_travel" placeholder="Smoke travel" />
+    <input id="struct_spread" placeholder="Flame spread factors" />
+    <input id="struct_smoke_damage" placeholder="Smoke damage" />
+    <input id="struct_water_damage" placeholder="Water damage" />
+  </div>
+
+  <!-- DETECTION -->
+  <button class="section-toggle" data-struct="detection">Detection</button>
+  <div class="section-panel hidden" data-struct-panel="detection">
+    <select id="struct_alarm">
+      <option value="">Smoke alarms</option>
+      <option>Yes</option>
+      <option>No</option>
+    </select>
+
+    <select id="struct_alarm_status">
+      <option value="">Operation</option>
+      <option>Operated</option>
+      <option>Failed</option>
+    </select>
+
+    <select id="struct_alarm_power">
+      <option value="">Power</option>
+      <option>AC</option>
+      <option>Battery</option>
+    </select>
+
+    <input id="struct_alarm_notes" placeholder="Notes" />
+  </div>
+
+  <!-- SUPPRESSION -->
+  <button class="section-toggle" data-struct="suppression">Suppression</button>
+  <div class="section-panel hidden" data-struct-panel="suppression">
+    <select id="struct_sprinklers">
+      <option value="">Sprinklers</option>
+      <option>Yes</option>
+      <option>No</option>
+    </select>
+
+    <input id="struct_heads" placeholder="Heads activated" />
+
+    <select id="struct_perf">
+      <option value="">Performance</option>
+      <option>Operated</option>
+      <option>Failed</option>
+      <option>Partial</option>
+    </select>
+
+    <input id="struct_sprinkler_notes" placeholder="Notes" />
+  </div>
+
+  <!-- EQUIPMENT -->
+  <button class="section-toggle" data-struct="equipment">Equipment</button>
+  <div class="section-panel hidden" data-struct-panel="equipment">
+    <input id="struct_ext" placeholder="Extinguishers used" />
+    <input id="struct_hose" placeholder="Hose reels used" />
+    <input id="struct_hydrant" placeholder="Hydrants used" />
+  </div>
+
+</div>
 
               <div id="detailTabPanel-alarm" class="placeholder-panel hidden">
                 <strong>Alarm</strong><br />
