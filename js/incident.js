@@ -198,14 +198,17 @@ function bindMva() {
         if (v === undefined || !flag) return;
         if (!state.incident.mva?.vehicles?.[v]) return;
 
-        const arr = state.incident.mva.vehicles[v].flags || [];
+       if (!state.incident.mva.vehicles[v].flags) {
+  state.incident.mva.vehicles[v].flags = [];
+}
 
-        if (arr.includes(flag)) {
-          state.incident.mva.vehicles[v].flags = arr.filter((f) => f !== flag);
-        } else {
-          arr.push(flag);
-          state.incident.mva.vehicles[v].flags = arr;
-        }
+const arr = state.incident.mva.vehicles[v].flags;
+
+if (arr.includes(flag)) {
+  state.incident.mva.vehicles[v].flags = arr.filter((f) => f !== flag);
+} else {
+  arr.push(flag);
+}
 
         saveState();
         renderMvaVehicles();
