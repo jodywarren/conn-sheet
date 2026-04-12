@@ -668,6 +668,7 @@ export async function runPagerOcrIntoIncident(file, integration = {}) {
 
     const rawPatch = buildIncidentPatchFromExtraction(extraction);
     const patch = buildNonEmptyPatch(rawPatch);
+    await enrichWithDistance(patch);
 
     if (extraction.success) {
       applyPatchToIncidentState(patch);
