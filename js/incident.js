@@ -98,6 +98,7 @@ export function bindIncidentInputs() {
   applyStructureEquipmentToggles();
   applyStructureSectionStates();
 
+  bindMva();
   renderMvaVehicles();
   bindAlarm();
   applyDetailTabCompletionStates();
