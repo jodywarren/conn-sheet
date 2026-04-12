@@ -646,15 +646,18 @@ function syncOicFromAllResponse() {
   }
 }
 
-function hasInjuredResponderWithoutNotes() {
+function hasAnyInjuredResponder() {
   const applianceInjury = Object.values(state.responders.appliances || {}).some((appliance) =>
     (appliance.crew || []).some((member) => member.isInjured)
   );
 
   const directInjury = (state.responders.directResponders || []).some((member) => member.isInjured);
-  const anyInjury = applianceInjury || directInjury;
 
-  return anyInjury && !String(state.responders.injuryNotes || "").trim();
+  return applianceInjury || directInjury;
+}
+
+function hasInjuredResponderWithoutNotes() {
+  return hasAnyInjuredResponder() && !String(state.responders.injuryNotes || "").trim();
 }
 
 function getApplianceStatusClass(appliance) {
