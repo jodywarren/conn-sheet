@@ -98,6 +98,7 @@ function addNav(pageId, buttons) {
     btn.type = "button";
     btn.className = btnConfig.className;
     btn.textContent = btnConfig.label;
+    btn.dataset.page = btnConfig.page;
 
     btn.addEventListener("click", () => {
       goToPage(btnConfig.page);
