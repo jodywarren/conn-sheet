@@ -169,6 +169,7 @@ function renderOtherResponding(panelId) {
       </div>
     </div>
 
+       ${showInjuryNotes ? `
     <div class="other-responding-section">
       <div class="subhead">Responder injury notes</div>
       ${injuryWarning}
@@ -181,6 +182,7 @@ function renderOtherResponding(panelId) {
         >${escapeHtml(state.responders.injuryNotes || "")}</textarea>
       </label>
     </div>
+    ` : ""}
   `;
 
   bindOtherRespondingEvents(panel);
