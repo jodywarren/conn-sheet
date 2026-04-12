@@ -1326,6 +1326,7 @@ function bindAlarm() {
     outcome.addEventListener("change", () => {
       state.incident.alarm.outcome = outcome.value;
       saveState();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1334,6 +1335,7 @@ function bindAlarm() {
     followUp.addEventListener("change", () => {
       state.incident.alarm.followUp = followUp.value;
       saveState();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1342,6 +1344,7 @@ function bindAlarm() {
     notes.addEventListener("input", () => {
       state.incident.alarm.notes = notes.value;
       saveState();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1358,6 +1361,7 @@ function bindAlarm() {
       reader.onload = () => {
         state.incident.alarm.photo = reader.result;
         saveState();
+        applyDetailTabCompletionStates();
 
         if (preview) {
           preview.src = reader.result;
