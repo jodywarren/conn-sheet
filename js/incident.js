@@ -510,6 +510,7 @@ function bindOperationalChips() {
   bindFlagChip("hotDebriefChip", "hotDebrief");
   bindFlagChip("aarRequiredChip", "aarRequired");
   bindFlagChip("injuryChip", "injury");
+  bindFlagChip("cancelledEnrouteChip", "cancelledEnroute");
 
   const signalChip = document.getElementById("signalChip");
   if (!signalChip || signalChip.dataset.boundClick === "1") return;
