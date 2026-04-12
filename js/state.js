@@ -5,25 +5,25 @@ function createDefaultState() {
       theme: "light"
     },
 
-  profile: {
-  name: "",
-  brigade: "Connewarre",
-  memberNumber: "",
-  contactNumber: "",
-  email: "",
+    profile: {
+      name: "",
+      brigade: "Connewarre",
+      memberNumber: "",
+      contactNumber: "",
+      email: "",
 
-  station1: {
-    name: "Connewarre",
-    lat: -38.265192,
-    lng: 144.398106
-  },
+      station1: {
+        name: "Connewarre",
+        lat: -38.265192,
+        lng: 144.398106
+      },
 
-  station2: {
-    name: "Mt Duneed",
-    lat: -38.249978,
-    lng: 144.351697
-  }
-}, 
+      station2: {
+        name: "Mt Duneed",
+        lat: -38.249978,
+        lng: 144.351697
+      }
+    },
 
     incident: {
       eventNumber: "",
@@ -49,20 +49,20 @@ function createDefaultState() {
       pagerScreenshot: "",
 
       mva: {
-      vehicles: [],
-      hazards: [],
-      outcome: "",
-      notes: ""
+        vehicles: [],
+        hazards: [],
+        outcome: "",
+        notes: ""
       },
 
       alarm: {
-   type: "",
-   cause: "",
-   outcome: "",
-   notes: "",
-   photo: ""
- },
-      
+        type: "",
+        cause: "",
+        outcome: "",
+        notes: "",
+        photo: ""
+      },
+
       sceneUnits: [],
       pagedSceneUnits: [],
 
@@ -73,13 +73,12 @@ function createDefaultState() {
 
       otherAgencies: [],
 
- flags: {
-  membersBefore: false,
-  hotDebrief: false,
-  aarRequired: false,
-  injury: false,
-  cancelledEnroute: false
-},
+      flags: {
+        membersBefore: false,
+        hotDebrief: false,
+        aarRequired: false,
+        injury: false,
+        cancelledEnroute: false
       },
 
       injuryNotes: "",
@@ -91,14 +90,14 @@ function createDefaultState() {
 
       activeDetailTab: "",
 
-structure: {
-  quick: {},
-  fireArea: {},
-  behaviour: {},
-  detection: {},
-  suppression: {},
-  equipment: {}
-}
+      structure: {
+        quick: {},
+        fireArea: {},
+        behaviour: {},
+        detection: {},
+        suppression: {},
+        equipment: {}
+      }
     },
 
     responders: {
@@ -185,7 +184,7 @@ export function saveProfileFromInputs() {
   state.profile.contactNumber = document.getElementById("profileContactNumber")?.value.trim() || "";
   state.profile.email = document.getElementById("profileEmail")?.value.trim() || "";
   state.profile.brigade = document.getElementById("profileBrigade")?.value.trim() || "Connewarre";
-  state.ui.theme = document.getElementById("themeToggle")?.checked ? "dark" : "light";
+
   if (!state.profile.station1) {
     state.profile.station1 = { name: "Connewarre", lat: 0, lng: 0 };
   }
@@ -193,18 +192,13 @@ export function saveProfileFromInputs() {
     state.profile.station2 = { name: "Mt Duneed", lat: 0, lng: 0 };
   }
 
-if (!state.profile.station1) {
-  state.profile.station1 = { name: "Connewarre", lat: 0, lng: 0 };
-}
-if (!state.profile.station2) {
-  state.profile.station2 = { name: "Mt Duneed", lat: 0, lng: 0 };
-}
+  state.profile.station1.lat = parseFloat(document.getElementById("station1Lat")?.value) || 0;
+  state.profile.station1.lng = parseFloat(document.getElementById("station1Lng")?.value) || 0;
 
-state.profile.station1.lat = parseFloat(document.getElementById("station1Lat")?.value) || 0;
-state.profile.station1.lng = parseFloat(document.getElementById("station1Lng")?.value) || 0;
+  state.profile.station2.lat = parseFloat(document.getElementById("station2Lat")?.value) || 0;
+  state.profile.station2.lng = parseFloat(document.getElementById("station2Lng")?.value) || 0;
 
-state.profile.station2.lat = parseFloat(document.getElementById("station2Lat")?.value) || 0;
-state.profile.station2.lng = parseFloat(document.getElementById("station2Lng")?.value) || 0;
+  state.ui.theme = document.getElementById("themeToggle")?.checked ? "dark" : "light";
   applyTheme();
   saveState();
 }
@@ -225,14 +219,14 @@ export function fillProfileInputs() {
   if (themeToggle) themeToggle.checked = state.ui.theme === "dark";
 
   const s1Lat = document.getElementById("station1Lat");
-const s1Lng = document.getElementById("station1Lng");
-const s2Lat = document.getElementById("station2Lat");
-const s2Lng = document.getElementById("station2Lng");
+  const s1Lng = document.getElementById("station1Lng");
+  const s2Lat = document.getElementById("station2Lat");
+  const s2Lng = document.getElementById("station2Lng");
 
-if (s1Lat) s1Lat.value = state.profile.station1?.lat ?? "";
-if (s1Lng) s1Lng.value = state.profile.station1?.lng ?? "";
-if (s2Lat) s2Lat.value = state.profile.station2?.lat ?? "";
-if (s2Lng) s2Lng.value = state.profile.station2?.lng ?? "";
+  if (s1Lat) s1Lat.value = state.profile.station1?.lat ?? "";
+  if (s1Lng) s1Lng.value = state.profile.station1?.lng ?? "";
+  if (s2Lat) s2Lat.value = state.profile.station2?.lat ?? "";
+  if (s2Lng) s2Lng.value = state.profile.station2?.lng ?? "";
 }
 
 export function renderOicBanner() {
@@ -294,6 +288,14 @@ export function loadState() {
 
     if (saved.profile) {
       Object.assign(fresh.profile, saved.profile);
+
+      if (saved.profile.station1) {
+        Object.assign(fresh.profile.station1, saved.profile.station1);
+      }
+
+      if (saved.profile.station2) {
+        Object.assign(fresh.profile.station2, saved.profile.station2);
+      }
     }
 
     if (saved.incident) {
