@@ -184,6 +184,11 @@ export function saveProfileFromInputs() {
   state.profile.email = document.getElementById("profileEmail")?.value.trim() || "";
   state.profile.brigade = document.getElementById("profileBrigade")?.value.trim() || "Connewarre";
   state.ui.theme = document.getElementById("themeToggle")?.checked ? "dark" : "light";
+  state.profile.station1.lat = parseFloat(document.getElementById("station1Lat")?.value) || 0;
+  state.profile.station1.lng = parseFloat(document.getElementById("station1Lng")?.value) || 0;
+
+  state.profile.station2.lat = parseFloat(document.getElementById("station2Lat")?.value) || 0;
+  state.profile.station2.lng = parseFloat(document.getElementById("station2Lng")?.value) || 0;
   applyTheme();
   saveState();
 }
