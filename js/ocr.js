@@ -795,19 +795,28 @@ async function enrichWithDistance(patch) {
       return;
     }
 
-     const rawArea = String(patch.alertAreaCode || "").trim().toUpperCase();
-    const area = rawArea.replace(/\d+$/, "");
+    const pagerText = String(patch.pagerDetails || "").toUpperCase();
 
     let origin = null;
+    let originName = "";
 
-    if (area === "CONN") {
+    if (
+      pagerText.includes("CONNEWARRE BRIGADE ALL") ||
+      pagerText.includes("CONNEWARRE ALL")
+    ) {
       origin = { lat: -38.265192, lng: 144.398106 };
-    } else if (area === "MTDU") {
+      originName = "CONNEWARRE";
+    } else if (
+      pagerText.includes("MT DUNEED ALL") ||
+      pagerText.includes("MTDUNEED ALL") ||
+      pagerText.includes("MOUNT DUNEED ALL")
+    ) {
       origin = { lat: -38.249978, lng: 144.351697 };
+      originName = "MT DUNEED";
     } else {
-      console.warn("Distance calc skipped: unknown alertAreaCode", rawArea);
+      console.warn("Distance calc skipped: unknown pager heading origin", pagerText);
       return;
-    }  
+    }
 
     const searchQueries = [
       `${rawAddress}, Victoria, Australia`,
@@ -823,7 +832,7 @@ async function enrichWithDistance(patch) {
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
       const res = await fetch(url, {
         headers: {
-          "Accept": "application/json"
+          Accept: "application/json"
         }
       });
 
@@ -862,7 +871,12 @@ async function enrichWithDistance(patch) {
     const distanceKm = Math.round(R * c);
 
     patch.distanceToScene = `${distanceKm} km`;
-    console.log("Distance calculated:", patch.distanceToScene, { rawAddress, area, origin, dest });
+    console.log("Distance calculated:", patch.distanceToScene, {
+      rawAddress,
+      originName,
+      origin,
+      dest
+    });
   } catch (err) {
     console.warn("Distance calc failed:", err);
   }
