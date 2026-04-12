@@ -147,7 +147,7 @@ function renderOtherResponding(panelId) {
       </div>
     </div>
 
-    <div class="other-responding-section">
+       <div class="other-responding-section">
       <div class="subhead">Station</div>
       <div class="responder-add-row">
         <input
@@ -161,17 +161,6 @@ function renderOtherResponding(panelId) {
         <datalist id="stationResponderNameList">
           ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
         </datalist>
-
-        <input
-          class="field-input editable-field"
-          id="stationResponderNumberInput"
-          type="tel"
-          inputmode="tel"
-          placeholder="Number"
-          autocomplete="off"
-        />
-
-        <button class="secondary-btn" id="addStationResponderBtn" type="button">Add</button>
       </div>
 
       <div class="crew-list">
