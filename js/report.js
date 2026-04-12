@@ -62,6 +62,40 @@ function buildStructureReportLines() {
 
   const lines = [];
 
+function buildAlarmReportLines() {
+  const alarm = state.incident.alarm;
+  if (!alarm) return [];
+
+  const lines = [];
+
+  const outcome = String(alarm.outcome || "").trim();
+  const followUp = String(alarm.followUp || "").trim();
+  const notes = String(alarm.notes || "").trim();
+  const hasPhoto = String(alarm.photo || "").trim().length > 0;
+
+  if (outcome) {
+    lines.push(`ALARM OUTCOME: ${outcome}`);
+  }
+
+  if (followUp) {
+    lines.push(`ALARM FOLLOW-UP: ${followUp}`);
+  }
+
+  if (notes) {
+    lines.push(`ALARM NOTES: ${notes}`);
+  }
+
+  if (hasPhoto) {
+    lines.push("ALARM BOOK PHOTO CAPTURED");
+  }
+
+  if (lines.length) {
+    lines.push("");
+  }
+
+  return lines;
+}
+  
   function addSection(title, entries) {
     const validEntries = entries.filter((entry) => String(entry.value || "").trim().length > 0);
     if (!validEntries.length) return;
