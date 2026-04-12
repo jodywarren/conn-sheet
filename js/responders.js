@@ -116,6 +116,7 @@ function renderOtherResponding(panelId) {
   if (!panel) return;
 
   const allMembers = getAllMembers();
+  const showInjuryNotes = hasAnyInjuredResponder();
   const injuryWarning = hasInjuredResponderWithoutNotes()
     ? `<div class="status-banner missing">Warning: A responder is marked injured but no injury notes have been entered.</div>`
     : "";
