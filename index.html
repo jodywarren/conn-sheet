@@ -363,11 +363,51 @@
 
 </div>
 
-              <div id="detailTabPanel-alarm" class="placeholder-panel hidden">
-                <strong>Alarm</strong><br />
-                Alarm investigation fields coming soon.
-              </div>
-            </div>
+<div id="detailTabPanel-alarm" class="placeholder-panel hidden">
+
+  <div class="section">
+    <strong>ALARM SUMMARY</strong>
+
+    <select id="alarmOutcome" class="field-input editable-field">
+      <option value="">Select outcome</option>
+      <option>False alarm</option>
+      <option>FIP fault</option>
+      <option>Detector fault</option>
+      <option>System fault</option>
+      <option>No sign of fire</option>
+      <option>Alarm reset to normal</option>
+      <option>Alarm isolated</option>
+      <option>Investigation only</option>
+      <option>Other</option>
+    </select>
+
+    <select id="alarmFollowUp" class="field-input editable-field">
+      <option value="">Select follow-up</option>
+      <option>Alarm company contacted</option>
+      <option>Technician to attend</option>
+      <option>Occupier advised</option>
+      <option>Premises handed back</option>
+      <option>No further action</option>
+      <option>Other</option>
+    </select>
+
+    <input id="alarmNotes" class="field-input editable-field" placeholder="Notes" />
+  </div>
+
+  <div class="section">
+    <strong>ALARM BOOK PHOTO</strong>
+
+    <div id="alarmUploadBox" class="upload-box upload-empty">
+      <input id="alarmUpload" type="file" accept="image/*" hidden />
+      <span id="alarmUploadLabel">ADD ALARM BOOK PHOTO</span>
+    </div>
+
+    <div class="preview-wrap">
+      <img id="alarmPreview" class="pager-preview hidden" alt="Alarm book preview" />
+    </div>
+  </div>
+
+</div>
 
             <div class="grid">
               <label>
