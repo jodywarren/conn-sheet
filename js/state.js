@@ -78,6 +78,7 @@ function createDefaultState() {
         hotDebrief: false,
         aarRequired: false,
         injury: false
+        cancelledEnroute: false
       },
 
       injuryNotes: "",
