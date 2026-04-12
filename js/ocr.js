@@ -789,36 +789,64 @@ export function bindOcrEvents() {
 
 async function enrichWithDistance(patch) {
   try {
-    const address = patch.actualAddress || patch.scannedAddress;
-    if (!address) return;
+    const rawAddress = String(patch.actualAddress || patch.scannedAddress || "").trim();
+    if (!rawAddress) {
+      console.warn("Distance calc skipped: no address");
+      return;
+    }
 
-    // --- STATION ORIGIN ---
-    const area = (patch.alertAreaCode || "").toUpperCase();
+    const area = String(patch.alertAreaCode || "").trim().toUpperCase();
 
     let origin = null;
 
     if (area === "CONN") {
-      origin = { lat: -38.265194, lng: 144.39255 }; // Connewarre
+      origin = { lat: -38.265192, lng: 144.398106 };
     } else if (area === "MTDU") {
-      origin = { lat: -38.249978, lng: 144.351697 }; // Mt Duneed
+      origin = { lat: -38.249978, lng: 144.351697 };
+    } else {
+      console.warn("Distance calc skipped: unknown alertAreaCode", area);
+      return;
     }
 
-    if (!origin) return;
+    const searchQueries = [
+      `${rawAddress}, Victoria, Australia`,
+      `${rawAddress}, Geelong, Victoria, Australia`,
+      `${rawAddress}, Armstrong Creek, Victoria, Australia`,
+      `${rawAddress}, Connewarre, Victoria, Australia`,
+      `${rawAddress}, Mount Duneed, Victoria, Australia`
+    ];
 
-    // --- GEOCODE ADDRESS (OpenStreetMap - free, no key) ---
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    let dest = null;
 
-    if (!data || !data[0]) return;
+    for (const q of searchQueries) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, {
+        headers: {
+          "Accept": "application/json"
+        }
+      });
 
-    const dest = {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon)
-    };
+      if (!res.ok) {
+        console.warn("Distance calc geocode HTTP failed:", res.status, q);
+        continue;
+      }
 
-    // --- HAVERSINE DISTANCE ---
-    const R = 6371; // km
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
+        dest = {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon)
+        };
+        break;
+      }
+    }
+
+    if (!dest) {
+      console.warn("Distance calc failed: no geocode result for", rawAddress);
+      return;
+    }
+
+    const R = 6371;
     const dLat = (dest.lat - origin.lat) * Math.PI / 180;
     const dLng = (dest.lng - origin.lng) * Math.PI / 180;
 
@@ -830,10 +858,10 @@ async function enrichWithDistance(patch) {
       Math.sin(dLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = Math.round(R * c);
+    const distanceKm = Math.round(R * c);
 
-    patch.distanceToScene = `${distance} km`;
-
+    patch.distanceToScene = `${distanceKm} km`;
+    console.log("Distance calculated:", patch.distanceToScene, { rawAddress, area, origin, dest });
   } catch (err) {
     console.warn("Distance calc failed:", err);
   }
