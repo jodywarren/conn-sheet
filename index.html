@@ -369,28 +369,55 @@
   <div class="section">
     <strong>ALARM SUMMARY</strong>
 
-    <select id="alarmOutcome" class="field-input editable-field">
-      <option value="">Select outcome</option>
-      <option>False alarm</option>
-      <option>FIP fault</option>
-      <option>Detector fault</option>
-      <option>System fault</option>
-      <option>No sign of fire</option>
-      <option>Alarm reset to normal</option>
-      <option>Alarm isolated</option>
-      <option>Investigation only</option>
-      <option>Other</option>
-    </select>
+  <select id="alarmType" class="field-input editable-field">
+  <option value="">Alarm type</option>
+  <option>Break glass / MCP activation</option>
+  <option>Smoke detector activation</option>
+  <option>Heat detector activation</option>
+  <option>Sprinkler flow / activation</option>
+  <option>Gas detector activation</option>
+  <option>FIP fault</option>
+  <option>Detector fault</option>
+  <option>Alarm system malfunction</option>
+  <option>FIP normal on arrival</option>
+  <option>Detector indicated not located</option>
+  <option>Unknown</option>
+</select>
 
-    <select id="alarmFollowUp" class="field-input editable-field">
-      <option value="">Select follow-up</option>
-      <option>Alarm company contacted</option>
-      <option>Technician to attend</option>
-      <option>Occupier advised</option>
-      <option>Premises handed back</option>
-      <option>No further action</option>
-      <option>Other</option>
-    </select>
+<select id="alarmCause" class="field-input editable-field">
+  <option value="">Cause / reason</option>
+  <option>False alarm</option>
+  <option>No sign of fire</option>
+  <option>Smoke from other location</option>
+  <option>Heat from other location</option>
+  <option>Cooking fumes</option>
+  <option>Dust / poor maintenance</option>
+  <option>Steam / sauna</option>
+  <option>Aerosol / spray</option>
+  <option>Workmen activity</option>
+  <option>Test not notified</option>
+  <option>Incorrect test</option>
+  <option>Extreme weather</option>
+  <option>Normal weather conditions</option>
+  <option>Power surge / electrical fault</option>
+  <option>Reset before arrival</option>
+  <option>Unknown</option>
+</select>
+
+<select id="alarmOutcome" class="field-input editable-field">
+  <option value="">Outcome / action</option>
+  <option>FIP reset</option>
+  <option>Alarm reset to normal</option>
+  <option>Alarm isolated</option>
+  <option>Alarm company contacted</option>
+  <option>Technician to attend</option>
+  <option>Occupier advised</option>
+  <option>Premises handed back</option>
+  <option>Zone identified</option>
+  <option>No further action</option>
+  <option>Investigation only</option>
+  <option>Other</option>
+</select>
 
     <input id="alarmNotes" class="field-input editable-field" placeholder="Notes" />
   </div>
