@@ -202,6 +202,16 @@ export function fillProfileInputs() {
   if (emailEl) emailEl.value = state.profile.email || "";
   if (brigadeEl) brigadeEl.value = state.profile.brigade || "Connewarre";
   if (themeToggle) themeToggle.checked = state.ui.theme === "dark";
+
+  const s1Lat = document.getElementById("station1Lat");
+const s1Lng = document.getElementById("station1Lng");
+const s2Lat = document.getElementById("station2Lat");
+const s2Lng = document.getElementById("station2Lng");
+
+if (s1Lat) s1Lat.value = state.profile.station1?.lat ?? "";
+if (s1Lng) s1Lng.value = state.profile.station1?.lng ?? "";
+if (s2Lat) s2Lat.value = state.profile.station2?.lat ?? "";
+if (s2Lng) s2Lng.value = state.profile.station2?.lng ?? "";
 }
 
 export function renderOicBanner() {
