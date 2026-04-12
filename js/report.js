@@ -62,40 +62,6 @@ function buildStructureReportLines() {
 
   const lines = [];
 
-function buildAlarmReportLines() {
-  const alarm = state.incident.alarm;
-  if (!alarm) return [];
-
-  const lines = [];
-
-  const outcome = String(alarm.outcome || "").trim();
-  const followUp = String(alarm.followUp || "").trim();
-  const notes = String(alarm.notes || "").trim();
-  const hasPhoto = String(alarm.photo || "").trim().length > 0;
-
-  if (outcome) {
-    lines.push(`ALARM OUTCOME: ${outcome}`);
-  }
-
-  if (followUp) {
-    lines.push(`ALARM FOLLOW-UP: ${followUp}`);
-  }
-
-  if (notes) {
-    lines.push(`ALARM NOTES: ${notes}`);
-  }
-
-  if (hasPhoto) {
-    lines.push("ALARM BOOK PHOTO CAPTURED");
-  }
-
-  if (lines.length) {
-    lines.push("");
-  }
-
-  return lines;
-}
-  
   function addSection(title, entries) {
     const validEntries = entries.filter((entry) => String(entry.value || "").trim().length > 0);
     if (!validEntries.length) return;
@@ -199,6 +165,113 @@ function buildAlarmReportLines() {
   }
 
   addSection("Structure - Equipment", equipmentEntries);
+
+  return lines;
+}
+
+function buildMvaReportLines() {
+  const mva = state.incident.mva;
+  if (!mva) return [];
+
+  const lines = [];
+
+  (mva.vehicles || []).forEach((vehicle, index) => {
+    const vehicleParts = [];
+
+    if (vehicle.make) vehicleParts.push(vehicle.make);
+    if (vehicle.model) vehicleParts.push(vehicle.model);
+    if (vehicle.rego) vehicleParts.push(vehicle.rego);
+    if (vehicle.state) vehicleParts.push(vehicle.state);
+
+    const contactParts = [];
+    if (vehicle.name) contactParts.push(vehicle.name);
+    if (vehicle.phone) contactParts.push(vehicle.phone);
+
+    const flags = (vehicle.flags || []).filter(Boolean);
+    const notes = String(vehicle.notes || "").trim();
+
+    const hasVehicleInfo =
+      vehicleParts.length ||
+      contactParts.length ||
+      flags.length ||
+      notes;
+
+    if (!hasVehicleInfo) return;
+
+    if (vehicleParts.length) {
+      lines.push(`VEHICLE ${index + 1}: ${vehicleParts.join(", ")}`);
+    } else {
+      lines.push(`VEHICLE ${index + 1}:`);
+    }
+
+    if (contactParts.length) {
+      lines.push(`CONTACT: ${contactParts.join(", ")}`);
+    }
+
+    if (flags.length) {
+      lines.push(`FLAGS: ${flags.join(", ")}`);
+    }
+
+    if (notes) {
+      lines.push(`NOTES: ${notes}`);
+    }
+
+    lines.push("");
+  });
+
+  const hazards = (mva.hazards || []).filter(Boolean);
+  const outcome = String(mva.outcome || "").trim();
+  const notes = String(mva.notes || "").trim();
+
+  if (hazards.length) {
+    lines.push(`MVA HAZARDS: ${hazards.join(", ")}`);
+  }
+
+  if (outcome) {
+    lines.push(`MVA OUTCOME: ${outcome}`);
+  }
+
+  if (notes) {
+    lines.push(`MVA NOTES: ${notes}`);
+  }
+
+  if (hazards.length || outcome || notes) {
+    lines.push("");
+  }
+
+  return lines;
+}
+
+function buildAlarmReportLines() {
+  const alarm = state.incident.alarm;
+  if (!alarm) return [];
+
+  const lines = [];
+
+  const outcome = String(alarm.outcome || "").trim();
+  const followUp = String(alarm.followUp || "").trim();
+  const notes = String(alarm.notes || "").trim();
+  const hasPhoto = String(alarm.photo || "").trim().length > 0;
+
+  if (outcome) {
+    lines.push(`ALARM OUTCOME: ${outcome}`);
+  }
+
+  if (followUp) {
+    lines.push(`ALARM FOLLOW-UP: ${followUp}`);
+  }
+
+  if (notes) {
+    lines.push(`ALARM NOTES: ${notes}`);
+  }
+
+  if (hasPhoto) {
+    lines.push("ALARM BOOK PHOTO CAPTURED");
+  }
+
+  if (lines.length) {
+    lines.push("");
+  }
 
   return lines;
 }
