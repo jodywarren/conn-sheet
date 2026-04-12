@@ -24,11 +24,12 @@ function normalizeSceneUnit(raw) {
 
 function ensureIncidentShapes() {
   if (!state.incident.flags) {
-    state.incident.flags = {
+     state.incident.flags = {
       membersBefore: false,
       hotDebrief: false,
       aarRequired: false,
-      injury: false
+      injury: false,
+      cancelledEnroute: false
     };
   }
 
