@@ -251,12 +251,6 @@ function bindAppliancePanelEvents(panel, applianceKey) {
     });
   });
 
-  panel.querySelectorAll("[data-action='add-member']").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      addMemberToAppliance(applianceKey);
-    });
-  });
-
   const input = document.getElementById(`${applianceKey}MemberInput`);
   if (input) {
     input.addEventListener("keydown", (event) => {
