@@ -1116,6 +1116,38 @@ body.dark-mode .ops-chip.active.complete {
   color: #e8f5e9 !important;
 }
 
+/* OCR scan status - dark mode fix */
+
+body.dark-mode .scan-status {
+  background: #222a33 !important;
+  border: 1px solid #556274 !important;
+  color: #edf2f7 !important;
+}
+
+body.dark-mode .scan-idle {
+  background: #222a33 !important;
+  color: #edf2f7 !important;
+}
+
+body.dark-mode .scan-working,
+body.dark-mode .scan-warn {
+  background: #4a3a1a !important;
+  border-color: #c8a84d !important;
+  color: #fff3c4 !important;
+}
+
+body.dark-mode .scan-good {
+  background: #1f3a28 !important;
+  border-color: #63a978 !important;
+  color: #eaffef !important;
+}
+
+body.dark-mode .scan-error {
+  background: #3a2020 !important;
+  border-color: #a85b5b !important;
+  color: #ffd6d6 !important;
+}
+
 /* Responsive */
 
 @media (max-width: 980px) {
