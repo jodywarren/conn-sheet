@@ -786,3 +786,54 @@ export function bindOcrEvents() {
     await runPagerOcrIntoIncident(file);
   });
 
+async function enrichWithDistance(patch) {
+  try {
+    const address = patch.actualAddress || patch.scannedAddress;
+    if (!address) return;
+
+    // --- STATION ORIGIN ---
+    const area = (patch.alertAreaCode || "").toUpperCase();
+
+    let origin = null;
+
+    if (area === "CONN") {
+      origin = { lat: -38.265194, lng: 144.39255 }; // Connewarre
+    } else if (area === "MTDU") {
+      origin = { lat: -38.249978, lng: 144.351697 }; // Mt Duneed
+    }
+
+    if (!origin) return;
+
+    // --- GEOCODE ADDRESS (OpenStreetMap - free, no key) ---
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data || !data[0]) return;
+
+    const dest = {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon)
+    };
+
+    // --- HAVERSINE DISTANCE ---
+    const R = 6371; // km
+    const dLat = (dest.lat - origin.lat) * Math.PI / 180;
+    const dLng = (dest.lng - origin.lng) * Math.PI / 180;
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(origin.lat * Math.PI / 180) *
+      Math.cos(dest.lat * Math.PI / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = Math.round(R * c);
+
+    patch.distanceToScene = `${distance} km`;
+
+  } catch (err) {
+    console.warn("Distance calc failed:", err);
+  }
+}
