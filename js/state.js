@@ -43,6 +43,13 @@ function createDefaultState() {
       notes: ""
       },
 
+      alarm: {
+      outcome: "",
+      followUp: "",
+      notes: "",
+      photo: ""
+      },
+      
       sceneUnits: [],
       pagedSceneUnits: [],
 
