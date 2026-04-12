@@ -44,11 +44,12 @@ function createDefaultState() {
       },
 
       alarm: {
-      outcome: "",
-      followUp: "",
-      notes: "",
-      photo: ""
-      },
+   type: "",
+   cause: "",
+   outcome: "",
+   notes: "",
+   photo: ""
+ },
       
       sceneUnits: [],
       pagedSceneUnits: [],
