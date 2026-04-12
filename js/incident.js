@@ -106,6 +106,7 @@ export function bindIncidentInputs() {
 
 function bindTextInputs() {
   const plainFields = [
+    "distanceToScene",
     "eventNumber",
     "pagerDate",
     "pagerTime",
