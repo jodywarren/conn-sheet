@@ -253,6 +253,20 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
   const input = document.getElementById(`${applianceKey}MemberInput`);
   if (input) {
+    input.addEventListener("input", () => {
+      const selectedName = String(input.value || "").trim().toUpperCase();
+      if (!selectedName) return;
+
+      const availableMembers = getMembersForAppliance(applianceKey);
+      const exactMatch = availableMembers.find(
+        (m) => String(m.name || "").trim().toUpperCase() === selectedName
+      );
+
+      if (exactMatch) {
+        addMemberToAppliance(applianceKey);
+      }
+    });
+
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
