@@ -795,7 +795,8 @@ async function enrichWithDistance(patch) {
       return;
     }
 
-    const area = String(patch.alertAreaCode || "").trim().toUpperCase();
+     const rawArea = String(patch.alertAreaCode || "").trim().toUpperCase();
+    const area = rawArea.replace(/\d+$/, "");
 
     let origin = null;
 
@@ -804,9 +805,9 @@ async function enrichWithDistance(patch) {
     } else if (area === "MTDU") {
       origin = { lat: -38.249978, lng: 144.351697 };
     } else {
-      console.warn("Distance calc skipped: unknown alertAreaCode", area);
+      console.warn("Distance calc skipped: unknown alertAreaCode", rawArea);
       return;
-    }
+    }  
 
     const searchQueries = [
       `${rawAddress}, Victoria, Australia`,
