@@ -32,7 +32,8 @@ const KNOWN_BRIGADE_CODES = new Set([
   "TRQY",
   "MTDU",
   "MODE",
-  "BELL",
+  "BBRE",
+  "AIRE",
   "BELM",
   "HIGH",
   "ANGL"
