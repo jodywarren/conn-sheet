@@ -1161,8 +1161,8 @@ body.dark-mode .scan-error {
 }
 
 @media (max-width: 820px) {
- .app-header.compact-header {
-  padding: 0.15rem 0.35rem 0.15rem 0.15rem;
+.app-header.compact-header {
+  padding: 0.05rem 0.2rem 0.1rem 0.05rem;
 }
 
   .header-actions {
