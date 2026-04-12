@@ -83,7 +83,6 @@ export function bindIncidentInputs() {
 
   bindTextInputs();
   bindSelect("firstAgency");
-  bindSelect("distanceToScene");
   bindSelect("weather1");
   bindSelect("weather2");
 
