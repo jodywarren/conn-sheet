@@ -1063,6 +1063,7 @@ function bindMva() {
   if (state.incident.mva.vehicles.length === 0) {
     state.incident.mva.vehicles.push(createEmptyVehicle());
     saveState();
+    applyDetailTabCompletionStates();
   }
 
   const addBtn = document.getElementById("addVehicleBtn");
@@ -1073,6 +1074,7 @@ function bindMva() {
       state.incident.mva.vehicles.push(createEmptyVehicle());
       saveState();
       renderMvaVehicles();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1092,6 +1094,7 @@ function bindMva() {
 
       state.incident.mva.vehicles[v][k] = String(target.value || "").trim();
       saveState();
+      applyDetailTabCompletionStates();
     });
 
     wrap.addEventListener("change", (e) => {
@@ -1106,6 +1109,7 @@ function bindMva() {
 
       state.incident.mva.vehicles[v][k] = String(target.value || "").trim();
       saveState();
+      applyDetailTabCompletionStates();
     });
 
     wrap.addEventListener("click", (e) => {
@@ -1131,6 +1135,7 @@ function bindMva() {
 
         saveState();
         renderMvaVehicles();
+        applyDetailTabCompletionStates();
         return;
       }
 
@@ -1149,6 +1154,7 @@ function bindMva() {
 
         saveState();
         renderMvaVehicles();
+        applyDetailTabCompletionStates();
       }
     });
   }
@@ -1172,6 +1178,7 @@ function bindMva() {
 
       saveState();
       renderMvaVehicles();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1182,6 +1189,7 @@ function bindMva() {
     outcome.addEventListener("change", () => {
       state.incident.mva.outcome = outcome.value;
       saveState();
+      applyDetailTabCompletionStates();
     });
   }
 
@@ -1192,6 +1200,7 @@ function bindMva() {
     notes.addEventListener("input", () => {
       state.incident.mva.notes = notes.value;
       saveState();
+      applyDetailTabCompletionStates();
     });
   }
 }
