@@ -100,6 +100,7 @@ export function bindIncidentInputs() {
 
   bindMva();
   renderMvaVehicles();
+  bindAlarm();
 }
 
 function bindTextInputs() {
