@@ -248,17 +248,22 @@ function buildAlarmReportLines() {
 
   const lines = [];
 
+  const type = String(alarm.type || "").trim();
+  const cause = String(alarm.cause || "").trim();
   const outcome = String(alarm.outcome || "").trim();
-  const followUp = String(alarm.followUp || "").trim();
   const notes = String(alarm.notes || "").trim();
   const hasPhoto = String(alarm.photo || "").trim().length > 0;
 
-  if (outcome) {
-    lines.push(`ALARM OUTCOME: ${outcome}`);
+  if (type) {
+    lines.push(`ALARM TYPE: ${type}`);
   }
 
-  if (followUp) {
-    lines.push(`ALARM FOLLOW-UP: ${followUp}`);
+  if (cause) {
+    lines.push(`ALARM CAUSE: ${cause}`);
+  }
+
+  if (outcome) {
+    lines.push(`ALARM OUTCOME: ${outcome}`);
   }
 
   if (notes) {
