@@ -91,7 +91,7 @@ function addNav(pageId, buttons) {
   if (existing) existing.remove();
 
   const nav = document.createElement("div");
-  nav.className = "page-bottom-nav row wrap";
+    nav.className = "page-bottom-nav top-nav";
 
   buttons.forEach((btnConfig) => {
     const btn = document.createElement("button");
