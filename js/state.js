@@ -193,11 +193,18 @@ export function saveProfileFromInputs() {
     state.profile.station2 = { name: "Mt Duneed", lat: 0, lng: 0 };
   }
 
-  state.profile.station1.lat = parseFloat(document.getElementById("station1Lat")?.value) || 0;
-  state.profile.station1.lng = parseFloat(document.getElementById("station1Lng")?.value) || 0;
+if (!state.profile.station1) {
+  state.profile.station1 = { name: "Connewarre", lat: 0, lng: 0 };
+}
+if (!state.profile.station2) {
+  state.profile.station2 = { name: "Mt Duneed", lat: 0, lng: 0 };
+}
 
-  state.profile.station2.lat = parseFloat(document.getElementById("station2Lat")?.value) || 0;
-  state.profile.station2.lng = parseFloat(document.getElementById("station2Lng")?.value) || 0;
+state.profile.station1.lat = parseFloat(document.getElementById("station1Lat")?.value) || 0;
+state.profile.station1.lng = parseFloat(document.getElementById("station1Lng")?.value) || 0;
+
+state.profile.station2.lat = parseFloat(document.getElementById("station2Lat")?.value) || 0;
+state.profile.station2.lng = parseFloat(document.getElementById("station2Lng")?.value) || 0;
   applyTheme();
   saveState();
 }
