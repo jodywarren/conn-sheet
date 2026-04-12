@@ -1291,3 +1291,83 @@ export function applyFieldCompletionStates() {
     injuryNotes.classList.toggle("field-complete", show && value.length > 0);
   }
 }
+
+/* ---------------- ALARM ---------------- */
+
+function bindAlarm() {
+  if (!state.incident.alarm) {
+    state.incident.alarm = {
+      outcome: "",
+      followUp: "",
+      notes: "",
+      photo: ""
+    };
+  }
+
+  const outcome = document.getElementById("alarmOutcome");
+  const followUp = document.getElementById("alarmFollowUp");
+  const notes = document.getElementById("alarmNotes");
+  const upload = document.getElementById("alarmUpload");
+  const uploadBox = document.getElementById("alarmUploadBox");
+  const preview = document.getElementById("alarmPreview");
+
+  if (outcome && outcome.dataset.bound !== "1") {
+    outcome.dataset.bound = "1";
+    outcome.addEventListener("change", () => {
+      state.incident.alarm.outcome = outcome.value;
+      saveState();
+    });
+  }
+
+  if (followUp && followUp.dataset.bound !== "1") {
+    followUp.dataset.bound = "1";
+    followUp.addEventListener("change", () => {
+      state.incident.alarm.followUp = followUp.value;
+      saveState();
+    });
+  }
+
+  if (notes && notes.dataset.bound !== "1") {
+    notes.dataset.bound = "1";
+    notes.addEventListener("input", () => {
+      state.incident.alarm.notes = notes.value;
+      saveState();
+    });
+  }
+
+  if (uploadBox && upload && uploadBox.dataset.bound !== "1") {
+    uploadBox.dataset.bound = "1";
+
+    uploadBox.addEventListener("click", () => upload.click());
+
+    upload.addEventListener("change", () => {
+      const file = upload.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.incident.alarm.photo = reader.result;
+        saveState();
+
+        if (preview) {
+          preview.src = reader.result;
+          preview.classList.remove("hidden");
+        }
+
+        uploadBox.classList.remove("upload-empty");
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (outcome) outcome.value = state.incident.alarm.outcome || "";
+  if (followUp) followUp.value = state.incident.alarm.followUp || "";
+  if (notes) notes.value = state.incident.alarm.notes || "";
+
+  if (preview && state.incident.alarm.photo) {
+    preview.src = state.incident.alarm.photo;
+    preview.classList.remove("hidden");
+    uploadBox?.classList.remove("upload-empty");
+  }
+}
