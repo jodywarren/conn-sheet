@@ -529,10 +529,7 @@ function addStationResponder() {
 
 function addDirectResponder() {
   const nameInput = document.getElementById("directResponderNameInput");
-  const numberInput = document.getElementById("directResponderNumberInput");
-
   const name = String(nameInput?.value || "").trim();
-  const number = String(numberInput?.value || "").trim();
 
   if (!name) return;
   if (isMemberAlreadyAssignedAnywhere(name.toUpperCase())) {
@@ -541,10 +538,16 @@ function addDirectResponder() {
   }
 
   const matched = findMemberByName(name);
+
+  if (!matched) {
+    window.alert("Select a valid member from the list.");
+    return;
+  }
+
   state.responders.directResponders.push({
     id: uid(),
-    name: matched?.name || name,
-    number: number || matched?.phone || "",
+    name: matched.name,
+    number: matched.phone || "",
     isCrewLeader: false,
     isOic: false,
     isBa: false,
@@ -552,10 +555,14 @@ function addDirectResponder() {
   });
 
   if (nameInput) nameInput.value = "";
-  if (numberInput) numberInput.value = "";
 
   saveState();
   renderRespondersPage();
+
+  setTimeout(() => {
+    const field = document.getElementById("directResponderNameInput");
+    field?.focus();
+  }, 0);
 }
 
 function getMembersForAppliance(applianceKey) {
