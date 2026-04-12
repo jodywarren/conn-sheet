@@ -1252,10 +1252,11 @@ export function loadIncidentIntoInputs() {
 }
 
 function applyOperationalChipStates() {
-  setChipState("membersBeforeChip", state.incident.flags?.membersBefore);
+   setChipState("membersBeforeChip", state.incident.flags?.membersBefore);
   setChipState("hotDebriefChip", state.incident.flags?.hotDebrief);
   setChipState("aarRequiredChip", state.incident.flags?.aarRequired);
   setChipState("injuryChip", state.incident.flags?.injury);
+  setChipState("cancelledEnrouteChip", state.incident.flags?.cancelledEnroute);
   setChipState("signalChip", Boolean(state.incident.signalCode));
 }
 
