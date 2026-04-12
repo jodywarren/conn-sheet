@@ -1308,33 +1308,54 @@ export function applyFieldCompletionStates() {
 function bindAlarm() {
   if (!state.incident.alarm) {
     state.incident.alarm = {
+      type: "",
+      cause: "",
       outcome: "",
-      followUp: "",
       notes: "",
       photo: ""
     };
   }
 
+  const type = document.getElementById("alarmType");
+  const cause = document.getElementById("alarmCause");
   const outcome = document.getElementById("alarmOutcome");
-  const followUp = document.getElementById("alarmFollowUp");
   const notes = document.getElementById("alarmNotes");
+
   const upload = document.getElementById("alarmUpload");
   const uploadBox = document.getElementById("alarmUploadBox");
   const preview = document.getElementById("alarmPreview");
+  const removeBtn = document.getElementById("removeAlarmPhotoBtn");
 
-  if (outcome && outcome.dataset.bound !== "1") {
-    outcome.dataset.bound = "1";
-    outcome.addEventListener("change", () => {
-      state.incident.alarm.outcome = outcome.value;
+  function markFieldComplete(el) {
+    if (!el) return;
+    el.classList.toggle("field-complete", String(el.value || "").trim().length > 0);
+  }
+
+  if (type && type.dataset.bound !== "1") {
+    type.dataset.bound = "1";
+    type.addEventListener("change", () => {
+      state.incident.alarm.type = type.value;
+      markFieldComplete(type);
       saveState();
       applyDetailTabCompletionStates();
     });
   }
 
-  if (followUp && followUp.dataset.bound !== "1") {
-    followUp.dataset.bound = "1";
-    followUp.addEventListener("change", () => {
-      state.incident.alarm.followUp = followUp.value;
+  if (cause && cause.dataset.bound !== "1") {
+    cause.dataset.bound = "1";
+    cause.addEventListener("change", () => {
+      state.incident.alarm.cause = cause.value;
+      markFieldComplete(cause);
+      saveState();
+      applyDetailTabCompletionStates();
+    });
+  }
+
+  if (outcome && outcome.dataset.bound !== "1") {
+    outcome.dataset.bound = "1";
+    outcome.addEventListener("change", () => {
+      state.incident.alarm.outcome = outcome.value;
+      markFieldComplete(outcome);
       saveState();
       applyDetailTabCompletionStates();
     });
@@ -1344,6 +1365,7 @@ function bindAlarm() {
     notes.dataset.bound = "1";
     notes.addEventListener("input", () => {
       state.incident.alarm.notes = notes.value;
+      markFieldComplete(notes);
       saveState();
       applyDetailTabCompletionStates();
     });
@@ -1361,28 +1383,68 @@ function bindAlarm() {
       const reader = new FileReader();
       reader.onload = () => {
         state.incident.alarm.photo = reader.result;
-        saveState();
-        applyDetailTabCompletionStates();
 
         if (preview) {
           preview.src = reader.result;
           preview.classList.remove("hidden");
         }
 
+        removeBtn?.classList.remove("hidden");
         uploadBox.classList.remove("upload-empty");
+
+        saveState();
+        applyDetailTabCompletionStates();
       };
 
       reader.readAsDataURL(file);
     });
   }
 
-  if (outcome) outcome.value = state.incident.alarm.outcome || "";
-  if (followUp) followUp.value = state.incident.alarm.followUp || "";
-  if (notes) notes.value = state.incident.alarm.notes || "";
+  if (removeBtn && removeBtn.dataset.bound !== "1") {
+    removeBtn.dataset.bound = "1";
+
+    removeBtn.addEventListener("click", () => {
+      state.incident.alarm.photo = "";
+
+      if (upload) upload.value = "";
+      if (preview) {
+        preview.src = "";
+        preview.classList.add("hidden");
+      }
+
+      removeBtn.classList.add("hidden");
+      uploadBox?.classList.add("upload-empty");
+
+      saveState();
+      applyDetailTabCompletionStates();
+    });
+  }
+
+  // LOAD STATE
+  if (type) {
+    type.value = state.incident.alarm.type || "";
+    markFieldComplete(type);
+  }
+
+  if (cause) {
+    cause.value = state.incident.alarm.cause || "";
+    markFieldComplete(cause);
+  }
+
+  if (outcome) {
+    outcome.value = state.incident.alarm.outcome || "";
+    markFieldComplete(outcome);
+  }
+
+  if (notes) {
+    notes.value = state.incident.alarm.notes || "";
+    markFieldComplete(notes);
+  }
 
   if (preview && state.incident.alarm.photo) {
     preview.src = state.incident.alarm.photo;
     preview.classList.remove("hidden");
+    removeBtn?.classList.remove("hidden");
     uploadBox?.classList.remove("upload-empty");
   }
 }
