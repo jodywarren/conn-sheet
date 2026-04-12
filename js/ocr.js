@@ -502,6 +502,7 @@ function applyPatchToIncidentState(patch) {
   if (patch.responseCode) state.incident.responseCode = patch.responseCode;
   if (patch.pagerDetails) state.incident.pagerDetails = patch.pagerDetails;
   if (patch.scannedAddress) state.incident.scannedAddress = patch.scannedAddress;
+  if (patch.distanceToScene) state.incident.distanceToScene = patch.distanceToScene;
 
   if (patch.actualAddress) {
     state.incident.actualAddress = patch.actualAddress;
