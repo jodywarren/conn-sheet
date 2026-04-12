@@ -69,18 +69,15 @@ function injectNewJobButton() {
 }
 
 function injectBottomPageNav() {
-  addNav("incidentPage", [
-    { label: "Next: Responders", page: "respondersPage", className: "primary-btn" }
-  ]);
+  const pageTabs = [
+    { label: "Incident", page: "incidentPage", className: "tab-btn" },
+    { label: "Responders", page: "respondersPage", className: "tab-btn" },
+    { label: "Send Report", page: "sendPage", className: "tab-btn" }
+  ];
 
-  addNav("respondersPage", [
-    { label: "Back: Incident", page: "incidentPage", className: "secondary-btn" },
-    { label: "Next: Send Report", page: "sendPage", className: "primary-btn" }
-  ]);
-
-  addNav("sendPage", [
-    { label: "Back: Responders", page: "respondersPage", className: "secondary-btn" }
-  ]);
+  addNav("incidentPage", pageTabs);
+  addNav("respondersPage", pageTabs);
+  addNav("sendPage", pageTabs);
 }
 
 function addNav(pageId, buttons) {
