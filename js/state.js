@@ -5,13 +5,25 @@ function createDefaultState() {
       theme: "light"
     },
 
-    profile: {
-      name: "",
-      brigade: "Connewarre",
-      memberNumber: "",
-      contactNumber: "",
-      email: ""
-    },
+  profile: {
+  name: "",
+  brigade: "Connewarre",
+  memberNumber: "",
+  contactNumber: "",
+  email: "",
+
+  station1: {
+    name: "Connewarre",
+    lat: -38.265192,
+    lng: 144.398106
+  },
+
+  station2: {
+    name: "Mt Duneed",
+    lat: -38.249978,
+    lng: 144.351697
+  }
+}, 
 
     incident: {
       eventNumber: "",
