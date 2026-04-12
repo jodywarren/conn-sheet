@@ -323,30 +323,29 @@ function bindAppliancePanelEvents(panel, applianceKey) {
 
 function bindOtherRespondingEvents(panel) {
   const stationNameInput = document.getElementById("stationResponderNameInput");
-  const stationNumberInput = document.getElementById("stationResponderNumberInput");
-  const addStationBtn = document.getElementById("addStationResponderBtn");
 
   if (stationNameInput) {
+    stationNameInput.addEventListener("input", () => {
+      const selectedName = String(stationNameInput.value || "").trim().toUpperCase();
+      if (!selectedName) return;
+
+      const allMembers = getAllMembers();
+      const exactMatch = allMembers.find(
+        (m) => String(m.name || "").trim().toUpperCase() === selectedName
+      );
+
+      if (exactMatch) {
+        addStationResponder();
+      }
+    });
+
     stationNameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
         addStationResponder();
       }
     });
-  }
-
-  if (stationNumberInput) {
-    stationNumberInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addStationResponder();
-      }
-    });
-  }
-
-  if (addStationBtn) {
-    addStationBtn.addEventListener("click", addStationResponder);
-  }
+  } 
 
    const directNameInput = document.getElementById("directResponderNameInput");
 
