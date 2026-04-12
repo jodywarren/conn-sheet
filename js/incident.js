@@ -1242,8 +1242,9 @@ export function loadIncidentIntoInputs() {
   toggleSignalNotes();
   applyDetailTabState();
   applyFieldCompletionStates();
-  loadStructureIntoInputs();
+   loadStructureIntoInputs();
   renderMvaVehicles();
+  applyDetailTabCompletionStates();
 
   document.dispatchEvent(new Event("incident:loaded"));
 }
