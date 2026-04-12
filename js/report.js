@@ -634,10 +634,14 @@ function buildMvaReportLines() {
     lines.push("After action review needed");
   }
 
-  if (incident.signalCode) {
+   if (incident.signalCode) {
     let signalLine = `Signal ${incident.signalCode}`;
     if (incident.signalNotes) signalLine += ` - ${incident.signalNotes}`;
     lines.push(signalLine);
+  }
+
+  if (incident.flags?.cancelledEnroute) {
+    lines.push("CANCELLED ENROUTE");
   }
 
   lines.push("");
