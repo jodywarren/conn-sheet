@@ -191,7 +191,6 @@ function renderStationResponderCard(member) {
       <div class="crew-card-top">
         <div>
           <strong>${escapeHtml(member.name)}</strong>
-          <div class="subtle">${escapeHtml(member.number || "")}</div>
         </div>
         <button class="tiny-btn" data-action="remove-station" data-member-id="${member.id}" type="button">Remove</button>
       </div>
