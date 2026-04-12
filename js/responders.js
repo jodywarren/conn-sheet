@@ -126,7 +126,7 @@ function renderOtherResponding(panelId) {
       <div class="appliance-title">Other Responding</div>
     </div>
 
-    <div class="other-responding-section">
+       <div class="other-responding-section">
       <div class="subhead">Direct</div>
       <div class="responder-add-row">
         <input
@@ -140,17 +140,6 @@ function renderOtherResponding(panelId) {
         <datalist id="directResponderNameList">
           ${allMembers.map((m) => `<option value="${escapeHtml(m.name)}"></option>`).join("")}
         </datalist>
-
-        <input
-          class="field-input editable-field"
-          id="directResponderNumberInput"
-          type="tel"
-          inputmode="tel"
-          placeholder="Number"
-          autocomplete="off"
-        />
-
-        <button class="secondary-btn" id="addDirectResponderBtn" type="button">Add</button>
       </div>
 
       <div class="crew-list">
