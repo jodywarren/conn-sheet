@@ -387,11 +387,17 @@ if (structureLines.length) {
   lines.push("");
   lines.push(...structureLines);
 }
-  
+
 const mvaLines = buildMvaReportLines();
 if (mvaLines.length) {
   lines.push("");
   lines.push(...mvaLines);
+}
+
+const alarmLines = buildAlarmReportLines();
+if (alarmLines.length) {
+  lines.push("");
+  lines.push(...alarmLines);
 }
   
   lines.push("");
