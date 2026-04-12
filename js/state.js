@@ -199,7 +199,7 @@ export function renderOicBanner() {
     return;
   }
 
-  const line1 = `OIC: ${name}, CONNEWARRE`;
+  const line1 = `OIC: ${name}`;
   const line2 = phone || "";
 
   banner.innerHTML = line2
