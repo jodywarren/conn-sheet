@@ -73,13 +73,13 @@ function createDefaultState() {
 
       otherAgencies: [],
 
-          flags: {
-        membersBefore: false,
-        hotDebrief: false,
-        aarRequired: false,
-        injury: false,
-        cancelledEnroute: false
-      },
+ flags: {
+  membersBefore: false,
+  hotDebrief: false,
+  aarRequired: false,
+  injury: false,
+  cancelledEnroute: false
+},
       },
 
       injuryNotes: "",
