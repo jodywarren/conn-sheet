@@ -1386,3 +1386,52 @@ function bindAlarm() {
     uploadBox?.classList.remove("upload-empty");
   }
 }
+
+function detailTabHasValue(tab) {
+  if (tab === "structure") {
+    const structure = state.incident.structure || {};
+    return Object.values(structure).some((section) =>
+      section && Object.values(section).some((value) => String(value || "").trim().length > 0)
+    );
+  }
+
+  if (tab === "mva") {
+    const mva = state.incident.mva || {};
+    const vehicleHasValue = (mva.vehicles || []).some((vehicle) => {
+      if (!vehicle) return false;
+
+      const fieldValues = ["name", "phone", "make", "model", "rego", "state", "notes"].some(
+        (key) => String(vehicle[key] || "").trim().length > 0
+      );
+
+      const flags = Array.isArray(vehicle.flags) && vehicle.flags.length > 0;
+      return fieldValues || flags;
+    });
+
+    return (
+      vehicleHasValue ||
+      (Array.isArray(mva.hazards) && mva.hazards.length > 0) ||
+      String(mva.outcome || "").trim().length > 0 ||
+      String(mva.notes || "").trim().length > 0
+    );
+  }
+
+  if (tab === "alarm") {
+    const alarm = state.incident.alarm || {};
+    return (
+      String(alarm.outcome || "").trim().length > 0 ||
+      String(alarm.followUp || "").trim().length > 0 ||
+      String(alarm.notes || "").trim().length > 0 ||
+      String(alarm.photo || "").trim().length > 0
+    );
+  }
+
+  return false;
+}
+
+function applyDetailTabCompletionStates() {
+  document.querySelectorAll("[data-detail-tab]").forEach((btn) => {
+    const tab = String(btn.dataset.detailTab || "").trim().toLowerCase();
+    btn.classList.toggle("complete", detailTabHasValue(tab));
+  });
+}
