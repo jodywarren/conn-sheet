@@ -360,11 +360,23 @@ function bindOtherRespondingEvents(panel) {
     addStationBtn.addEventListener("click", addStationResponder);
   }
 
-  const directNameInput = document.getElementById("directResponderNameInput");
-  const directNumberInput = document.getElementById("directResponderNumberInput");
-  const addDirectBtn = document.getElementById("addDirectResponderBtn");
+   const directNameInput = document.getElementById("directResponderNameInput");
 
   if (directNameInput) {
+    directNameInput.addEventListener("input", () => {
+      const selectedName = String(directNameInput.value || "").trim().toUpperCase();
+      if (!selectedName) return;
+
+      const allMembers = getAllMembers();
+      const exactMatch = allMembers.find(
+        (m) => String(m.name || "").trim().toUpperCase() === selectedName
+      );
+
+      if (exactMatch) {
+        addDirectResponder();
+      }
+    });
+
     directNameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -372,20 +384,7 @@ function bindOtherRespondingEvents(panel) {
       }
     });
   }
-
-  if (directNumberInput) {
-    directNumberInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addDirectResponder();
-      }
-    });
-  }
-
-  if (addDirectBtn) {
-    addDirectBtn.addEventListener("click", addDirectResponder);
-  }
-
+  
   const injuryNotes = document.getElementById("respondersInjuryNotes");
   if (injuryNotes) {
     injuryNotes.addEventListener("input", () => {
