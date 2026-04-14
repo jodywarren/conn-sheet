@@ -511,6 +511,7 @@ function bindOperationalChips() {
   bindFlagChip("aarRequiredChip", "aarRequired");
   bindFlagChip("injuryChip", "injury");
   bindFlagChip("cancelledEnrouteChip", "cancelledEnroute");
+  bindFlagChip("failedToRespondChip", "failedToRespond");
 
   const signalChip = document.getElementById("signalChip");
   if (!signalChip || signalChip.dataset.boundClick === "1") return;
