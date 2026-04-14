@@ -578,8 +578,8 @@ textarea:focus {
   gap: 8px;
 }
 
-.chip-wrap {
-  margin-top: 14px;
+.ops-chip-row {
+  margin-top: 12px;
 }
 
 .chip-group {
