@@ -381,11 +381,16 @@ label {
 }
 
 .secondary-btn {
-  background: #e5e7eb;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-weight: 600;
+  background: #fff4d6;
+  border: 1.5px solid #d9a441;
+  color: #5c3b00;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.secondary-btn:hover {
+  background: #ffe8b3;
 }
 
 .tiny-btn {
