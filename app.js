@@ -21,8 +21,9 @@ async function initApp() {
   loadIncidentIntoInputs();
   renderReportPreview();
 
-  injectNewJobButton();
+   injectNewJobButton();
   injectBottomPageNav();
+  goToPage(state.ui.currentPage || "incidentPage");
   bindReportAutoRefresh();
   bindSupportOicFields();
   syncSupportOicUi();
