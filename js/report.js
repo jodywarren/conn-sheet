@@ -640,6 +640,10 @@ function buildMvaReportLines() {
     lines.push(signalLine);
   }
 
+    if (incident.flags?.failedToRespond) {
+    lines.push("FAILED TO RESPOND");
+  }
+
   if (incident.flags?.cancelledEnroute) {
     lines.push("CANCELLED ENROUTE");
   }
