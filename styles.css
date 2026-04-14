@@ -1227,3 +1227,10 @@ body.dark-mode .scan-error {
 .section-panel {
   padding: 10px 0 6px;
 }
+
+.danger-chip {
+  background: #ffe3e3;
+  border: 1.5px solid #c40018;
+  color: #7a0000;
+  font-weight: 700;
+}
