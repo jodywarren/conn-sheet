@@ -1202,7 +1202,23 @@ body.dark-mode .scan-error {
   .grid {
     grid-template-columns: 1fr;
   }
-}
+
+  .status-chip-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .status-chip-row .ops-chip {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    font-size: 14px;
+    padding: 12px 14px;
+    min-height: 48px;
+  }
+  }
 
 .section-toggle {
   display: block;
