@@ -573,6 +573,10 @@ textarea:focus {
   gap: 8px;
 }
 
+.chip-wrap {
+  margin-top: 14px;
+}
+
 .chip-group {
   margin-bottom: 10px;
 }
