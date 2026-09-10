@@ -55,25 +55,44 @@ function renderAppliance(applianceKey, panelId) {
   const appliance = state.responders.appliances[applianceKey];
   const statusClass = getApplianceStatusClass(appliance);
   const availableMembers = getMembersForAppliance(applianceKey);
+  const station = state.profile?.[appliance.stationKey] || null;
 
   panel.className = `appliance-panel ${statusClass}`;
   panel.innerHTML = `
-    <div class="appliance-head">
+    <div class="appliance-banner">
       <div class="appliance-title">${escapeHtml(appliance.label)}</div>
-      <div class="appliance-code-row">
-        <button class="chip-btn ${appliance.code === "C1" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C1" type="button">Code 1</button>
-        <button class="chip-btn ${appliance.code === "C3" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C3" type="button">Code 3</button>
-        <button class="chip-btn ${appliance.code === "" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="" type="button">Clear</button>
+      <div class="appliance-firs-fields">
+        <div class="appliance-code-row">
+          <button class="chip-btn ${appliance.code === "C1" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C1" type="button">Code 1</button>
+          <button class="chip-btn ${appliance.code === "C3" ? "active" : ""}" data-action="set-code" data-appliance="${applianceKey}" data-code="C3" type="button">Code 3</button>
+        </div>
+        <label class="appliance-km-field">
+          <span>KM</span>
+          <input
+            class="field-input appliance-km-input ${String(appliance.km || '').trim() ? 'field-complete' : ''}"
+            data-action="set-km"
+            data-appliance="${applianceKey}"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            value="${escapeHtml(appliance.km || '')}"
+            placeholder="km"
+            aria-label="Whole kilometres from station to event"
+          />
+        </label>
       </div>
     </div>
 
-       <div class="responder-add-row">
+    <div class="subtle appliance-distance-note">Whole kilometres from station to event only.${station?.name ? ` Calculated from ${escapeHtml(station.name)} when available.` : ''}</div>
+
+    <div class="responder-add-row">
       <input
         class="field-input editable-field"
         id="${applianceKey}MemberInput"
         list="${applianceKey}MemberList"
         type="text"
-        placeholder="Type member name"
+        placeholder="Add crew member"
         autocomplete="off"
       />
       <datalist id="${applianceKey}MemberList">
@@ -81,14 +100,13 @@ function renderAppliance(applianceKey, panelId) {
       </datalist>
     </div>
 
-    <div class="crew-list" id="${applianceKey}CrewList">
+    <div class="crew-list compact-crew-list" id="${applianceKey}CrewList">
       ${appliance.crew.map((member) => renderCrewCard(applianceKey, member)).join("")}
     </div>
   `;
 
   bindAppliancePanelEvents(panel, applianceKey);
 }
-
 function renderCrewCard(applianceKey, member) {
   return `
     <div class="crew-card" data-member-id="${member.id}">
@@ -230,6 +248,20 @@ function bindAppliancePanelEvents(panel, applianceKey) {
       renderRespondersPage();
     });
   });
+
+  const kmInput = panel.querySelector("[data-action='set-km']");
+  if (kmInput) {
+    const commitKm = () => {
+      const raw = String(kmInput.value || "").trim();
+      const parsed = raw === "" ? "" : String(Math.max(0, Math.round(Number(raw) || 0)));
+      state.responders.appliances[applianceKey].km = parsed;
+      kmInput.value = parsed;
+      kmInput.classList.toggle("field-complete", parsed !== "");
+      saveState();
+    };
+    kmInput.addEventListener("change", commitKm);
+    kmInput.addEventListener("blur", commitKm);
+  }
 
   const input = document.getElementById(`${applianceKey}MemberInput`);
   if (input) {
@@ -447,6 +479,20 @@ function bindOtherRespondingEvents(panel) {
 }
 
 function addMemberToAppliance(applianceKey) {
+  const kmInput = panel.querySelector("[data-action='set-km']");
+  if (kmInput) {
+    const commitKm = () => {
+      const raw = String(kmInput.value || "").trim();
+      const parsed = raw === "" ? "" : String(Math.max(0, Math.round(Number(raw) || 0)));
+      state.responders.appliances[applianceKey].km = parsed;
+      kmInput.value = parsed;
+      kmInput.classList.toggle("field-complete", parsed !== "");
+      saveState();
+    };
+    kmInput.addEventListener("change", commitKm);
+    kmInput.addEventListener("blur", commitKm);
+  }
+
   const input = document.getElementById(`${applianceKey}MemberInput`);
   const selectedName = input?.value.trim().toUpperCase() || "";
   if (!selectedName) return;
@@ -666,10 +712,11 @@ function hasInjuredResponderWithoutNotes() {
 function getApplianceStatusClass(appliance) {
   if (!appliance.crew.length) return "appliance-empty";
   const hasDriver = appliance.crew.some((member) => member.isDriver);
-  if (!hasDriver) return "appliance-warning";
+  const hasCode = appliance.code === "C1" || appliance.code === "C3";
+  const hasKm = String(appliance.km || "").trim().length > 0;
+  if (!hasDriver || !hasCode || !hasKm) return "appliance-warning";
   return "appliance-ready";
 }
-
 function buildMemberSubline(phone, sourceBrigade) {
   const parts = [];
   if (phone) parts.push(escapeHtml(phone));
