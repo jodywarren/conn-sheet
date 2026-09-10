@@ -43,10 +43,14 @@ function buildCrewLine(member) {
 
 function getOtherAgencySummary(agency) {
   const parts = [];
+  const attendanceLabels = { notified: "Notified", attended: "Notified and attended", unknown: "Unknown" };
+  if (agency.type === "Police" || agency.type === "Ambulance") {
+    parts.push(attendanceLabels[agency.attendanceStatus || "unknown"] || "Unknown");
+  }
 
   if (agency.name) parts.push(agency.name);
   if (agency.contactNumber) parts.push(agency.contactNumber);
-  if (agency.badgeNumber) parts.push(`Badge ${agency.badgeNumber}`);
+  if (agency.badgeNumber) parts.push(`Number ${agency.badgeNumber}`);
   if (agency.idNumber) parts.push(`ID ${agency.idNumber}`);
   if (agency.station) parts.push(agency.station);
   if (agency.localHq) parts.push(agency.localHq);
@@ -325,77 +329,188 @@ function formatDateForSubject(dateValue) {
   return dateValue;
 }
 
+function buildCasualtyReportLines() {
+  const c = state.firs?.casualties;
+  if (!c) return [];
+
+  const fields = [
+    ["Brigade members injured", c.brigadeInjured],
+    ["Brigade member fatalities", c.brigadeFatalities],
+    ["Other persons injured", c.otherInjured],
+    ["Other persons fatalities", c.otherFatalities],
+    ["Persons extricated", c.personsExtricated],
+    ["Persons released", c.personsReleased],
+    ["Persons assisted by brigade", c.personsAssisted],
+    ["Persons evacuated", c.personsEvacuated]
+  ].filter(([, value]) => String(value ?? "").trim() !== "");
+
+  if (!fields.length && !String(c.comments || "").trim()) return [];
+  const lines = ["CASUALTIES, RESCUE AND EVACUATION"];
+  fields.forEach(([label, value]) => lines.push(`${label}: ${value}`));
+  if (String(c.comments || "").trim()) lines.push(`Comments: ${c.comments}`);
+  return lines;
+}
+
 function getMissingWarnings() {
   const warnings = [];
+  const supportMode = state.firs?.pathway === "support";
 
   if (!state.incident.actualAddress) {
-    warnings.push({
-      key: "actualAddress",
-      label: "Actual address missing",
-      page: "incidentPage",
-      targetId: "actualAddress"
-    });
+    warnings.push({ key: "actualAddress", label: "Actual address missing", page: "incidentPage", targetId: supportMode ? "firsSupportAddress" : "actualAddress" });
   }
 
-  if (!state.incident.distanceToScene) {
-    warnings.push({
-      key: "distanceToScene",
-      label: "Distance to scene missing",
-      page: "incidentPage",
-      targetId: "distanceToScene"
-    });
+  Object.values(state.responders.appliances || {}).forEach((appliance) => {
+    if (!Array.isArray(appliance.crew) || appliance.crew.length === 0) return;
+    if (!(appliance.code === "C1" || appliance.code === "C3")) {
+      warnings.push({ key: `code-${appliance.label}`, label: `${appliance.label}: Code 1 or Code 3 missing`, page: "respondersPage", targetId: null });
+    }
+    if (String(appliance.km || "").trim() === "") {
+      warnings.push({ key: `km-${appliance.label}`, label: `${appliance.label}: KM missing`, page: "respondersPage", targetId: null });
+    }
+    if (!appliance.crew.some((member) => member.isDriver)) {
+      warnings.push({ key: `driver-${appliance.label}`, label: `${appliance.label}: Driver missing`, page: "respondersPage", targetId: null });
+    }
+  });
+
+  if (supportMode) {
+    const sr = state.firs?.supportReport || {};
+    if (!String(sr.primaryBrigade || "").trim()) warnings.push({ key: "supportPrimary", label: "Support Callout: Primary brigade missing", page: "incidentPage", targetId: "firsSupportPrimaryBrigade" });
+    if (!String(sr.incidentType || "").trim()) warnings.push({ key: "supportIncidentType", label: "Support Callout: Incident type missing", page: "incidentPage", targetId: "firsSupportIncidentType" });
+    if (!String(sr.supportBrigade || "").trim()) warnings.push({ key: "supportBrigade", label: "Support brigade missing", page: "incidentPage", targetId: "firsSupportBrigade" });
+    if (!String(sr.brigadePaged || "").trim()) warnings.push({ key: "supportPaged", label: "Support Report: Brigade paged missing", page: "incidentPage", targetId: "firsSupportBrigadePaged" });
+    if (!String(sr.actionTaken || "").trim()) warnings.push({ key: "supportAction", label: "Support Report: Action taken missing", page: "incidentPage", targetId: "firsSupportActionTaken" });
+    if (!String(sr.asbestosExposure || "").trim()) warnings.push({ key: "supportAsbestos", label: "Support Report: Asbestos exposure not answered", page: "incidentPage", targetId: "firsSupportAsbestosExposure" });
+  } else {
+    const firsDetails = state.firs?.incidentDetails || {};
+    if (!firsDetails.typeOfIncident) warnings.push({ key: "firsType", label: "FIRS Type of incident missing", page: "incidentPage", targetId: "firsTypeOfIncident" });
+    if (!firsDetails.hazardClass) warnings.push({ key: "firsHazard", label: "FIRS Hazard class missing", page: "incidentPage", targetId: "firsHazardClass" });
+    if (!firsDetails.arrivedFirst) warnings.push({ key: "firsArrived", label: "Who arrived on scene first? missing", page: "incidentPage", targetId: "firsArrivedFirst" });
+    if (!firsDetails.incidentControllerAgency) warnings.push({ key: "firsIC", label: "Incident controller agency missing", page: "incidentPage", targetId: "firsControllerAgency" });
+    if (firsDetails.incidentControllerAgency === "CFA" && !firsDetails.cfaIncidentController) warnings.push({ key: "firsCfaIC", label: "CFA incident controller missing", page: "incidentPage", targetId: "firsCfaController" });
+    if (firsDetails.incidentControllerAgency && firsDetails.incidentControllerAgency !== "CFA" && firsDetails.incidentControllerAgency !== "Undetermined" && !firsDetails.incidentControllerName) warnings.push({ key: "firsExternalIC", label: "Incident controller name not obtained", page: "incidentPage", targetId: "firsControllerName" });
+
+    const further = state.firs?.furtherDetails || {};
+    if (!further.generalPropertyUse) warnings.push({ key: "generalProperty", label: "General property use missing", page: "incidentPage", targetId: "firsGeneralPropertyUse" });
+    if (!further.fixedPropertyUse) warnings.push({ key: "fixedProperty", label: "Fixed property use missing", page: "incidentPage", targetId: "firsFixedPropertyUse" });
+
+    const brigadeResponse = state.firs?.brigadeResponse || {};
+    if (!brigadeResponse.primaryBrigade) warnings.push({ key: "responsePrimary", label: "Brigade Response: Primary brigade missing", page: "incidentPage", targetId: "firsResponsePrimaryBrigade" });
+    if (!brigadeResponse.officerInCharge) warnings.push({ key: "responseOic", label: "Brigade Response: Officer in charge missing", page: "incidentPage", targetId: "firsResponseOic" });
+    if (!brigadeResponse.asbestosExposure) warnings.push({ key: "asbestos", label: "Potential asbestos exposure not answered", page: "incidentPage", targetId: "firsAsbestosExposure" });
+    if (!brigadeResponse.hotDebrief) warnings.push({ key: "hotDebriefFirs", label: "Hot debrief question not answered", page: "incidentPage", targetId: "firsHotDebrief" });
+    if (!brigadeResponse.aarRequired) warnings.push({ key: "aarFirs", label: "AAR question not answered", page: "incidentPage", targetId: "firsAarRequired" });
+
+    const incidentSummary = state.firs?.incidentSummary || {};
+    if (!incidentSummary.significantIncident) warnings.push({ key: "significantIncident", label: "Significant incident question not answered", page: "sendPage", targetId: "firsSignificantIncident" });
+    if (!String(incidentSummary.brigadeComments || "").trim()) warnings.push({ key: "brigadeCommentsFirs", label: "Brigade comments missing", page: "sendPage", targetId: "firsBrigadeComments" });
+
+    if (!state.incident.weather1) warnings.push({ key: "weather1", label: "Weather missing", page: "incidentPage", targetId: "weather1" });
+    if (!state.responders.oicName) warnings.push({ key: "oicName", label: "OIC missing", page: "respondersPage", targetId: null });
   }
 
-  if (!state.incident.firstAgency) {
-    warnings.push({
-      key: "firstAgency",
-      label: "1st agency missing",
-      page: "incidentPage",
-      targetId: "firstAgency"
-    });
+  if (!String(state.profile.name || "").trim() || !String(state.profile.memberNumber || "").trim() || !String(state.profile.contactNumber || "").trim()) {
+    warnings.push({ key: "profileMissing", label: "Profile details missing", page: "incidentPage", targetId: null });
   }
-
-  if (!state.incident.weather1) {
-    warnings.push({
-      key: "weather1",
-      label: "Weather missing",
-      page: "incidentPage",
-      targetId: "weather1"
-    });
-  }
-
-  if (!state.responders.oicName) {
-    warnings.push({
-      key: "oicName",
-      label: "OIC missing",
-      page: "respondersPage",
-      targetId: null
-    });
-  }
-
-  if (
-    !String(state.profile.name || "").trim() ||
-    !String(state.profile.memberNumber || "").trim() ||
-    !String(state.profile.contactNumber || "").trim()
-  ) {
-    warnings.push({
-      key: "profileMissing",
-      label: "Profile details missing",
-      page: "incidentPage",
-      targetId: null
-    });
-  }
-
   if (hasAnyResponderInjury() && !String(state.responders.injuryNotes || "").trim()) {
-    warnings.push({
-      key: "respondersInjuryNotes",
-      label: "Responder injury notes missing",
-      page: "respondersPage",
-      targetId: "respondersInjuryNotes"
+    warnings.push({ key: "respondersInjuryNotes", label: "Responder injury notes missing", page: "respondersPage", targetId: "respondersInjuryNotes" });
+  }
+  return warnings;
+}
+
+function prettyCoded(value) {
+  const text = String(value || "").trim();
+  return text.includes("|") ? text.replace("|", " - ") : text;
+}
+
+function buildFirsTransferLines() {
+  const lines = ["FIRS TRANSFER VIEW"];
+  const add = (label, value) => { if (String(value || "").trim()) lines.push(`${label}: ${prettyCoded(value)}`); };
+
+  if (state.firs?.pathway === "support") {
+    const sr = state.firs?.supportReport || {};
+    lines.push("", "CALLOUT");
+    add("FIRS no", sr.firsNumber);
+    add("District", sr.district);
+    add("Call to ESTA", sr.callToEsta);
+    add("Primary brigade", sr.primaryBrigade);
+    add("Address", state.incident.actualAddress);
+    add("Incident type", sr.incidentType);
+
+    lines.push("", "YOUR RESPONSE");
+    add("Support brigade", sr.supportBrigade);
+    add("Brigade report no.", sr.brigadeReportNumber);
+    add("Brigade paged", sr.brigadePaged);
+    add("Action taken", sr.actionTaken);
+    add("Was there a potential exposure to asbestos?", sr.asbestosExposure);
+
+    lines.push("", "APPLIANCES / PEOPLE");
+    Object.values(state.responders.appliances || {}).forEach((appliance) => {
+      if (!Array.isArray(appliance.crew) || appliance.crew.length === 0) return;
+      add(appliance.label, `${appliance.code || "Code missing"}, ${String(appliance.km || "").trim() || "KM missing"} km, ${appliance.crew.length} crew`);
     });
+
+    lines.push("", "SIGN OFF");
+    lines.push("Exact FIRS controls not yet captured.");
+    lines.push("", "INCIDENT COMMENTS");
+    add("Incident comments", sr.incidentComments);
+    lines.push("", "ATTACHMENTS");
+    lines.push("Exact FIRS controls not yet captured.");
+    return lines;
   }
 
-  return warnings;
+  const d = state.firs?.incidentDetails || {};
+  const f = state.firs?.furtherDetails || {};
+  lines.push("", "INCIDENT DETAILS");
+  add("Type of incident", d.typeOfIncident);
+  add("Address", state.incident.actualAddress);
+  add("FIRS no", d.firsNumber);
+  add("District", d.district);
+  add("Brigade area", d.brigadeArea);
+  add("Territory", d.territory);
+  add("Hazard class", d.hazardClass);
+  add("Call detected by", d.callDetectedBy);
+  add("Call reported by", d.callReportedBy);
+  add("Who arrived on scene first?", d.arrivedFirst);
+  add("Incident controller agency", d.incidentControllerAgency);
+  if (d.incidentControllerAgency === "CFA") add("CFA incident controller", d.cfaIncidentController);
+  else { add("Incident controller name", d.incidentControllerName); add("Incident controller ID", d.incidentControllerId); }
+  lines.push("", "FURTHER INCIDENT DETAILS");
+  add("General property use", f.generalPropertyUse);
+  add("Fixed property use", f.fixedPropertyUse);
+  add("Type of occupant", f.typeOfOccupant);
+  add("Type of owner", f.typeOfOwner);
+  add("Occupant's name", f.occupantName);
+  add("Ambulance Victoria", f.ambulanceAttendance);
+  add("Police", f.policeAttendance);
+  if (f.policeAttendance === "Notified and attended") {
+    add("Police member name", f.policeName); add("Police member number", f.policeNumber); add("Police station", f.policeStation);
+  }
+  if (state.incident.sceneUnits?.length) add("Supporting brigades", state.incident.sceneUnits.join(", "));
+
+  const b = state.firs?.brigadeResponse || {};
+  lines.push("", "BRIGADE RESPONSE");
+  add("Primary brigade", b.primaryBrigade);
+  add("Brigade report no.", b.brigadeReportNumber);
+  add("Action taken", b.actionTaken);
+  add("Officer in charge", b.officerInCharge);
+  add("Main problem encountered", b.mainProblemEncountered);
+  add("Weather", b.weather);
+  add("Potential exposure to asbestos?", b.asbestosExposure);
+  add("Was a hot debrief held?", b.hotDebrief);
+  add("Will you run an AAR for this incident?", b.aarRequired);
+  add("Turnout failure code", b.turnoutFailureCode);
+  add("Travel failure code", b.travelFailureCode);
+  add("SDS Comments", b.sdsComments);
+
+  const m = state.firs?.incidentSummary || {};
+  lines.push("", "INCIDENT SUMMARY");
+  add("Was this a significant incident?", m.significantIncident);
+  add("CAD Information", m.cadInformation);
+  add("Brigade comments", m.brigadeComments);
+  add("Report created by", m.reportCreatedBy);
+  add("Report completed by", m.reportCompletedBy);
+  add("Report created", m.reportCreated);
+  return lines;
 }
 
 function getReportLines() {
@@ -405,6 +520,8 @@ function getReportLines() {
 
   lines.push("CONNEWARRE FIRE BRIGADE TURNOUT SHEET");
   lines.push("");
+  lines.push(...buildFirsTransferLines());
+  lines.push("", "OPERATIONAL NOTES", "");
 
   if (incident.pagerDetails) {
     lines.push(incident.pagerDetails);
@@ -448,10 +565,6 @@ function getReportLines() {
     lines.push(`Weather: ${weather}`);
   }
 
-  if (incident.distanceToScene) {
-    lines.push(`Distance to scene: ${formatDistance(incident.distanceToScene)}`);
-  }
-
   if (incident.hosesUsed) {
     lines.push(`Hoses used: ${incident.hosesUsed}`);
   }
@@ -477,6 +590,12 @@ if (alarmLines.length) {
   lines.push("");
   lines.push(...alarmLines);
 }
+
+const casualtyLines = buildCasualtyReportLines();
+if (casualtyLines.length) {
+  lines.push("");
+  lines.push(...casualtyLines);
+}
   
   lines.push("");
   lines.push("MEMBERS RESPONDING");
@@ -493,7 +612,8 @@ if (alarmLines.length) {
     appliancesWithCrew.forEach((appliance) => {
       const applianceLabel = formatApplianceLabel(appliance.label);
       const code = appliance.code ? appliance.code.toUpperCase().replace(/^C/, "CODE ") : "";
-      lines.push(`${applianceLabel.padEnd(30)} ${code}`.trimEnd());
+      const km = String(appliance.km || "").trim() ? `${Math.round(Number(appliance.km))} KM` : "";
+      lines.push([applianceLabel, code, km].filter(Boolean).join(" • "));
 
       appliance.crew.forEach((member) => {
         lines.push(buildCrewLine(member));
@@ -521,7 +641,7 @@ if (alarmLines.length) {
 
 if (incident.otherAgencies?.length) {
   incident.otherAgencies.forEach((agency) => {
-    const typeLabel = String(agency.type || agency.agencyName || "").trim().toUpperCase();
+    const typeLabel = String(agency.type === "Ambulance" ? "Ambulance Victoria" : (agency.type || agency.agencyName || "")).trim().toUpperCase();
     const summary = getOtherAgencySummary(agency);
     const notes = String(agency.notes || "").trim();
 
@@ -712,7 +832,8 @@ function saveCurrentReportLocally() {
     savedAt: now.toISOString(),
     text: getReportText(),
     incidentSnapshot: JSON.parse(JSON.stringify(state.incident)),
-    respondersSnapshot: JSON.parse(JSON.stringify(state.responders))
+    respondersSnapshot: JSON.parse(JSON.stringify(state.responders)),
+    firsSnapshot: JSON.parse(JSON.stringify(state.firs || {}))
   };
 
   reports.unshift(report);
@@ -725,6 +846,7 @@ function applySavedReport(report) {
 
   state.incident = Object.assign({}, state.incident, report.incidentSnapshot || {});
   state.responders = Object.assign({}, state.responders, report.respondersSnapshot || {});
+  if (report.firsSnapshot) state.firs = Object.assign({}, state.firs || {}, report.firsSnapshot);
 
   saveState();
   loadIncidentIntoInputs();
