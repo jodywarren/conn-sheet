@@ -101,6 +101,85 @@ function createDefaultState() {
       }
     },
 
+    firs: {
+      pathway: "short-primary",
+      currentSection: "incident-details",
+      incidentDetails: {
+        typeOfIncident: "",
+        firsNumber: "",
+        district: "",
+        brigadeArea: "",
+        territory: "",
+        hazardClass: "",
+        callDetectedBy: "",
+        callReportedBy: "",
+        arrivedFirst: "",
+        incidentControllerAgency: "",
+        cfaIncidentController: "",
+        incidentControllerName: "",
+        incidentControllerId: ""
+      },
+      furtherDetails: {
+        generalPropertyUse: "",
+        fixedPropertyUse: "",
+        typeOfOccupant: "",
+        typeOfOwner: "",
+        occupantName: "",
+        ambulanceAttendance: "Unknown",
+        policeAttendance: "Unknown",
+        policeName: "",
+        policeNumber: "",
+        policeStation: "",
+        supportingBrigades: []
+      },
+      casualties: {
+        brigadeInjured: "",
+        brigadeFatalities: "",
+        otherInjured: "",
+        otherFatalities: "",
+        personsExtricated: "",
+        personsReleased: "",
+        personsAssisted: "",
+        personsEvacuated: "",
+        comments: ""
+      },
+      brigadeResponse: {
+        primaryBrigade: "",
+        brigadeReportNumber: "",
+        actionTaken: "",
+        officerInCharge: "",
+        mainProblemEncountered: "",
+        weather: "",
+        asbestosExposure: "",
+        hotDebrief: "",
+        aarRequired: "",
+        turnoutFailureCode: "",
+        travelFailureCode: "",
+        sdsComments: ""
+      },
+      incidentSummary: {
+        significantIncident: "",
+        cadInformation: "",
+        brigadeComments: "",
+        reportCreatedBy: "",
+        reportCompletedBy: "",
+        reportCreated: ""
+      },
+      supportReport: {
+        firsNumber: "",
+        district: "",
+        callToEsta: "",
+        primaryBrigade: "",
+        incidentType: "",
+        supportBrigade: "Connewarre",
+        brigadeReportNumber: "",
+        brigadePaged: "",
+        actionTaken: "",
+        asbestosExposure: "",
+        incidentComments: ""
+      }
+    },
+
     responders: {
       members: {
         conn: [],
@@ -110,18 +189,24 @@ function createDefaultState() {
 
       appliances: {
         conn1: {
-          label: "CONN 1",
+          label: "CONN T1",
+          stationKey: "station1",
           code: "",
+          km: "",
           crew: []
         },
         conn2: {
-          label: "CONN 2",
+          label: "CONN T2",
+          stationKey: "station1",
           code: "",
+          km: "",
           crew: []
         },
         mtdpt: {
-          label: "MTD P/T",
+          label: "MT DUNEED PT",
+          stationKey: "station2",
           code: "",
+          km: "",
           crew: []
         }
       },
@@ -147,7 +232,7 @@ export function initState() {
 
   const versionTarget = document.getElementById("appVersionText");
   if (versionTarget) {
-    versionTarget.textContent = "3.4.0";
+    versionTarget.textContent = "3.7.0";
   }
 }
 
@@ -158,6 +243,7 @@ export function resetState() {
 
   // Keep theme and profile. Clear current job only.
   state.incident = fresh.incident;
+  state.firs = fresh.firs;
 
   // Preserve loaded member lists, reset response content only.
   state.responders = {
@@ -323,6 +409,16 @@ export function loadState() {
       }
     }
 
+    if (saved.firs) {
+      if (typeof saved.firs.pathway === "string") fresh.firs.pathway = saved.firs.pathway;
+      if (typeof saved.firs.currentSection === "string") fresh.firs.currentSection = saved.firs.currentSection;
+      if (saved.firs.incidentDetails) Object.assign(fresh.firs.incidentDetails, saved.firs.incidentDetails);
+      if (saved.firs.furtherDetails) Object.assign(fresh.firs.furtherDetails, saved.firs.furtherDetails);
+      if (saved.firs.casualties) Object.assign(fresh.firs.casualties, saved.firs.casualties);
+      if (saved.firs.brigadeResponse) Object.assign(fresh.firs.brigadeResponse, saved.firs.brigadeResponse);
+      if (saved.firs.incidentSummary) Object.assign(fresh.firs.incidentSummary, saved.firs.incidentSummary);
+    }
+
     if (saved.responders) {
       if (saved.responders.members) {
         fresh.responders.members = saved.responders.members;
@@ -331,6 +427,17 @@ export function loadState() {
       if (saved.responders.appliances) {
         Object.assign(fresh.responders.appliances, saved.responders.appliances);
       }
+
+      // Migrate older appliance records into the per-appliance FIRS response model.
+      const applianceDefaults = createDefaultState().responders.appliances;
+      Object.entries(fresh.responders.appliances).forEach(([key, appliance]) => {
+        const defaults = applianceDefaults[key] || {};
+        if (typeof appliance.km !== "string") appliance.km = "";
+        if (!appliance.stationKey) appliance.stationKey = defaults.stationKey || "station1";
+        if (defaults.label && ["CONN 1", "CONN 2", "MTD P/T"].includes(appliance.label)) {
+          appliance.label = defaults.label;
+        }
+      });
 
       if (Array.isArray(saved.responders.stationResponders)) {
         fresh.responders.stationResponders = saved.responders.stationResponders;
@@ -356,6 +463,7 @@ export function loadState() {
     Object.assign(state.ui, fresh.ui);
     Object.assign(state.profile, fresh.profile);
     Object.assign(state.incident, fresh.incident);
+    state.firs = fresh.firs;
     Object.assign(state.responders, fresh.responders);
   } catch (err) {
     console.warn("State load failed", err);
