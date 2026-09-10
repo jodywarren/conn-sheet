@@ -1,4 +1,4 @@
-const CACHE_NAME = "conn-sheet-v361";
+const CACHE_NAME = "conn-sheet-v3.9.0";
 
 const APP_SHELL = [
   "./",
@@ -17,7 +17,9 @@ const APP_SHELL = [
   "./js/incident.js",
   "./js/responders.js",
   "./js/ocr.js",
-  "./js/report.js"
+  "./js/report.js",
+  "./js/firs-schema.js",
+  "./js/firs-fields.js"
 ];
 
 self.addEventListener("install", (event) => {
