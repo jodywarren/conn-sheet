@@ -4,6 +4,8 @@ import { bindIncidentInputs, loadIncidentIntoInputs } from "./js/incident.js";
 import { initResponders, renderRespondersPage } from "./js/responders.js";
 import { bindOcrEvents } from "./js/ocr.js";
 import { bindReportEvents, renderReportPreview } from "./js/report.js";
+import { bindFirsNavigation, refreshFirsNavigation } from "./js/firs-schema.js";
+import { bindFirsFields, renderFirsFields } from "./js/firs-fields.js";
 
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -22,7 +24,8 @@ async function initApp() {
   renderReportPreview();
 
    injectNewJobButton();
-  injectBottomPageNav();
+  bindFirsFields();
+  bindFirsNavigation(goToPage);
   goToPage(state.ui.currentPage || "incidentPage");
   bindReportAutoRefresh();
   bindSupportOicFields();
@@ -30,6 +33,15 @@ async function initApp() {
 
   document.addEventListener("incident:loaded", () => {
     syncSupportOicUi();
+    renderReportPreview();
+    renderFirsFields();
+    refreshFirsNavigation(goToPage);
+  });
+
+  document.addEventListener("change", () => refreshFirsNavigation(goToPage));
+  document.addEventListener("firs:changed", () => refreshFirsNavigation(goToPage));
+  document.addEventListener("firs:pathwayChanged", () => {
+    renderFirsFields();
     renderReportPreview();
   });
 }
@@ -58,57 +70,17 @@ function injectNewJobButton() {
 
     resetState();
     loadIncidentIntoInputs();
+    renderFirsFields();
     renderRespondersPage();
     renderReportPreview();
     syncSupportOicUi();
     goToPage("incidentPage");
+    refreshFirsNavigation(goToPage);
   });
 
   statusWrap.insertBefore(split, connectionBanner);
   split.appendChild(connectionBanner);
   split.appendChild(newJobBtn);
-}
-
-function injectBottomPageNav() {
-  const pageTabs = [
-    { label: "Incident", page: "incidentPage", className: "tab-btn" },
-    { label: "Responders", page: "respondersPage", className: "tab-btn" },
-    { label: "Send Report", page: "sendPage", className: "tab-btn" }
-  ];
-
-  addNav("incidentPage", pageTabs);
-  addNav("respondersPage", pageTabs);
-  addNav("sendPage", pageTabs);
-}
-
-function addNav(pageId, buttons) {
-  const page = document.getElementById(pageId);
-  if (!page) return;
-
-  const card = page.querySelector(".card");
-  if (!card) return;
-
-  const existing = card.querySelector(".page-bottom-nav");
-  if (existing) existing.remove();
-
-  const nav = document.createElement("div");
-    nav.className = "page-bottom-nav top-nav";
-
-  buttons.forEach((btnConfig) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = btnConfig.className;
-    btn.textContent = btnConfig.label;
-    btn.dataset.page = btnConfig.page;
-
-    btn.addEventListener("click", () => {
-      goToPage(btnConfig.page);
-    });
-
-    nav.appendChild(btn);
-  });
-
-  card.appendChild(nav);
 }
 
 function goToPage(pageId) {
@@ -122,11 +94,15 @@ function goToPage(pageId) {
 
   setCurrentPage(pageId);
 
-  if (pageId === "incidentPage") loadIncidentIntoInputs();
+  if (pageId === "incidentPage") {
+    loadIncidentIntoInputs();
+    renderFirsFields();
+  }
   if (pageId === "respondersPage") renderRespondersPage();
   if (pageId === "sendPage") renderReportPreview();
 
   syncSupportOicUi();
+  refreshFirsNavigation(goToPage);
 }
 
 function bindReportAutoRefresh() {
