@@ -106,14 +106,12 @@ export function bindIncidentInputs() {
 
 function bindTextInputs() {
   const plainFields = [
-    "distanceToScene",
     "eventNumber",
     "pagerDate",
     "pagerTime",
     "alertAreaCode",
     "brigadeRole",
     "incidentType",
-    "responseCode",
     "pagerDetails",
     "scannedAddress",
     "actualAddress",
@@ -269,6 +267,7 @@ function createEmptyAgency() {
   return {
     id: uid(),
     type: "",
+    attendanceStatus: "unknown",
     agencyName: "",
     name: "",
     contactNumber: "",
@@ -283,24 +282,19 @@ function createEmptyAgency() {
   };
 }
 
-function getAgencyFieldConfig(type) {
+function getAgencyFieldConfig(type, agency = null) {
+  const status = String(agency?.attendanceStatus || "unknown");
+
   switch (type) {
     case "Police":
+      if (status !== "attended") return [];
       return [
         { key: "name", label: "Name", mode: "text" },
-        { key: "contactNumber", label: "Contact number", mode: "tel" },
-        { key: "badgeNumber", label: "Badge number", mode: "numeric" },
-        { key: "station", label: "Station", mode: "text" },
-        { key: "notes", label: "Notes", mode: "text" }
+        { key: "badgeNumber", label: "Number", mode: "numeric" },
+        { key: "station", label: "Station", mode: "text" }
       ];
     case "Ambulance":
-      return [
-        { key: "name", label: "Name", mode: "text" },
-        { key: "contactNumber", label: "Contact number", mode: "tel" },
-        { key: "idNumber", label: "ID number", mode: "numeric" },
-        { key: "station", label: "Station", mode: "text" },
-        { key: "notes", label: "Notes", mode: "text" }
-      ];
+      return [];
     case "SES":
       return [
         { key: "name", label: "Name", mode: "text" },
@@ -340,21 +334,38 @@ function getAgencyFieldConfig(type) {
       return [];
   }
 }
-
 function isAgencyComplete(agency) {
   if (!agency || !agency.type) return false;
-  const fields = getAgencyFieldConfig(agency.type);
+
+  if (agency.type === "Police" || agency.type === "Ambulance") {
+    const status = String(agency.attendanceStatus || "unknown");
+    if (!status) return false;
+    if (agency.type === "Police" && status === "attended") {
+      return [agency.name, agency.badgeNumber, agency.station].every(
+        (value) => String(value || "").trim().length > 0
+      );
+    }
+    return true;
+  }
+
+  const fields = getAgencyFieldConfig(agency.type, agency);
   if (!fields.length) return false;
   return fields.every((field) => String(agency[field.key] || "").trim().length > 0);
 }
-
 function getAgencySummary(agency) {
-  const type = agency.type || "Add Agency";
+  const type = agency.type === "Ambulance" ? "Ambulance Victoria" : (agency.type || "Add Agency");
+  const statusLabels = {
+    notified: "Notified",
+    attended: "Notified and attended",
+    unknown: "Unknown"
+  };
+  const status = (agency.type === "Police" || agency.type === "Ambulance")
+    ? statusLabels[agency.attendanceStatus || "unknown"]
+    : "";
   const who = agency.name || agency.agencyName || "";
-  const number = agency.contactNumber || "";
-  return [type, who, number].filter(Boolean).join(" • ");
+  const number = agency.type === "Police" ? agency.badgeNumber : (agency.contactNumber || "");
+  return [type, status, who, number].filter(Boolean).join(" • ");
 }
-
 function bindOtherAgencyControls() {
   const dropdown = document.getElementById("agencyDropdown");
   const agencyPanel = document.getElementById("agencyPanel");
@@ -387,7 +398,7 @@ export function renderOtherAgencies() {
   wrap.innerHTML = "";
 
   (state.incident.otherAgencies || []).forEach((agency) => {
-    const fields = getAgencyFieldConfig(agency.type);
+    const fields = getAgencyFieldConfig(agency.type, agency);
     const complete = isAgencyComplete(agency);
     const card = document.createElement("div");
     card.className = `agency-card ${complete ? "complete" : "pending"} ${agency.expanded ? "expanded" : "collapsed"}`;
@@ -411,6 +422,16 @@ export function renderOtherAgencies() {
             <button class="tiny-btn" type="button" data-remove-agency="${agency.id}">Remove</button>
           </div>
         </div>
+
+        ${(agency.type === "Police" || agency.type === "Ambulance") ? `
+          <label class="agency-attendance-label">
+            Attendance
+            <select class="field-input editable-field agency-attendance" data-agency-id="${agency.id}">
+              <option value="unknown" ${agency.attendanceStatus === "unknown" ? "selected" : ""}>Unknown</option>
+              <option value="notified" ${agency.attendanceStatus === "notified" ? "selected" : ""}>Notified</option>
+              <option value="attended" ${agency.attendanceStatus === "attended" ? "selected" : ""}>Notified and attended</option>
+            </select>
+          </label>` : ""}
 
         <div class="grid agency-grid">
           ${fields
@@ -487,6 +508,19 @@ function bindRenderedOtherAgencyEvents() {
         renderOtherAgencies();
         saveState();
       }
+    });
+  });
+
+  document.querySelectorAll(".agency-attendance").forEach((el) => {
+    if (el.dataset.boundAttendance === "1") return;
+    el.dataset.boundAttendance = "1";
+
+    el.addEventListener("change", () => {
+      const agency = (state.incident.otherAgencies || []).find((x) => x.id === el.dataset.agencyId);
+      if (!agency) return;
+      agency.attendanceStatus = String(el.value || "unknown");
+      saveState();
+      renderOtherAgencies();
     });
   });
 
@@ -1218,13 +1252,11 @@ export function loadIncidentIntoInputs() {
     alertAreaCode: state.incident.alertAreaCode,
     brigadeRole: state.incident.brigadeRole,
     incidentType: state.incident.incidentType,
-    responseCode: state.incident.responseCode,
     pagerDetails: state.incident.pagerDetails,
     scannedAddress: state.incident.scannedAddress,
     actualAddress: state.incident.actualAddress,
     controlName: state.incident.controlName,
     firstAgency: state.incident.firstAgency,
-    distanceToScene: state.incident.distanceToScene,
     weather1: state.incident.weather1,
     weather2: state.incident.weather2,
     injuryNotes: state.incident.injuryNotes,
@@ -1276,12 +1308,10 @@ export function applyFieldCompletionStates() {
     "alertAreaCode",
     "brigadeRole",
     "incidentType",
-    "responseCode",
     "pagerDetails",
     "scannedAddress",
     "actualAddress",
     "firstAgency",
-    "distanceToScene",
     "weather1"
   ];
 
